@@ -15,9 +15,9 @@ const { Content } = await render(entry);
 ---
 
 <BaseLayout title={entry.data.title} description={entry.data.excerpt}>
-  <article class="mx-auto max-w-3xl px-6 py-16 md:py-24">
-    <header class="mb-12 border-b border-neutral-200 pb-8">
-      <p class="text-xs uppercase tracking-widest text-neutral-500">
+  <article class="mx-auto max-w-3xl px-6 py-32 md:py-40">
+    <header class="mb-16 border-b border-bone/10 pb-10">
+      <p class="font-mono text-xs uppercase tracking-[0.3em] text-amber mb-6">
         {
           entry.data.date.toLocaleDateString("sr-Latn-ME", {
             day: "numeric",
@@ -26,20 +26,36 @@ const { Content } = await render(entry);
           })
         }
       </p>
-      <h1 class="mt-2 text-4xl font-semibold tracking-tight md:text-5xl">
+      <h1
+        class="font-display font-light text-4xl md:text-6xl leading-[0.95] tracking-tight"
+      >
         {entry.data.title}
       </h1>
       {
         entry.data.excerpt && (
-          <p class="mt-4 text-lg text-neutral-600">{entry.data.excerpt}</p>
+          <p class="mt-6 text-lg text-bone/70 max-w-2xl">{entry.data.excerpt}</p>
         )
       }
     </header>
 
     <div
-      class="prose prose-neutral max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-neutral-900 prose-a:underline prose-a:underline-offset-4 prose-img:rounded-lg"
+      class="prose prose-invert max-w-none
+        prose-headings:font-display prose-headings:font-light prose-headings:tracking-tight
+        prose-h2:text-4xl prose-h3:text-2xl
+        prose-a:text-amber prose-a:no-underline prose-a:underline-offset-4 hover:prose-a:underline
+        prose-strong:text-bone prose-em:text-amber prose-em:font-display prose-em:not-italic
+        prose-img:rounded-sm prose-img:img-bw"
     >
       <Content />
     </div>
+
+    <footer class="mt-16 pt-10 border-t border-bone/10">
+      <a
+        href="/blog/"
+        class="inline-flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-amber"
+      >
+        <span aria-hidden="true">←</span> Sve novosti
+      </a>
+    </footer>
   </article>
 </BaseLayout>

@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction 3 · Concert Energy — Rokumentarni dani</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              void: "#08070d",
+              dusk: "#15131f",
+              neon: "#c4ff00",
+              cyan: "#00e0ff",
+              hot: "#ff2e88",
+              cream: "#f8f5e8",
+            },
+            fontFamily: {
+              display: ['"Bricolage Grotesque"', "sans-serif"],
+              serif: ['"Instrument Serif"', "serif"],
+              mono: ['"DM Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        background: #08070d;
+        color: #f8f5e8;
+        font-family: "Bricolage Grotesque", sans-serif;
+        overflow-x: hidden;
+      }
+      /* animated mesh gradient */
+      .mesh {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        z-index: 0;
+      }
+      .mesh::before,
+      .mesh::after {
+        content: "";
+        position: absolute;
+        width: 65vw;
+        height: 65vw;
+        border-radius: 50%;
+        filter: blur(110px);
+        opacity: 0.55;
+      }
+      .mesh::before {
+        background: #ff2e88;
+        top: -20vw;
+        left: -10vw;
+        animation: float1 18s ease-in-out infinite alternate;
+      }
+      .mesh::after {
+        background: #00e0ff;
+        bottom: -25vw;
+        right: -10vw;
+        animation: float2 22s ease-in-out infinite alternate;
+      }
+      .mesh-3 {
+        position: absolute;
+        width: 40vw;
+        height: 40vw;
+        border-radius: 50%;
+        filter: blur(100px);
+        background: #c4ff00;
+        opacity: 0.35;
+        top: 30%;
+        left: 40%;
+        animation: float3 25s ease-in-out infinite alternate;
+      }
+      @keyframes float1 {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(8vw, 12vw) scale(1.1);
+        }
+      }
+      @keyframes float2 {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(-10vw, -8vw) scale(1.15);
+        }
+      }
+      @keyframes float3 {
+        from {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        to {
+          transform: translate(-30%, -60%) scale(1.2);
+        }
+      }
+      .grid-bg {
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+      .label {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .marquee {
+        animation: marquee 35s linear infinite;
+      }
+      @keyframes marquee {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+      .sticker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        background: #c4ff00;
+        color: #08070d;
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 500;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.7rem;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .gradient-text {
+        background: linear-gradient(120deg, #c4ff00, #00e0ff 50%, #ff2e88);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .img-cyan {
+        filter: grayscale(1) contrast(1.1);
+        mix-blend-mode: lighten;
+      }
+      .ticker-spin {
+        animation: spin 30s linear infinite;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .glitch:hover {
+        text-shadow:
+          2px 0 #ff2e88,
+          -2px 0 #00e0ff;
+      }
+    </style>
+  </head>
+
+  <body class="font-display">
+    <!-- NAV -->
+    <header class="fixed top-0 inset-x-0 z-50 backdrop-blur-xl bg-void/60 border-b border-cream/10">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8 h-16 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-3">
+          <span class="h-2.5 w-2.5 rounded-full bg-neon animate-pulse"></span>
+          <span class="font-mono text-sm">RokDani <span class="text-cyan">/</span> X</span>
+        </a>
+        <nav class="hidden md:flex gap-7 label">
+          <a href="#" class="hover:text-neon transition glitch">Program</a>
+          <a href="#" class="hover:text-neon transition glitch">Filmovi</a>
+          <a href="#" class="hover:text-neon transition glitch">O&nbsp;festivalu</a>
+          <a href="#" class="hover:text-neon transition glitch">Galerija</a>
+          <a href="#" class="hover:text-neon transition glitch">Novosti</a>
+        </nav>
+        <a
+          href="#"
+          class="inline-flex items-center gap-2 bg-neon text-void px-4 py-2 label rounded-full hover:bg-cyan hover:text-void transition"
+        >
+          Get Tickets <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="relative min-h-screen flex items-center overflow-hidden">
+      <div class="mesh"><div class="mesh-3"></div></div>
+      <div class="absolute inset-0 grid-bg opacity-60"></div>
+
+      <div class="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 pt-32 pb-20 w-full">
+        <div class="flex items-center gap-3 mb-10 flex-wrap">
+          <span class="sticker">★ Izdanje X · 2026</span>
+          <span class="badge text-cyan">Niksić · Podgorica · Kotor</span>
+          <span class="badge text-hot">Free Entry</span>
+        </div>
+
+        <h1 class="font-display font-light text-[clamp(4rem,15vw,12rem)] leading-[0.85] tracking-[-0.04em]">
+          <span class="block">turn it</span>
+          <span class="block gradient-text font-medium italic">UP</span>
+          <span class="block">— ten years of</span>
+          <span class="block font-mono text-base md:text-2xl tracking-widest mt-4 text-cream/60">
+            ROKUMENTARNI · DANI · MMXXVI
+          </span>
+        </h1>
+
+        <div class="mt-14 flex flex-wrap gap-6 items-center">
+          <a
+            href="#"
+            class="group inline-flex items-center gap-3 bg-neon text-void px-8 py-4 rounded-full font-mono text-sm uppercase tracking-widest font-medium hover:bg-cream transition"
+          >
+            See the lineup
+            <span
+              class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-void text-neon group-hover:rotate-45 transition"
+              >→</span
+            >
+          </a>
+          <a
+            href="#"
+            class="inline-flex items-center gap-3 px-6 py-4 label border border-cream/20 rounded-full hover:border-cyan hover:text-cyan transition"
+          >
+            ▶ Watch trailer · 1:24
+          </a>
+          <p class="label text-cream/50">12—16 Dec 2026</p>
+        </div>
+      </div>
+
+      <!-- spinning sticker -->
+      <div class="absolute bottom-10 right-10 hidden lg:block">
+        <div class="ticker-spin h-32 w-32 rounded-full border border-neon flex items-center justify-center text-neon">
+          <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full">
+            <defs>
+              <path id="circle" d="M 50, 50 m -36, 0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0" />
+            </defs>
+            <text fill="currentColor" class="label">
+              <textPath href="#circle">
+                · Karte u prodaji · Rokumentarni Dani 2026 · Karte u prodaji ·
+              </textPath>
+            </text>
+          </svg>
+          <span class="text-2xl">★</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- TICKER -->
+    <div class="bg-neon text-void py-3 overflow-hidden border-y-2 border-neon">
+      <div class="marquee whitespace-nowrap font-mono text-2xl md:text-3xl font-medium">
+        <span class="mx-4">CRIMSON KING</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">SUGAR MAN</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">ANVIL</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">20 FEET FROM STARDOM</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">SOUND CITY</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">MR BAKER</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">CRIMSON KING</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">SUGAR MAN</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">ANVIL</span>
+        <span class="mx-4">★</span>
+        <span class="mx-4">20 FEET FROM STARDOM</span>
+        <span class="mx-4">★</span>
+      </div>
+    </div>
+
+    <!-- PROGRAM CARDS -->
+    <section class="relative py-32 overflow-hidden">
+      <div class="absolute inset-0 grid-bg opacity-30"></div>
+      <div class="relative mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="flex items-end justify-between mb-16 flex-wrap gap-6">
+          <div>
+            <p class="label text-neon mb-3">// the lineup</p>
+            <h2 class="font-display text-6xl md:text-8xl leading-[0.9] tracking-tight">
+              twelve films,<br />
+              <span class="font-serif italic gradient-text">one festival</span>
+            </h2>
+          </div>
+          <a href="#" class="badge text-neon hover:bg-neon hover:text-void transition"
+            >See full program →</a
+          >
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <article class="group relative rounded-3xl overflow-hidden bg-dusk border border-cream/10 hover:border-neon transition">
+            <div class="absolute inset-0 opacity-50">
+              <img
+                src="/media/2018/06/0002-1024x683.jpg"
+                alt=""
+                class="w-full h-full object-cover img-cyan"
+                onerror="this.style.background='#15131f';this.removeAttribute('src');"
+              />
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-t from-void via-void/60 to-transparent"></div>
+            <div class="relative p-7 h-[480px] flex flex-col justify-between">
+              <div class="flex items-start justify-between">
+                <span class="sticker">01 / 12</span>
+                <span class="badge text-cyan">Premjera</span>
+              </div>
+              <div>
+                <h3 class="font-display text-3xl leading-tight">
+                  In the Court of the Crimson King
+                </h3>
+                <p class="mt-2 label text-cream/50">UK · 2022 · 86'</p>
+                <div class="mt-5 pt-5 border-t border-cream/10 flex justify-between label">
+                  <span>12 Dec · 20:00</span>
+                  <span class="text-neon">Niksić</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="group relative rounded-3xl overflow-hidden bg-dusk border border-cream/10 hover:border-cyan transition md:translate-y-12">
+            <div class="absolute inset-0 opacity-50">
+              <img
+                src="/media/2018/06/0003-1024x683.jpg"
+                alt=""
+                class="w-full h-full object-cover img-cyan"
+                onerror="this.style.background='#15131f';this.removeAttribute('src');"
+              />
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-t from-void via-void/60 to-transparent"></div>
+            <div class="relative p-7 h-[480px] flex flex-col justify-between">
+              <div class="flex items-start justify-between">
+                <span class="sticker">02 / 12</span>
+              </div>
+              <div>
+                <h3 class="font-display text-3xl leading-tight">Searching for Sugar Man</h3>
+                <p class="mt-2 label text-cream/50">SE/UK · 2012 · 86'</p>
+                <div class="mt-5 pt-5 border-t border-cream/10 flex justify-between label">
+                  <span>13 Dec · 19:00</span>
+                  <span class="text-cyan">Podgorica</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="group relative rounded-3xl overflow-hidden bg-dusk border border-cream/10 hover:border-hot transition">
+            <div class="absolute inset-0 opacity-50">
+              <img
+                src="/media/2018/06/0004-1024x682.jpg"
+                alt=""
+                class="w-full h-full object-cover img-cyan"
+                onerror="this.style.background='#15131f';this.removeAttribute('src');"
+              />
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-t from-void via-void/60 to-transparent"></div>
+            <div class="relative p-7 h-[480px] flex flex-col justify-between">
+              <div class="flex items-start justify-between">
+                <span class="sticker">03 / 12</span>
+                <span class="badge text-hot">Razgovor</span>
+              </div>
+              <div>
+                <h3 class="font-display text-3xl leading-tight">Anvil! The Story of Anvil</h3>
+                <p class="mt-2 label text-cream/50">CA · 2008 · 80'</p>
+                <div class="mt-5 pt-5 border-t border-cream/10 flex justify-between label">
+                  <span>14 Dec · 21:30</span>
+                  <span class="text-hot">Kotor</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT — bold quote -->
+    <section class="relative py-32 overflow-hidden border-y border-cream/10">
+      <div class="mesh"></div>
+      <div class="relative mx-auto max-w-5xl px-6 lg:px-8 text-center">
+        <p class="label text-neon mb-8">// about · o nama</p>
+        <p class="font-serif italic text-4xl md:text-7xl leading-[1.05]">
+          "Music is the<br />
+          <span class="gradient-text not-italic font-display font-medium">shortest</span>
+          <span class="not-italic font-display font-medium">distance</span><br />
+          between two people."
+        </p>
+        <p class="mt-10 label text-cream/50">
+          Deset godina filma i muzike u Crnoj Gori
+        </p>
+        <a
+          href="#"
+          class="inline-flex items-center gap-3 mt-12 bg-cream text-void px-8 py-4 rounded-full label hover:bg-neon transition"
+        >
+          Read the manifesto <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="relative py-32">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="flex items-end justify-between mb-12 flex-wrap gap-6">
+          <h2 class="font-display text-5xl md:text-7xl leading-[0.9]">
+            from the <span class="gradient-text italic font-serif">feed</span>
+          </h2>
+          <a href="#" class="badge text-neon hover:bg-neon hover:text-void transition"
+            >All news →</a
+          >
+        </div>
+        <div class="grid md:grid-cols-3 gap-6">
+          <a
+            href="#"
+            class="group rounded-3xl border border-cream/10 hover:border-neon p-7 transition flex flex-col justify-between min-h-[320px]"
+          >
+            <div>
+              <span class="sticker">News · 02 May</span>
+              <h3 class="mt-6 font-display text-2xl leading-tight group-hover:text-neon transition">
+                Objavljen muzički program nikšićkih Rokumentarnih dana
+              </h3>
+            </div>
+            <p class="label text-cream/50 mt-6">→ read more</p>
+          </a>
+          <a
+            href="#"
+            class="group rounded-3xl border border-cream/10 hover:border-cyan p-7 transition flex flex-col justify-between min-h-[320px]"
+          >
+            <div>
+              <span class="sticker" style="background:#00e0ff">Workshop · 28 Apr</span>
+              <h3 class="mt-6 font-display text-2xl leading-tight group-hover:text-cyan transition">
+                Otvorene prijave za radionicu kritike muzičkog filma
+              </h3>
+            </div>
+            <p class="label text-cream/50 mt-6">→ apply</p>
+          </a>
+          <a
+            href="#"
+            class="group rounded-3xl border border-cream/10 hover:border-hot p-7 transition flex flex-col justify-between min-h-[320px]"
+          >
+            <div>
+              <span class="sticker" style="background:#ff2e88;color:#fff">Guest · 14 Apr</span>
+              <h3 class="mt-6 font-display text-2xl leading-tight group-hover:text-hot transition">
+                Specijalni gost X izdanja festivala
+              </h3>
+            </div>
+            <p class="label text-cream/50 mt-6">→ read more</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- BIG CTA -->
+    <section class="relative py-32 overflow-hidden bg-neon text-void border-y-2 border-neon">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8 text-center">
+        <p class="font-mono text-sm uppercase tracking-widest mb-6">// 12 — 16 Dec 2026</p>
+        <h2 class="font-display text-7xl md:text-[10rem] leading-[0.85] font-medium tracking-tight">
+          ne propusti.
+        </h2>
+        <a
+          href="#"
+          class="inline-flex items-center gap-3 mt-12 bg-void text-neon px-10 py-5 rounded-full font-mono text-sm uppercase tracking-widest hover:bg-hot hover:text-cream transition"
+        >
+          Karte uskoro u prodaji <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="relative py-16">
+      <div class="mx-auto max-w-7xl px-6 lg:px-8">
+        <div class="grid md:grid-cols-4 gap-10 mb-12">
+          <div class="md:col-span-2">
+            <p class="font-display text-5xl">RokDani <span class="gradient-text">/X</span></p>
+            <p class="mt-3 text-cream/50 max-w-sm">
+              Festival dokumentarnog filma o muzici. Niksić, Crna Gora.
+            </p>
+          </div>
+          <div>
+            <p class="label text-neon mb-4">Festival</p>
+            <ul class="space-y-2 text-sm text-cream/70">
+              <li><a href="#" class="hover:text-neon">Program</a></li>
+              <li><a href="#" class="hover:text-neon">Filmovi</a></li>
+              <li><a href="#" class="hover:text-neon">Galerija</a></li>
+              <li><a href="#" class="hover:text-neon">Arhiva</a></li>
+            </ul>
+          </div>
+          <div>
+            <p class="label text-cyan mb-4">Pratite</p>
+            <ul class="space-y-2 text-sm text-cream/70">
+              <li><a href="#" class="hover:text-cyan">Instagram</a></li>
+              <li><a href="#" class="hover:text-cyan">Facebook</a></li>
+              <li><a href="#" class="hover:text-cyan">YouTube</a></li>
+            </ul>
+          </div>
+        </div>
+        <div
+          class="pt-8 border-t border-cream/10 flex flex-col md:flex-row justify-between gap-3 label text-cream/40"
+        >
+          <p>© 2026 · Rokumentarni dani</p>
+          <p>Direction 03 · Concert Energy</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design directions — Rokumentarni dani</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+    </style>
+  </head>
+  <body class="bg-neutral-50 text-neutral-900 min-h-screen">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="mono text-xs uppercase tracking-[0.25em] text-neutral-500">
+        Internal · Design exploration
+      </p>
+      <h1 class="mt-3 text-4xl md:text-5xl font-semibold tracking-tight">
+        Three directions for Rokumentarni dani
+      </h1>
+      <p class="mt-4 text-lg text-neutral-600 max-w-2xl">
+        Each is a full landing page mockup. Open any one in a new tab and
+        scroll. Then come back and tell Claude which feels right (or which
+        bits to mash together).
+      </p>
+
+      <ul class="mt-12 grid md:grid-cols-3 gap-6">
+        <li class="border border-neutral-200 rounded-2xl overflow-hidden bg-white hover:shadow-xl transition">
+          <a href="/design-explorations/01-cinema-hall.html" target="_blank" class="block">
+            <div class="aspect-[4/3] bg-neutral-900 flex flex-col items-center justify-center text-amber-200 p-6">
+              <p class="mono text-[10px] uppercase tracking-[0.3em] mb-3">Direction 01</p>
+              <p class="text-3xl font-serif italic text-center" style="font-family: Georgia, serif">
+                Cinema<br />Hall
+              </p>
+            </div>
+            <div class="p-6">
+              <h2 class="text-xl font-semibold">Dark editorial</h2>
+              <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                A24 / Criterion energy. Deep blacks, warm amber, big serif
+                display, film-grain texture, festival photos as posters.
+                Slow, premium, cinematic.
+              </p>
+              <p class="mt-4 mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+                Cormorant Garamond · Inter · JetBrains Mono
+              </p>
+            </div>
+          </a>
+        </li>
+
+        <li class="border border-neutral-200 rounded-2xl overflow-hidden bg-white hover:shadow-xl transition">
+          <a href="/design-explorations/02-magazine-poster.html" target="_blank" class="block">
+            <div class="aspect-[4/3] bg-[#f4f1ea] flex flex-col items-center justify-center text-neutral-900 p-6 border-b border-neutral-900">
+              <p class="mono text-[10px] uppercase tracking-[0.3em] mb-3 text-red-600">Direction 02</p>
+              <p class="text-4xl text-center font-semibold leading-[0.85]" style="font-family: Georgia, serif; letter-spacing: -0.04em">
+                Magazine<br />Poster
+              </p>
+            </div>
+            <div class="p-6">
+              <h2 class="text-xl font-semibold">Bold print</h2>
+              <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                Wallpaper magazine / Pentagram poster. Cream paper, brick-red
+                accent, oversized type as the visual hero, asymmetric grid,
+                program-as-table. Editorial and confident.
+              </p>
+              <p class="mt-4 mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+                Fraunces · Space Grotesk · Space Mono
+              </p>
+            </div>
+          </a>
+        </li>
+
+        <li class="border border-neutral-200 rounded-2xl overflow-hidden bg-white hover:shadow-xl transition">
+          <a href="/design-explorations/03-concert-energy.html" target="_blank" class="block">
+            <div
+              class="aspect-[4/3] flex flex-col items-center justify-center p-6 relative overflow-hidden"
+              style="background:radial-gradient(circle at 30% 30%, #ff2e88 0%, transparent 50%), radial-gradient(circle at 70% 70%, #00e0ff 0%, transparent 50%), #08070d;"
+            >
+              <p class="mono text-[10px] uppercase tracking-[0.3em] mb-3 text-lime-300 relative">Direction 03</p>
+              <p class="text-3xl font-bold text-center text-white relative leading-tight tracking-tight">
+                Concert<br />Energy
+              </p>
+            </div>
+            <div class="p-6">
+              <h2 class="text-xl font-semibold">Vibrant maximalist</h2>
+              <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                Gig-poster / Spotify / club-night feel. Dark base with neon,
+                cyan, hot-pink accents, animated mesh gradients, marquee
+                tickers, sticker UI. Loud, young, music-forward.
+              </p>
+              <p class="mt-4 mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+                Bricolage · Instrument Serif · DM Mono
+              </p>
+            </div>
+          </a>
+        </li>
+      </ul>
+
+      <div class="mt-16 p-6 rounded-2xl border border-neutral-200 bg-white">
+        <h3 class="font-semibold">Notes for the brainstorm</h3>
+        <ul class="mt-4 space-y-2 text-sm text-neutral-600 list-disc pl-5">
+          <li>All three use the same content (same films, same news, same dates) so you can compare design only.</li>
+          <li>All three are responsive — try resizing the window.</li>
+          <li>Hero photos pull from your existing <code class="mono text-xs bg-neutral-100 px-1">/media/2018/06/</code> folder.</li>
+          <li>You can mix-and-match — e.g. typography from 02 with the dark base of 01, or the marquee from 03 inside 01.</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

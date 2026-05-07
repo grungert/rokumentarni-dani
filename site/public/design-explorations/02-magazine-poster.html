@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction 2 · Magazine Poster — Rokumentarni dani</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              paper: "#f4f1ea",
+              ink: "#111111",
+              ash: "#5a5a5a",
+              brick: "#d63a1f",
+              moss: "#404a32",
+            },
+            fontFamily: {
+              display: ["Fraunces", "serif"],
+              sans: ['"Space Grotesk"', "sans-serif"],
+              mono: ['"Space Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        background: #f4f1ea;
+        color: #111111;
+        font-family: "Space Grotesk", sans-serif;
+      }
+      /* subtle paper grain */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 100;
+        opacity: 0.06;
+        mix-blend-mode: multiply;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      }
+      .display-tight {
+        font-feature-settings: "ss01", "ss02";
+        font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+        letter-spacing: -0.04em;
+      }
+      .label {
+        font-family: "Space Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+      .stamp {
+        transform: rotate(-4deg);
+        border: 2px solid currentColor;
+        padding: 0.4rem 0.8rem;
+        display: inline-block;
+        font-family: "Space Mono", monospace;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+      .img-duotone {
+        filter: grayscale(1) contrast(1.1);
+      }
+      .marquee {
+        animation: marquee 50s linear infinite;
+      }
+      @keyframes marquee {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+      .arrow-link::after {
+        content: "↗";
+        display: inline-block;
+        margin-left: 0.4rem;
+        transition: transform 0.3s;
+      }
+      .arrow-link:hover::after {
+        transform: translate(2px, -2px);
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- TOP STRIP -->
+    <div class="border-b border-ink">
+      <div
+        class="mx-auto max-w-[1400px] px-6 lg:px-10 py-3 flex items-center justify-between label"
+      >
+        <span>Issue X · Volume MMXXVI</span>
+        <span class="hidden md:inline">Niksić · Podgorica · Kotor</span>
+        <span>12 — 16. Decembar 2026</span>
+      </div>
+    </div>
+
+    <!-- NAV -->
+    <header class="border-b-2 border-ink">
+      <div
+        class="mx-auto max-w-[1400px] px-6 lg:px-10 h-20 flex items-center justify-between"
+      >
+        <a href="#" class="flex items-baseline gap-3">
+          <span class="font-display display-tight text-3xl font-semibold">RD/26</span>
+        </a>
+        <nav class="hidden lg:flex gap-8 label">
+          <a href="#" class="hover:text-brick">Program</a>
+          <a href="#" class="hover:text-brick">Filmovi</a>
+          <a href="#" class="hover:text-brick">O&nbsp;festivalu</a>
+          <a href="#" class="hover:text-brick">Galerija</a>
+          <a href="#" class="hover:text-brick">Novosti</a>
+          <a href="#" class="hover:text-brick">Kontakt</a>
+        </nav>
+        <a
+          href="#"
+          class="inline-flex items-center gap-2 bg-ink text-paper px-5 py-2.5 label hover:bg-brick transition"
+        >
+          Karte / Tickets
+        </a>
+      </div>
+    </header>
+
+    <!-- HERO POSTER -->
+    <section class="border-b-2 border-ink overflow-hidden">
+      <div class="mx-auto max-w-[1400px] px-6 lg:px-10 py-10 lg:py-16">
+        <div class="grid grid-cols-12 gap-x-6">
+          <!-- left meta -->
+          <aside class="col-span-12 lg:col-span-2 space-y-8 mb-8 lg:mb-0">
+            <div>
+              <p class="label text-ash mb-2">Editor</p>
+              <p class="font-display text-lg leading-tight">Bojan Atman</p>
+            </div>
+            <div>
+              <p class="label text-ash mb-2">Selekcija</p>
+              <p class="font-display text-lg leading-tight">12 filmova</p>
+              <p class="font-display text-lg leading-tight">10 koncerata</p>
+            </div>
+            <div>
+              <p class="label text-ash mb-2">Trajanje</p>
+              <p class="font-display text-lg leading-tight">5 dana</p>
+            </div>
+            <span class="stamp text-brick">X · Jubilej</span>
+          </aside>
+
+          <!-- big title -->
+          <div class="col-span-12 lg:col-span-10">
+            <h1
+              class="display-tight font-display text-[clamp(4rem,15vw,14rem)] leading-[0.82] font-medium"
+            >
+              Roku<span class="text-brick">·</span>men<br />
+              tarni <em class="font-light">dani</em>
+            </h1>
+
+            <div class="mt-10 grid md:grid-cols-3 gap-8 max-w-4xl">
+              <div class="md:col-span-2">
+                <p class="font-display text-2xl md:text-3xl leading-snug max-w-2xl">
+                  Festival dokumentarnog filma o muzici. Dvanaest priča o
+                  zvuku, slobodi i pobuni — od Kralja romske muzike do antiratnih
+                  open-air koncerata.
+                </p>
+              </div>
+              <div class="space-y-1">
+                <p class="label text-ash">Pročitajte</p>
+                <a href="#" class="block font-display text-lg leading-snug hover:text-brick arrow-link"
+                  >Manifest izdanja X</a
+                >
+                <a href="#" class="block font-display text-lg leading-snug hover:text-brick arrow-link"
+                  >Razgovor sa direktorom</a
+                >
+                <a href="#" class="block font-display text-lg leading-snug hover:text-brick arrow-link"
+                  >Šta donosi 2026.</a
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BIG FEATURE IMAGE -->
+    <section class="border-b-2 border-ink">
+      <div class="mx-auto max-w-[1400px] px-6 lg:px-10 py-10 lg:py-16 grid grid-cols-12 gap-6">
+        <div class="col-span-12 lg:col-span-8">
+          <div class="aspect-[16/10] bg-ink overflow-hidden">
+            <img
+              src="/media/2018/06/0001-1024x683.jpg"
+              alt=""
+              class="w-full h-full object-cover img-duotone"
+              onerror="this.style.background='#111';this.removeAttribute('src');"
+            />
+          </div>
+          <div class="mt-4 flex items-baseline justify-between">
+            <p class="label text-ash">Slika 01 / Festival 2018</p>
+            <p class="label">Foto · Arhiv</p>
+          </div>
+        </div>
+        <aside class="col-span-12 lg:col-span-4 lg:pt-8">
+          <p class="label text-brick mb-4">Cover Story</p>
+          <h2 class="font-display display-tight text-5xl lg:text-6xl leading-[0.92] font-medium">
+            Deset godina muzike na filmu.
+          </h2>
+          <p class="mt-6 text-lg leading-relaxed text-ash">
+            Od jedne projekcije u Niksiću do regionalnog festivala koji okuplja
+            autore, muzičare i publiku iz cijelog Balkana — kratka istorija
+            Rokumentarnih dana.
+          </p>
+          <a href="#" class="inline-block mt-6 label arrow-link border-b-2 border-ink pb-1"
+            >Pročitaj priču</a
+          >
+        </aside>
+      </div>
+    </section>
+
+    <!-- PROGRAM TABLE -->
+    <section class="border-b-2 border-ink">
+      <div class="mx-auto max-w-[1400px] px-6 lg:px-10 py-16 lg:py-24">
+        <div class="flex items-end justify-between mb-12">
+          <div>
+            <p class="label text-brick mb-3">Selekcija · 12 filmova</p>
+            <h2 class="font-display display-tight text-6xl lg:text-8xl font-medium leading-[0.85]">
+              Program <em class="font-light">2026.</em>
+            </h2>
+          </div>
+          <a href="#" class="hidden md:inline-flex label arrow-link border-b-2 border-ink pb-1">
+            Cijeli program
+          </a>
+        </div>
+
+        <div class="border-t-2 border-ink">
+          <!-- row -->
+          <article
+            class="grid grid-cols-12 gap-6 py-8 border-b border-ink/20 hover:bg-ink hover:text-paper transition group"
+          >
+            <span class="col-span-1 label pt-2">01</span>
+            <div class="col-span-12 md:col-span-6">
+              <h3 class="font-display display-tight text-3xl md:text-5xl font-medium leading-[0.95]">
+                In the Court of the Crimson King
+              </h3>
+              <p class="mt-2 label text-ash group-hover:text-paper/60">
+                Toby Amies · 2022 · 86'
+              </p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Datum</p>
+              <p>12 Dec · 20:00</p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Mjesto</p>
+              <p>Niksić · CzK</p>
+            </div>
+            <div class="col-span-12 md:col-span-1 flex md:justify-end items-start pt-2">
+              <span class="stamp text-brick group-hover:text-paper">Premjera</span>
+            </div>
+          </article>
+
+          <article
+            class="grid grid-cols-12 gap-6 py-8 border-b border-ink/20 hover:bg-ink hover:text-paper transition group"
+          >
+            <span class="col-span-1 label pt-2">02</span>
+            <div class="col-span-12 md:col-span-6">
+              <h3 class="font-display display-tight text-3xl md:text-5xl font-medium leading-[0.95]">
+                Searching for Sugar Man
+              </h3>
+              <p class="mt-2 label text-ash group-hover:text-paper/60">
+                Malik Bendjelloul · 2012 · 86'
+              </p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Datum</p>
+              <p>13 Dec · 19:00</p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Mjesto</p>
+              <p>Podgorica · 201 ES</p>
+            </div>
+            <div class="col-span-12 md:col-span-1"></div>
+          </article>
+
+          <article
+            class="grid grid-cols-12 gap-6 py-8 border-b border-ink/20 hover:bg-ink hover:text-paper transition group"
+          >
+            <span class="col-span-1 label pt-2">03</span>
+            <div class="col-span-12 md:col-span-6">
+              <h3 class="font-display display-tight text-3xl md:text-5xl font-medium leading-[0.95]">
+                Anvil! The Story of Anvil
+              </h3>
+              <p class="mt-2 label text-ash group-hover:text-paper/60">
+                Sacha Gervasi · 2008 · 80'
+              </p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Datum</p>
+              <p>14 Dec · 21:30</p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Mjesto</p>
+              <p>Kotor · TBC</p>
+            </div>
+            <div class="col-span-12 md:col-span-1 flex md:justify-end items-start pt-2">
+              <span class="stamp text-moss group-hover:text-paper">Razgovor</span>
+            </div>
+          </article>
+
+          <article
+            class="grid grid-cols-12 gap-6 py-8 border-b border-ink/20 hover:bg-ink hover:text-paper transition group"
+          >
+            <span class="col-span-1 label pt-2">04</span>
+            <div class="col-span-12 md:col-span-6">
+              <h3 class="font-display display-tight text-3xl md:text-5xl font-medium leading-[0.95]">
+                20 Feet from Stardom
+              </h3>
+              <p class="mt-2 label text-ash group-hover:text-paper/60">
+                Morgan Neville · 2013 · 91'
+              </p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Datum</p>
+              <p>15 Dec · 20:00</p>
+            </div>
+            <div class="col-span-6 md:col-span-2 label pt-2">
+              <p class="text-ash group-hover:text-paper/60 mb-1">Mjesto</p>
+              <p>Niksić · CzK</p>
+            </div>
+            <div class="col-span-12 md:col-span-1"></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- MARQUEE -->
+    <div class="bg-ink text-paper py-4 overflow-hidden border-b-2 border-ink">
+      <div class="marquee whitespace-nowrap font-display text-3xl md:text-4xl">
+        <span class="mx-6">★ Karte u prodaji</span>
+        <span class="mx-6 text-brick">·</span>
+        <span class="mx-6">★ Najavljeni izvođači</span>
+        <span class="mx-6 text-brick">·</span>
+        <span class="mx-6">★ Otvoren konkurs za radionicu</span>
+        <span class="mx-6 text-brick">·</span>
+        <span class="mx-6">★ Ulaz besplatan na sve programe</span>
+        <span class="mx-6 text-brick">·</span>
+        <span class="mx-6">★ Karte u prodaji</span>
+        <span class="mx-6 text-brick">·</span>
+        <span class="mx-6">★ Najavljeni izvođači</span>
+        <span class="mx-6 text-brick">·</span>
+        <span class="mx-6">★ Otvoren konkurs za radionicu</span>
+        <span class="mx-6 text-brick">·</span>
+      </div>
+    </div>
+
+    <!-- ABOUT TWO COLUMN -->
+    <section class="border-b-2 border-ink">
+      <div class="mx-auto max-w-[1400px] px-6 lg:px-10 py-16 lg:py-24 grid grid-cols-12 gap-6">
+        <div class="col-span-12 md:col-span-7">
+          <p class="label text-brick mb-4">O festivalu</p>
+          <h2 class="font-display display-tight text-5xl md:text-7xl font-medium leading-[0.9]">
+            Slušaš očima.<br />Gledaš ušima.
+          </h2>
+          <div class="mt-10 columns-1 md:columns-2 gap-10 text-lg leading-relaxed">
+            <p class="mb-6">
+              Rokumentarni dani su nikšićki festival posvećen dokumentarnom filmu
+              o muzici. Već deset godina spajamo film i koncert, autora i publiku,
+              razgovor i ples.
+            </p>
+            <p>
+              Ulaz na sve programe je besplatan. Festival se odvija u Niksiću,
+              Podgorici i Kotoru. Organizator: Centar za kulturu Niksić, uz
+              podršku partnera iz regiona.
+            </p>
+          </div>
+        </div>
+        <aside class="col-span-12 md:col-span-4 md:col-start-9">
+          <div class="border-2 border-ink p-6 bg-ink text-paper">
+            <p class="label text-brick mb-2">Tema 2026.</p>
+            <p class="font-display display-tight text-4xl font-medium leading-[0.95]">
+              Osvajanje slobode
+            </p>
+            <p class="mt-4 text-sm text-paper/70 leading-relaxed">
+              Antiratne poruke, položaj manjina, ženski glasovi u modernoj
+              muzici. Tri tematske cjeline koje povezuju cijeli program.
+            </p>
+            <a href="#" class="inline-block mt-6 label arrow-link">Saznaj više</a>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="border-b-2 border-ink">
+      <div class="mx-auto max-w-[1400px] px-6 lg:px-10 py-16">
+        <div class="flex items-end justify-between mb-10">
+          <h2 class="font-display display-tight text-5xl md:text-6xl font-medium">
+            Novosti
+          </h2>
+          <a href="#" class="label arrow-link border-b-2 border-ink pb-1">
+            Sve vijesti
+          </a>
+        </div>
+        <ul class="grid md:grid-cols-3 gap-x-10 gap-y-6 border-t border-ink">
+          <li class="border-b md:border-b-0 md:border-r border-ink py-6 md:pr-8">
+            <p class="label text-ash mb-2">02 Maj 2026</p>
+            <h3 class="font-display display-tight text-2xl md:text-3xl font-medium leading-tight">
+              Objavljen muzički program nikšićkih Rokumentarnih dana
+            </h3>
+            <a href="#" class="inline-block mt-4 label arrow-link">Pročitaj</a>
+          </li>
+          <li class="border-b md:border-b-0 md:border-r border-ink py-6 md:px-8">
+            <p class="label text-ash mb-2">28 April 2026</p>
+            <h3 class="font-display display-tight text-2xl md:text-3xl font-medium leading-tight">
+              Otvorene prijave za radionicu kritike muzičkog filma
+            </h3>
+            <a href="#" class="inline-block mt-4 label arrow-link">Pročitaj</a>
+          </li>
+          <li class="py-6 md:pl-8">
+            <p class="label text-ash mb-2">14 April 2026</p>
+            <h3 class="font-display display-tight text-2xl md:text-3xl font-medium leading-tight">
+              Specijalni gost X izdanja festivala
+            </h3>
+            <a href="#" class="inline-block mt-4 label arrow-link">Pročitaj</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="mx-auto max-w-[1400px] px-6 lg:px-10 py-16">
+        <div class="grid grid-cols-12 gap-10">
+          <div class="col-span-12 md:col-span-6">
+            <p class="display-tight font-display text-7xl md:text-9xl font-medium leading-[0.85]">
+              RD<span class="text-brick">/</span>26
+            </p>
+          </div>
+          <div class="col-span-6 md:col-span-2">
+            <p class="label text-brick mb-3">Festival</p>
+            <ul class="space-y-2 text-sm">
+              <li><a href="#" class="hover:text-brick">Program</a></li>
+              <li><a href="#" class="hover:text-brick">Filmovi</a></li>
+              <li><a href="#" class="hover:text-brick">Galerija</a></li>
+              <li><a href="#" class="hover:text-brick">Arhiva</a></li>
+            </ul>
+          </div>
+          <div class="col-span-6 md:col-span-2">
+            <p class="label text-brick mb-3">Pratite</p>
+            <ul class="space-y-2 text-sm">
+              <li><a href="#" class="hover:text-brick">Instagram</a></li>
+              <li><a href="#" class="hover:text-brick">Facebook</a></li>
+              <li><a href="#" class="hover:text-brick">YouTube</a></li>
+            </ul>
+          </div>
+          <div class="col-span-12 md:col-span-2">
+            <p class="label text-brick mb-3">Kontakt</p>
+            <ul class="space-y-2 text-sm">
+              <li>bucanpas@gmail.com</li>
+              <li>+382 67 573 57</li>
+            </ul>
+          </div>
+        </div>
+        <div
+          class="mt-12 pt-6 border-t-2 border-ink flex flex-col md:flex-row justify-between gap-3 label"
+        >
+          <p>© MMXXVI · Rokumentarni dani</p>
+          <p>Direction 02 · Magazine Poster</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

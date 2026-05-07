@@ -1,37 +1,43 @@
 ---
 const nav = [
-  { href: "/", label: "Početna" },
-  { href: "/o-festivalu/", label: "O festivalu" },
   { href: "/program/", label: "Program" },
   { href: "/filmovi/", label: "Filmovi" },
+  { href: "/o-festivalu/", label: "O festivalu" },
   { href: "/galerija/", label: "Galerija" },
-  { href: "/novosti/", label: "Novosti" },
+  { href: "/blog/", label: "Novosti" },
   { href: "/kontakt/", label: "Kontakt" },
 ];
 
 const currentPath = Astro.url.pathname;
+const editionYear = new Date().getFullYear();
 ---
 
-<header class="border-b border-neutral-200 bg-white">
-  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-    <a href="/" class="text-xl font-semibold tracking-tight text-neutral-900">
-      Rokumentarni dani
+<header
+  class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-ink/70 border-b border-bone/10"
+>
+  <div
+    class="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between"
+  >
+    <a href="/" class="flex items-baseline gap-2">
+      <span class="font-display text-2xl tracking-tight">Rokumentarni</span>
+      <span
+        class="font-mono text-[10px] uppercase tracking-[0.25em] text-amber"
+        >Dani · {editionYear}</span
+      >
     </a>
+
     <nav class="hidden md:block">
-      <ul class="flex gap-7 text-sm">
+      <ul class="flex gap-8 text-xs font-mono uppercase tracking-[0.25em]">
         {
           nav.map((item) => {
-            const active =
-              item.href === "/" ? currentPath === "/" : currentPath.startsWith(item.href);
+            const active = currentPath.startsWith(item.href);
             return (
               <li>
                 <a
                   href={item.href}
                   class:list={[
-                    "transition-colors",
-                    active
-                      ? "text-neutral-900 font-medium"
-                      : "text-neutral-500 hover:text-neutral-900",
+                    "underline-amber",
+                    active ? "text-amber" : "text-bone/70 hover:text-bone",
                   ]}
                 >
                   {item.label}
@@ -42,5 +48,13 @@ const currentPath = Astro.url.pathname;
         }
       </ul>
     </nav>
+
+    <a
+      href="/program/"
+      class="hidden md:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-ink bg-amber px-4 py-2 hover:bg-bone transition"
+    >
+      Karte
+      <span aria-hidden="true">→</span>
+    </a>
   </div>
 </header>

@@ -2,30 +2,39 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
-const posts = (await getCollection("posts", ({ data }) => data.status === "publish")).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
-);
+const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 ---
 
 <BaseLayout title="Novosti" description="Najnovije vijesti i objave festivala">
-  <section class="mx-auto max-w-3xl px-6 py-16 md:py-24">
-    <h1 class="text-4xl font-semibold tracking-tight md:text-5xl">Novosti</h1>
-    <ul class="mt-12 divide-y divide-neutral-200">
+  <section class="mx-auto max-w-3xl px-6 py-32 md:py-40">
+    <p class="font-mono text-xs uppercase tracking-[0.3em] text-amber mb-6">
+      Novosti
+    </p>
+    <h1
+      class="font-display font-light text-5xl md:text-7xl leading-[0.9] tracking-tight"
+    >
+      Šta se dešava na<br /><em class="text-amber">festivalu</em>
+    </h1>
+
+    <ul class="mt-20 divide-y divide-bone/10 border-y border-bone/10">
       {posts.map((post) => (
-        <li class="py-8">
-          <a href={`/blog/${post.data.slug ?? post.id}/`} class="group block">
-            <p class="text-xs uppercase tracking-widest text-neutral-500">
+        <li class="group py-10">
+          <a href={`/blog/${post.data.slug ?? post.id}/`} class="block">
+            <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-amber mb-3">
               {post.data.date.toLocaleDateString("sr-Latn-ME", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
               })}
             </p>
-            <h2 class="mt-2 text-2xl font-medium text-neutral-900 group-hover:underline">
+            <h2 class="font-display text-3xl md:text-4xl leading-snug group-hover:text-amber transition">
               {post.data.title}
             </h2>
             {post.data.excerpt && (
-              <p class="mt-2 text-neutral-600">{post.data.excerpt}</p>
+              <p class="mt-4 text-base text-bone/70 leading-relaxed">
+                {post.data.excerpt}
+              </p>
             )}
           </a>
         </li>
