@@ -1,0 +1,74 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 3);
+---
+
+<BaseLayout title="Rokumentarni dani" description="Festival dokumentarnog filma o muzici">
+  <section class="border-b border-neutral-200 bg-neutral-50">
+    <div class="mx-auto max-w-6xl px-6 py-24 md:py-32">
+      <p class="text-sm font-medium uppercase tracking-widest text-neutral-500">
+        Festival dokumentarnog filma o muzici
+      </p>
+      <h1 class="mt-6 text-5xl font-semibold tracking-tight text-neutral-900 md:text-7xl">
+        Rokumentarni dani
+      </h1>
+      <p class="mt-8 max-w-2xl text-lg text-neutral-600">
+        Filmovi, muzika i razgovori. Sljedeće izdanje uskoro.
+      </p>
+      <div class="mt-10 flex flex-wrap gap-4">
+        <a
+          href="/program/"
+          class="inline-flex items-center rounded-full bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-700"
+        >
+          Pogledaj program
+        </a>
+        <a
+          href="/o-festivalu/"
+          class="inline-flex items-center rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-900 transition hover:border-neutral-900"
+        >
+          O festivalu
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {
+    posts.length > 0 && (
+      <section class="mx-auto max-w-6xl px-6 py-20">
+        <div class="flex items-end justify-between">
+          <h2 class="text-2xl font-semibold tracking-tight">Najnovije vijesti</h2>
+          <a href="/novosti/" class="text-sm text-neutral-500 hover:text-neutral-900">
+            Sve vijesti →
+          </a>
+        </div>
+        <ul class="mt-10 grid gap-8 md:grid-cols-3">
+          {posts.map((post) => (
+            <li>
+              <a href={`/blog/${post.data.slug ?? post.id}/`} class="group block">
+                <p class="text-xs uppercase tracking-widest text-neutral-500">
+                  {post.data.date.toLocaleDateString("sr-Latn-ME", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+                <h3 class="mt-2 text-lg font-medium text-neutral-900 group-hover:underline">
+                  {post.data.title}
+                </h3>
+                {post.data.excerpt && (
+                  <p class="mt-2 line-clamp-3 text-sm text-neutral-600">
+                    {post.data.excerpt}
+                  </p>
+                )}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</BaseLayout>

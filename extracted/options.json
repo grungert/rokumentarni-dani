@@ -1,0 +1,21 @@
+{
+  "admin_email": "bojan.atman@gmail.com",
+  "blogdescription": "",
+  "blogname": "Rokumentarni dani",
+  "category_base": "",
+  "date_format": "F j, Y",
+  "default_category": "1",
+  "home": "http://rokumentarnidani.me/",
+  "page_for_posts": "0",
+  "page_on_front": "248",
+  "permalink_structure": "/%year%/%monthnum%/%day%/%postname%/",
+  "show_on_front": "page",
+  "siteurl": "http://rokumentarnidani.me/",
+  "start_of_week": "1",
+  "stylesheet": "bridge",
+  "tag_base": "",
+  "template": "bridge",
+  "time_format": "H:i",
+  "timezone_string": "",
+  "WPLANG": ""
+}

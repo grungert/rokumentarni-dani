@@ -1,0 +1,46 @@
+---
+const nav = [
+  { href: "/", label: "Početna" },
+  { href: "/o-festivalu/", label: "O festivalu" },
+  { href: "/program/", label: "Program" },
+  { href: "/filmovi/", label: "Filmovi" },
+  { href: "/galerija/", label: "Galerija" },
+  { href: "/novosti/", label: "Novosti" },
+  { href: "/kontakt/", label: "Kontakt" },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="border-b border-neutral-200 bg-white">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+    <a href="/" class="text-xl font-semibold tracking-tight text-neutral-900">
+      Rokumentarni dani
+    </a>
+    <nav class="hidden md:block">
+      <ul class="flex gap-7 text-sm">
+        {
+          nav.map((item) => {
+            const active =
+              item.href === "/" ? currentPath === "/" : currentPath.startsWith(item.href);
+            return (
+              <li>
+                <a
+                  href={item.href}
+                  class:list={[
+                    "transition-colors",
+                    active
+                      ? "text-neutral-900 font-medium"
+                      : "text-neutral-500 hover:text-neutral-900",
+                  ]}
+                >
+                  {item.label}
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </nav>
+  </div>
+</header>

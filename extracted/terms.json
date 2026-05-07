@@ -1,0 +1,218 @@
+[
+  {
+    "term_id": 2,
+    "name": "Art",
+    "slug": "art",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 3,
+    "name": "Business",
+    "slug": "business",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 4,
+    "name": "Design",
+    "slug": "design",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 5,
+    "name": "Music",
+    "slug": "music",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 6,
+    "name": "Photography",
+    "slug": "photography",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 7,
+    "name": "Sport",
+    "slug": "sport",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 1,
+    "name": "Uncategorized",
+    "slug": "uncategorized",
+    "taxonomy": "category",
+    "description": "",
+    "parent": 0,
+    "count": 2
+  },
+  {
+    "term_id": 20,
+    "name": "Blog Post",
+    "slug": "blog-post",
+    "taxonomy": "exactmetrics_note_category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 21,
+    "name": "Promotion",
+    "slug": "promotion",
+    "taxonomy": "exactmetrics_note_category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 19,
+    "name": "Website Updates",
+    "slug": "website-updates",
+    "taxonomy": "exactmetrics_note_category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 23,
+    "name": "Blog Post",
+    "slug": "blog-post",
+    "taxonomy": "monsterinsights_note_category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 24,
+    "name": "Promotion",
+    "slug": "promotion",
+    "taxonomy": "monsterinsights_note_category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 22,
+    "name": "Website Updates",
+    "slug": "website-updates",
+    "taxonomy": "monsterinsights_note_category",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 13,
+    "name": "main menu",
+    "slug": "main-menu",
+    "taxonomy": "nav_menu",
+    "description": "",
+    "parent": 0,
+    "count": 6
+  },
+  {
+    "term_id": 17,
+    "name": "meni-backup",
+    "slug": "meni-backup",
+    "taxonomy": "nav_menu",
+    "description": "",
+    "parent": 0,
+    "count": 31
+  },
+  {
+    "term_id": 14,
+    "name": "Audio",
+    "slug": "post-format-audio",
+    "taxonomy": "post_format",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 15,
+    "name": "Gallery",
+    "slug": "post-format-gallery",
+    "taxonomy": "post_format",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 16,
+    "name": "Video",
+    "slug": "post-format-video",
+    "taxonomy": "post_format",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 8,
+    "name": "Analysis",
+    "slug": "analysis",
+    "taxonomy": "post_tag",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 9,
+    "name": "Articles",
+    "slug": "articles",
+    "taxonomy": "post_tag",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 10,
+    "name": "Business",
+    "slug": "business",
+    "taxonomy": "post_tag",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 11,
+    "name": "Opportunities",
+    "slug": "opportunities",
+    "taxonomy": "post_tag",
+    "description": "",
+    "parent": 0,
+    "count": 0
+  },
+  {
+    "term_id": 18,
+    "name": "2020",
+    "slug": "2020",
+    "taxonomy": "slides_category",
+    "description": "",
+    "parent": 0,
+    "count": 1
+  },
+  {
+    "term_id": 12,
+    "name": "main slider",
+    "slug": "main-slider",
+    "taxonomy": "slides_category",
+    "description": "",
+    "parent": 0,
+    "count": 1
+  }
+]
