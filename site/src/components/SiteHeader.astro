@@ -1,4 +1,6 @@
 ---
+import Logo from "./Logo.astro";
+
 const nav = [
   { href: "/program/", label: "Program" },
   { href: "/filmovi/", label: "Filmovi" },
@@ -18,12 +20,12 @@ const editionYear = new Date().getFullYear();
   <div
     class="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between"
   >
-    <a href="/" class="flex items-baseline gap-2">
-      <span class="font-display text-2xl tracking-tight">Rokumentarni</span>
-      <span
-        class="font-mono text-[10px] uppercase tracking-[0.25em] text-amber"
-        >Dani · {editionYear}</span
-      >
+    <a href="/" class="flex items-center gap-3">
+      <Logo variant="mark" class="h-7" twinkle />
+      <span class="font-display text-2xl tracking-tight leading-none">Rokumentarni</span>
+      <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-accent">
+        Dani · {editionYear}
+      </span>
     </a>
 
     <nav class="hidden md:block">
@@ -36,8 +38,8 @@ const editionYear = new Date().getFullYear();
                 <a
                   href={item.href}
                   class:list={[
-                    "underline-amber",
-                    active ? "text-amber" : "text-bone/70 hover:text-bone",
+                    "underline-accent",
+                    active ? "text-accent" : "text-bone/70 hover:text-bone",
                   ]}
                 >
                   {item.label}
@@ -51,7 +53,7 @@ const editionYear = new Date().getFullYear();
 
     <a
       href="/program/"
-      class="hidden md:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-ink bg-amber px-4 py-2 hover:bg-bone transition"
+      class="hidden md:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-ink bg-accent px-4 py-2 hover:bg-bone transition"
     >
       Karte
       <span aria-hidden="true">→</span>

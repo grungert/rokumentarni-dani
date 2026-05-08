@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logo + accent color preview — Rokumentarni dani</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#0a0a0a",
+              ash: "#1a1a1a",
+              fog: "#2a2a2a",
+              bone: "#f5f1e8",
+              amber: "#d4a574",
+              cyan: "#39c7e2",
+              cyanInk: "#0c2a31",
+            },
+            fontFamily: {
+              display: ['"Cormorant Garamond"', "serif"],
+              sans: ["Inter", "sans-serif"],
+              mono: ['"JetBrains Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background: #0a0a0a;
+        color: #f5f1e8;
+        font-family: "Inter", sans-serif;
+      }
+      .grain::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 100;
+        opacity: 0.18;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      }
+      .swatch {
+        height: 80px;
+        border-radius: 6px;
+      }
+      .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+      /* Logo helpers */
+      .logo {
+        display: inline-block;
+        line-height: 0;
+      }
+      .logo svg {
+        display: block;
+        height: 100%;
+        width: auto;
+      }
+      .logo-inline {
+        display: inline-flex;
+        align-items: center;
+        height: 100%;
+      }
+
+      /* --- Variant A: amber --- */
+      .v-amber {
+        --accent: #d4a574;
+        --logo-fill: #d4a574;
+        --logo-bg: #f5f1e8;
+      }
+      /* --- Variant B: cyan (brand) --- */
+      .v-cyan {
+        --accent: #39c7e2;
+        --logo-fill: #39c7e2;
+        --logo-bg: #f5f1e8;
+      }
+      /* --- Variant C: hybrid (cyan logo, amber UI) --- */
+      .v-hybrid {
+        --accent: #d4a574;
+        --logo-fill: #39c7e2;
+        --logo-bg: #f5f1e8;
+      }
+      /* --- Variant D: cyan mark only (no white grid cells) --- */
+      .v-mark-only {
+        --accent: #39c7e2;
+        --logo-fill: #39c7e2;
+        /* logo-mark-only.svg drops the bg cells entirely */
+      }
+
+      .accent {
+        color: var(--accent);
+      }
+      .accent-bg {
+        background: var(--accent);
+        color: #0a0a0a;
+      }
+      .accent-border {
+        border-color: var(--accent);
+      }
+    </style>
+  </head>
+
+  <body class="grain">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="label text-bone/50">Internal · Logo + color exploration</p>
+      <h1 class="mt-3 font-display text-5xl md:text-6xl tracking-tight">
+        The Rokumentarni mark, recoloured.
+      </h1>
+      <p class="mt-4 text-lg text-bone/70 max-w-2xl">
+        The 2018 pixel-art rock-hand logo, traced from PNG to clean SVG (270 cells)
+        and recoloured via CSS. Pick the variant that feels right.
+      </p>
+
+      <!-- Logo at sizes -->
+      <section class="mt-16 space-y-4">
+        <p class="label text-bone/50 mb-2">Mark · sizes (cyan + bone)</p>
+        <div class="border border-bone/10 rounded-xl p-10 flex items-end gap-12 bg-ash" style="--logo-fill:#39c7e2;--logo-bg:#f5f1e8">
+          <div class="logo h-8"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+          <div class="logo h-16"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+          <div class="logo h-32"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+          <div class="logo h-48"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+        </div>
+
+        <p class="label text-bone/50 mb-2 mt-6">Mark · cyan only (no grid cells)</p>
+        <div class="border border-bone/10 rounded-xl p-10 flex items-end gap-12 bg-ash" style="--logo-fill:#39c7e2">
+          <div class="logo h-8"><span class="logo-inline" data-src="/brand/logo-mark-only.svg"></span></div>
+          <div class="logo h-16"><span class="logo-inline" data-src="/brand/logo-mark-only.svg"></span></div>
+          <div class="logo h-32"><span class="logo-inline" data-src="/brand/logo-mark-only.svg"></span></div>
+          <div class="logo h-48"><span class="logo-inline" data-src="/brand/logo-mark-only.svg"></span></div>
+        </div>
+        <p class="label text-bone/40 mt-3">SVG, 198 cells (116 fill + 82 bg) · recolour via <code class="text-amber">--logo-fill</code> &amp; <code class="text-amber">--logo-bg</code></p>
+      </section>
+
+      <!-- Variants -->
+      <section class="mt-20 space-y-12">
+        <p class="label text-bone/50">Accent variants</p>
+
+        <!-- A: Amber -->
+        <article class="v-amber border border-bone/10 rounded-xl overflow-hidden">
+          <div class="bg-ash p-8 grid md:grid-cols-12 gap-8 items-center">
+            <div class="md:col-span-3 flex items-center gap-3">
+              <span class="font-mono text-xs accent">A.</span>
+              <div>
+                <p class="font-display text-3xl">Amber</p>
+                <p class="label text-bone/50 mt-1">Editorial · warm</p>
+              </div>
+            </div>
+            <div class="md:col-span-3 logo h-20"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+            <div class="md:col-span-6">
+              <header class="flex items-center justify-between border border-bone/10 rounded p-3 bg-ink">
+                <div class="flex items-baseline gap-2">
+                  <div class="logo h-5"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+                  <span class="font-display text-lg">Rokumentarni</span>
+                  <span class="label accent">Dani · 2026</span>
+                </div>
+                <a href="#" class="accent-bg label px-3 py-1.5">Karte →</a>
+              </header>
+              <div class="mt-4 flex gap-2 flex-wrap">
+                <div class="swatch flex-1 min-w-[120px] accent-bg"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#f5f1e8;color:#0a0a0a"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#1a1a1a;border:1px solid #ffffff20"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#0a0a0a;border:1px solid #ffffff20"></div>
+              </div>
+            </div>
+          </div>
+          <div class="px-8 py-4 text-sm text-bone/70 border-t border-bone/10 bg-ink">
+            Premium, editorial, slow. Reads more "film festival catalog" than music.
+            Loses the established cyan brand recognition.
+          </div>
+        </article>
+
+        <!-- B: Cyan -->
+        <article class="v-cyan border border-bone/10 rounded-xl overflow-hidden">
+          <div class="bg-ash p-8 grid md:grid-cols-12 gap-8 items-center">
+            <div class="md:col-span-3 flex items-center gap-3">
+              <span class="font-mono text-xs accent">B.</span>
+              <div>
+                <p class="font-display text-3xl">Cyan</p>
+                <p class="label text-bone/50 mt-1">Brand · electric</p>
+              </div>
+            </div>
+            <div class="md:col-span-3 logo h-20"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+            <div class="md:col-span-6">
+              <header class="flex items-center justify-between border border-bone/10 rounded p-3 bg-ink">
+                <div class="flex items-baseline gap-2">
+                  <div class="logo h-5"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+                  <span class="font-display text-lg">Rokumentarni</span>
+                  <span class="label accent">Dani · 2026</span>
+                </div>
+                <a href="#" class="accent-bg label px-3 py-1.5">Karte →</a>
+              </header>
+              <div class="mt-4 flex gap-2 flex-wrap">
+                <div class="swatch flex-1 min-w-[120px] accent-bg"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#f5f1e8;color:#0a0a0a"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#1a1a1a;border:1px solid #ffffff20"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#0a0a0a;border:1px solid #ffffff20"></div>
+              </div>
+            </div>
+          </div>
+          <div class="px-8 py-4 text-sm text-bone/70 border-t border-bone/10 bg-ink">
+            Honors the existing cyan brand. Cyan + deep black + cream feels like
+            vintage neon, music venue, retro arcade — fits a music doc festival
+            beautifully and the logo glows. <span class="accent">★ recommended.</span>
+          </div>
+        </article>
+
+        <!-- C: Hybrid -->
+        <article class="v-hybrid border border-bone/10 rounded-xl overflow-hidden">
+          <div class="bg-ash p-8 grid md:grid-cols-12 gap-8 items-center">
+            <div class="md:col-span-3 flex items-center gap-3">
+              <span class="font-mono text-xs accent">C.</span>
+              <div>
+                <p class="font-display text-3xl">Hybrid</p>
+                <p class="label text-bone/50 mt-1">Cyan logo · amber UI</p>
+              </div>
+            </div>
+            <div class="md:col-span-3 logo h-20"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+            <div class="md:col-span-6">
+              <header class="flex items-center justify-between border border-bone/10 rounded p-3 bg-ink">
+                <div class="flex items-baseline gap-2">
+                  <div class="logo h-5"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+                  <span class="font-display text-lg">Rokumentarni</span>
+                  <span class="label accent">Dani · 2026</span>
+                </div>
+                <a href="#" class="accent-bg label px-3 py-1.5">Karte →</a>
+              </header>
+              <div class="mt-4 flex gap-2 flex-wrap">
+                <div class="swatch flex-1 min-w-[120px]" style="background:#39c7e2"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#d4a574"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#f5f1e8"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#0a0a0a;border:1px solid #ffffff20"></div>
+              </div>
+            </div>
+          </div>
+          <div class="px-8 py-4 text-sm text-bone/70 border-t border-bone/10 bg-ink">
+            Two accents. Logo stays cyan (brand), UI accents stay amber (warm,
+            editorial). More work to maintain — every component has to decide
+            which accent it lives in.
+          </div>
+        </article>
+
+        <!-- D: Cyan mark only -->
+        <article class="v-mark-only border border-bone/10 rounded-xl overflow-hidden">
+          <div class="bg-ash p-8 grid md:grid-cols-12 gap-8 items-center">
+            <div class="md:col-span-3 flex items-center gap-3">
+              <span class="font-mono text-xs accent">D.</span>
+              <div>
+                <p class="font-display text-3xl">Mark only</p>
+                <p class="label text-bone/50 mt-1">Cyan · no grid</p>
+              </div>
+            </div>
+            <div class="md:col-span-3 logo h-20"><span class="logo-inline" data-src="/brand/logo-mark-only.svg"></span></div>
+            <div class="md:col-span-6">
+              <header class="flex items-center justify-between border border-bone/10 rounded p-3 bg-ink">
+                <div class="flex items-baseline gap-2">
+                  <div class="logo h-5"><span class="logo-inline" data-src="/brand/logo-mark-only.svg"></span></div>
+                  <span class="font-display text-lg">Rokumentarni</span>
+                  <span class="label accent">Dani · 2026</span>
+                </div>
+                <a href="#" class="accent-bg label px-3 py-1.5">Karte →</a>
+              </header>
+              <div class="mt-4 flex gap-2 flex-wrap">
+                <div class="swatch flex-1 min-w-[120px] accent-bg"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#f5f1e8;color:#0a0a0a"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#1a1a1a;border:1px solid #ffffff20"></div>
+                <div class="swatch flex-1 min-w-[120px]" style="background:#0a0a0a;border:1px solid #ffffff20"></div>
+              </div>
+            </div>
+          </div>
+          <div class="px-8 py-4 text-sm text-bone/70 border-t border-bone/10 bg-ink">
+            Same brand cyan but the off-white grid cells are dropped — letting
+            the dark background show through where the original logo had
+            empty squares. Stripped down, more "broadcast bug" feel.
+          </div>
+        </article>
+      </section>
+
+      <!-- Logo on hero context -->
+      <section class="mt-20">
+        <p class="label text-bone/50 mb-6">In situ · over photography</p>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="relative aspect-[4/3] overflow-hidden rounded-xl bg-fog">
+            <img src="/media/2023/11/lennon-1024x584.jpg" class="absolute inset-0 w-full h-full object-cover" style="filter:grayscale(0.6) contrast(1.05) brightness(0.7)"/>
+            <div class="absolute inset-0" style="background:linear-gradient(to top, #0a0a0a 0%, #0a0a0aaa 30%, transparent 70%)"></div>
+            <div class="absolute bottom-0 inset-x-0 p-8 flex items-end gap-6 v-cyan">
+              <div class="logo h-20"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+              <div>
+                <p class="font-display text-4xl leading-none">Rokumentarni dani</p>
+                <p class="label accent mt-2">Variant B · Cyan</p>
+              </div>
+            </div>
+          </div>
+          <div class="relative aspect-[4/3] overflow-hidden rounded-xl bg-fog">
+            <img src="/media/2023/11/lennon-1024x584.jpg" class="absolute inset-0 w-full h-full object-cover" style="filter:grayscale(0.6) contrast(1.05) brightness(0.7)"/>
+            <div class="absolute inset-0" style="background:linear-gradient(to top, #0a0a0a 0%, #0a0a0aaa 30%, transparent 70%)"></div>
+            <div class="absolute bottom-0 inset-x-0 p-8 flex items-end gap-6 v-amber">
+              <div class="logo h-20"><span class="logo-inline" data-src="/brand/logo.svg"></span></div>
+              <div>
+                <p class="font-display text-4xl leading-none">Rokumentarni dani</p>
+                <p class="label accent mt-2">Variant A · Amber</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="mt-16 text-sm text-bone/50">
+        Tell Claude which variant to ship. The two-color SVG ships at <code class="text-amber">/brand/logo.svg</code>; the silhouette at <code class="text-amber">/brand/logo-mono.svg</code>.
+      </p>
+    </div>
+
+    <script>
+      // Inject SVG inline so CSS custom props cascade into the <svg> tree.
+      (async () => {
+        const cache = new Map();
+        const targets = document.querySelectorAll(".logo-inline[data-src]");
+        for (const el of targets) {
+          const src = el.dataset.src;
+          let svg = cache.get(src);
+          if (!svg) {
+            svg = await fetch(src).then((r) => r.text());
+            cache.set(src, svg);
+          }
+          el.innerHTML = svg;
+          // Make sure the inlined <svg> fills its container.
+          const node = el.querySelector("svg");
+          if (node) {
+            node.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            node.style.height = "100%";
+            node.style.width = "auto";
+            node.style.display = "block";
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>

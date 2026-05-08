@@ -1,0 +1,84 @@
+---
+// Vite `?raw` imports inline the file contents as a string at build time,
+// so the SVG ships in the rendered HTML and the page's CSS variables
+// cascade into the paths.
+import logoFull from "../brand/logo.svg?raw";
+import logoMark from "../brand/logo-mark-only.svg?raw";
+
+interface Props {
+  /** "full" includes the off-white grid cells; "mark" is cyan only. */
+  variant?: "full" | "mark";
+  class?: string;
+  ariaLabel?: string;
+  /**
+   * When true, randomly fade individual cyan cells in/out for a subtle
+   * "alive" effect. Honors prefers-reduced-motion. Pauses when the logo
+   * is off-screen.
+   */
+  twinkle?: boolean;
+}
+
+const {
+  variant = "full",
+  class: className = "",
+  ariaLabel = "Rokumentarni dani",
+  twinkle = false,
+} = Astro.props;
+
+const svg = variant === "mark" ? logoMark : logoFull;
+---
+
+<span
+  class:list={["logo", className]}
+  data-twinkle={twinkle ? "" : null}
+  role="img"
+  aria-label={ariaLabel}
+  set:html={svg}
+/>
+
+<script>
+  // One module per page (Astro de-dupes script tags by source). Find
+  // every opted-in logo and animate independently.
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const logos = document.querySelectorAll<HTMLElement>(".logo[data-twinkle]");
+    logos.forEach((root) => {
+      const cells = Array.from(
+        root.querySelectorAll<SVGPathElement>('path[fill*="--logo-fill"]'),
+      );
+      if (!cells.length) return;
+
+      // Larger logos get more activity. Read the rendered height once;
+      // header (≈28 px) → 1 cell at a time, gentle. Interlude (≈260 px)
+      // → 2-3 cells, livelier.
+      const h = root.getBoundingClientRect().height;
+      const concurrent = h > 200 ? 3 : h > 80 ? 2 : 1;
+      const minDelay = h > 200 ? 200 : 400;
+      const maxDelay = h > 200 ? 900 : 1800;
+      const minOpacity = h > 200 ? 0.15 : 0.35;
+
+      let visible = true;
+      new IntersectionObserver(
+        (entries) => (visible = entries[0].isIntersecting),
+        { threshold: 0 },
+      ).observe(root);
+
+      function flicker() {
+        if (visible) {
+          for (let i = 0; i < concurrent; i++) {
+            const cell = cells[Math.floor(Math.random() * cells.length)];
+            cell.animate(
+              [
+                { opacity: "1" },
+                { opacity: String(minOpacity) },
+                { opacity: "1" },
+              ],
+              { duration: 500 + Math.random() * 500, easing: "ease-in-out" },
+            );
+          }
+        }
+        setTimeout(flicker, minDelay + Math.random() * (maxDelay - minDelay));
+      }
+      flicker();
+    });
+  }
+</script>

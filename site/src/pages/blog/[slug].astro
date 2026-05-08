@@ -17,7 +17,7 @@ const { Content } = await render(entry);
 <BaseLayout title={entry.data.title} description={entry.data.excerpt}>
   <article class="mx-auto max-w-3xl px-6 py-32 md:py-40">
     <header class="mb-16 border-b border-bone/10 pb-10">
-      <p class="font-mono text-xs uppercase tracking-[0.3em] text-amber mb-6">
+      <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6">
         {
           entry.data.date.toLocaleDateString("sr-Latn-ME", {
             day: "numeric",
@@ -42,8 +42,8 @@ const { Content } = await render(entry);
       class="prose prose-invert max-w-none
         prose-headings:font-display prose-headings:font-light prose-headings:tracking-tight
         prose-h2:text-4xl prose-h3:text-2xl
-        prose-a:text-amber prose-a:no-underline prose-a:underline-offset-4 hover:prose-a:underline
-        prose-strong:text-bone prose-em:text-amber prose-em:font-display prose-em:not-italic
+        prose-a:text-accent prose-a:no-underline prose-a:underline-offset-4 hover:prose-a:underline
+        prose-strong:text-bone prose-em:text-accent prose-em:font-display prose-em:not-italic
         prose-img:rounded-sm prose-img:img-bw"
     >
       <Content />
@@ -52,7 +52,7 @@ const { Content } = await render(entry);
     <footer class="mt-16 pt-10 border-t border-bone/10">
       <a
         href="/blog/"
-        class="inline-flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-amber"
+        class="inline-flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
       >
         <span aria-hidden="true">←</span> Sve novosti
       </a>

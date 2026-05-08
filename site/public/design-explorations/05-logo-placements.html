@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logo placements — Rokumentarni dani</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#0a0a0a",
+              ash: "#1a1a1a",
+              fog: "#2a2a2a",
+              bone: "#f5f1e8",
+              accent: "#4ac5e4",
+            },
+            fontFamily: {
+              display: ['"Cormorant Garamond"', "serif"],
+              sans: ["Inter", "sans-serif"],
+              mono: ['"JetBrains Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background: #0a0a0a;
+        color: #f5f1e8;
+        font-family: "Inter", sans-serif;
+      }
+      .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+      .demo {
+        position: relative;
+        border: 1px solid #ffffff10;
+        border-radius: 12px;
+        background: #1a1a1a;
+        overflow: hidden;
+      }
+      .demo h2 {
+        font-family: "Cormorant Garamond", serif;
+      }
+      .logo-host {
+        --logo-fill: #4ac5e4;
+        --logo-bg: #f5f1e8;
+        display: inline-block;
+        line-height: 0;
+      }
+      .logo-host > svg {
+        display: block;
+        height: 100%;
+        width: auto;
+      }
+      .grain::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.18;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      }
+      .demo-pad {
+        padding: 4rem;
+      }
+      .replay-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 5;
+      }
+      /* Demo 5 hover trigger */
+      .hover-target .logo-host path[fill*="--logo-fill"] {
+        opacity: 1;
+        transition: opacity 0.4s ease;
+      }
+      .hover-target:hover .logo-host path[fill*="--logo-fill"] {
+        opacity: 1; /* JS will override individual cells */
+      }
+
+      /* Demo 7 constellation — same trail as Demo 6 for unpainted cells.
+         Painted cells receive an inline `filter` style which beats the CSS
+         hover rule, so the persistent glow stays put. */
+      .constellation-host {
+        touch-action: none; /* let pointer events drive painting on touch */
+        user-select: none;
+      }
+      .constellation-host path {
+        transition: filter 0.6s ease-out;
+        cursor: crosshair;
+      }
+      .constellation-host path:hover {
+        transition: filter 0s;
+      }
+      .constellation-host path[fill*="--logo-fill"]:hover {
+        filter: drop-shadow(0 0 6px #4ac5e4) brightness(1.3);
+      }
+      .constellation-host path[fill*="--logo-bg"]:hover {
+        filter: drop-shadow(0 0 4px #f5f1e8) brightness(1.2);
+      }
+
+      /* Color palette */
+      .palette {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .palette-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 2px solid transparent;
+        outline: 1px solid #ffffff20;
+        outline-offset: -1px;
+        cursor: pointer;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+      }
+      .palette-swatch:hover {
+        transform: scale(1.1);
+      }
+      .palette-swatch.active {
+        border-color: #f5f1e8;
+        transform: scale(1.15);
+      }
+      /* Compact icon-button used for eraser, style toggle, reset. */
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        background: transparent;
+        color: #f5f1e8aa;
+        border: 1px solid #ffffff20;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 14px;
+        line-height: 1;
+        transition: background 0.15s ease, color 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .icon-btn:hover {
+        background: #ffffff10;
+        color: #f5f1e8;
+        border-color: #ffffff40;
+      }
+      .icon-btn.active {
+        background: #f5f1e8;
+        color: #0a0a0a;
+        border-color: #f5f1e8;
+      }
+
+      /* Vertical divider between control clusters. */
+      .ctl-divider {
+        width: 1px;
+        height: 20px;
+        background: #ffffff20;
+        margin: 0 4px;
+      }
+
+      /* Demo 6 cell-hover glow — pure CSS, per-cell drop-shadow on :hover.
+         Asymmetric transition: glow lights instantly on hover, then decays
+         slowly when the cursor leaves, leaving a glowing trail behind the
+         pointer. */
+      .cell-glow .logo-host path {
+        transition: filter 0.9s ease-out;
+        cursor: crosshair;
+      }
+      .cell-glow .logo-host path:hover {
+        transition: filter 0s;
+      }
+      .cell-glow .logo-host path[fill*="--logo-fill"]:hover {
+        filter: drop-shadow(0 0 8px #4ac5e4)
+                drop-shadow(0 0 18px #4ac5e4)
+                brightness(1.5);
+      }
+      .cell-glow .logo-host path[fill*="--logo-bg"]:hover {
+        filter: drop-shadow(0 0 6px #f5f1e8)
+                drop-shadow(0 0 14px #f5f1e8aa)
+                brightness(1.3);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="mx-auto max-w-5xl px-6 py-16">
+      <p class="label text-bone/50">Internal · Logo placement research</p>
+      <h1
+        class="mt-3 font-display text-5xl md:text-6xl tracking-tight leading-[0.95]"
+      >
+        Where should the animated logo live?
+      </h1>
+      <p class="mt-6 text-lg text-bone/70 max-w-2xl">
+        Five concrete experiments. Each is interactive — try them, then tell
+        Claude which to wire into the real site (or which combination).
+      </p>
+
+      <!-- =================================================== -->
+      <!-- 1. BOOT LOADER -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <div class="flex items-baseline justify-between mb-4">
+          <h2 class="text-3xl">
+            01 · Boot loader
+            <span class="label text-accent ml-3">on first load</span>
+          </h2>
+          <button
+            class="replay-btn-1 label text-accent border border-accent/30 px-3 py-1 hover:bg-accent hover:text-ink transition"
+          >
+            Replay ↻
+          </button>
+        </div>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Pixel cells light up one-by-one when the page first loads — like a
+          film projector warming up — then settle into the still mark. Plays
+          once per visit (sessionStorage), respects reduced-motion, dismisses
+          on click. Replays via the button.
+        </p>
+        <div class="demo grain" id="demo-1">
+          <div
+            class="demo-pad flex flex-col items-center justify-center"
+            style="min-height: 480px"
+          >
+            <div
+              class="logo-host loader-1"
+              style="height: 220px; --logo-fill: #4ac5e4; --logo-bg: #f5f1e8"
+            ></div>
+            <p
+              class="mt-8 label text-bone/60 loader-1-tag"
+              style="opacity: 0"
+            >
+              Učitavanje festivala…
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================== -->
+      <!-- 2. IMAGE / VIDEO POSTER PLACEHOLDER -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <h2 class="text-3xl mb-4">
+          02 · Poster placeholder
+          <span class="label text-accent ml-3">in film grids</span>
+        </h2>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Each film card uses the animated logo as its poster fallback. While
+          you wait for an image to load — or for stills you don't have yet —
+          the logo plays. Live cells animate independently per card. The
+          logo doubles as a watermark on real posters (small mark in the
+          corner).
+        </p>
+        <div class="demo grain p-8">
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <article
+              class="aspect-[3/4] bg-ink/60 border border-bone/10 flex items-center justify-center relative"
+            >
+              <div
+                class="logo-host placeholder-logo"
+                style="height: 60%; --logo-fill: #4ac5e4; --logo-bg: transparent"
+              ></div>
+              <div class="absolute bottom-0 inset-x-0 p-4">
+                <p class="label text-accent">01 / 12</p>
+                <p class="font-display text-xl mt-1">Crimson King</p>
+                <p class="label text-bone/40 mt-1">12 Dec · 20:00</p>
+              </div>
+            </article>
+            <article
+              class="aspect-[3/4] bg-ink/60 border border-bone/10 flex items-center justify-center relative"
+            >
+              <div
+                class="logo-host placeholder-logo"
+                style="height: 60%; --logo-fill: #4ac5e4; --logo-bg: transparent"
+              ></div>
+              <div class="absolute bottom-0 inset-x-0 p-4">
+                <p class="label text-accent">02 / 12</p>
+                <p class="font-display text-xl mt-1">Sugar Man</p>
+                <p class="label text-bone/40 mt-1">13 Dec · 19:00</p>
+              </div>
+            </article>
+            <article
+              class="aspect-[3/4] bg-ink/60 border border-bone/10 flex items-center justify-center relative"
+            >
+              <div
+                class="logo-host placeholder-logo"
+                style="height: 60%; --logo-fill: #4ac5e4; --logo-bg: transparent"
+              ></div>
+              <div class="absolute bottom-0 inset-x-0 p-4">
+                <p class="label text-accent">03 / 12</p>
+                <p class="font-display text-xl mt-1">Anvil</p>
+                <p class="label text-bone/40 mt-1">14 Dec · 21:30</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================== -->
+      <!-- 3. INTERACTIVE CURSOR FIELD -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <h2 class="text-3xl mb-4">
+          03 · Interactive cursor field
+          <span class="label text-accent ml-3">hover the logo</span>
+        </h2>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Cells closest to your cursor brighten and lift; cells far away fade.
+          The logo becomes a tactile object. Stays still when the mouse
+          leaves. On touch devices it falls back to the gentle twinkle.
+        </p>
+        <div class="demo grain p-8">
+          <div
+            class="flex items-center justify-center"
+            style="min-height: 540px"
+          >
+            <div
+              class="logo-host cursor-field"
+              style="height: 380px; --logo-fill: #4ac5e4; --logo-bg: #f5f1e8"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================== -->
+      <!-- 4. AUDIO EQ -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <h2 class="text-3xl mb-4">
+          04 · Audio EQ
+          <span class="label text-accent ml-3">music visualizer</span>
+        </h2>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Bottom rows pulse rhythmically like an audio meter. The rock-hand
+          becomes a "now playing" indicator — works as a small floating mark
+          when a video is playing on the page, or as a hero accent. Loops at a
+          fixed BPM (no real audio yet — easy to wire to a trailer's
+          AudioContext later).
+        </p>
+        <div class="demo grain p-8 relative">
+          <div
+            class="flex items-center justify-center"
+            style="min-height: 480px"
+          >
+            <div
+              class="logo-host audio-eq"
+              style="height: 320px; --logo-fill: #4ac5e4; --logo-bg: #f5f1e8"
+            ></div>
+          </div>
+          <div class="absolute bottom-4 right-4 flex items-center gap-3">
+            <button
+              class="bpm-toggle label text-accent border border-accent/30 px-3 py-1 hover:bg-accent hover:text-ink transition"
+            >
+              ▶ Pause
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================== -->
+      <!-- 5. HOVER-ONLY HEADER -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <h2 class="text-3xl mb-4">
+          05 · Hover-only header
+          <span class="label text-accent ml-3">opt-in twinkle</span>
+        </h2>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Logo in the header is dead-still by default. Hover over it (or any
+          part of the header) and cells start dancing. Returns to still when
+          you move away. Zero ambient motion, signature reveal — feels like
+          the page noticed you.
+        </p>
+        <div class="demo grain">
+          <header
+            class="hover-target h-16 px-6 flex items-center justify-between border-b border-bone/10 bg-ink/70 backdrop-blur"
+          >
+            <a href="#" class="flex items-center gap-3">
+              <div
+                class="logo-host hover-logo"
+                style="height: 28px; --logo-fill: #4ac5e4; --logo-bg: transparent"
+              ></div>
+              <span class="font-display text-2xl">Rokumentarni</span>
+              <span class="label text-accent">Dani · 2026</span>
+            </a>
+            <nav class="hidden md:flex gap-7 label">
+              <a href="#" class="text-bone/70 hover:text-accent">Program</a>
+              <a href="#" class="text-bone/70 hover:text-accent">Filmovi</a>
+              <a href="#" class="text-bone/70 hover:text-accent">O festivalu</a>
+              <a href="#" class="text-bone/70 hover:text-accent">Novosti</a>
+            </nav>
+            <a
+              href="#"
+              class="label bg-accent text-ink px-3 py-1.5 hover:bg-bone transition"
+              >Karte →</a
+            >
+          </header>
+          <div class="p-12 text-center">
+            <p class="text-bone/60 max-w-md mx-auto label">
+              Hover over the header above ↑
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================== -->
+      <!-- 6. CELL-HOVER GLOW -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <h2 class="text-3xl mb-4">
+          06 · Cell hover glow
+          <span class="label text-accent ml-3">touch any brick</span>
+        </h2>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Move the cursor over individual cells — each one lights up with a
+          glow halo (drop-shadow + brightness) as you pass over it. Tactile,
+          arcade-button feel, leaves a brief trail. Pure CSS — runs at full
+          framerate, no JS bookkeeping.
+        </p>
+        <div class="demo grain p-8 cell-glow">
+          <div
+            class="flex items-center justify-center"
+            style="min-height: 540px"
+          >
+            <div
+              class="logo-host"
+              style="height: 380px; --logo-fill: #4ac5e4; --logo-bg: #f5f1e8"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================== -->
+      <!-- 7. CONSTELLATION (drawing game) -->
+      <!-- =================================================== -->
+      <section class="mt-20">
+        <h2 class="text-3xl mb-4">
+          07 · Constellation
+          <span class="label text-accent ml-3">draw your own — game</span>
+        </h2>
+        <p class="text-bone/60 max-w-2xl mb-4">
+          Pick a colour, drag across the grid to paint. Toggle between
+          <span class="text-bone">✦ glow</span> and
+          <span class="text-bone">□ fill-only</span>. Use
+          <span class="text-bone">⌫</span> to erase, then save your drawing
+          as a PNG to share.
+        </p>
+        <div class="demo grain p-8">
+          <div
+            class="flex items-center justify-between mb-6 flex-wrap gap-3"
+          >
+            <!-- Left cluster: paint controls -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="palette constellation-palette"></div>
+              <button
+                class="icon-btn constellation-eraser"
+                title="Brisač"
+                aria-label="Brisač"
+              >
+                ⌫
+              </button>
+              <span class="ctl-divider"></span>
+              <div class="constellation-style flex items-center gap-1">
+                <button
+                  data-mode="glow"
+                  class="icon-btn active"
+                  title="Boja + sjaj"
+                  aria-label="Boja + sjaj"
+                >
+                  ✦
+                </button>
+                <button
+                  data-mode="fill"
+                  class="icon-btn"
+                  title="Samo boja"
+                  aria-label="Samo boja"
+                >
+                  □
+                </button>
+              </div>
+            </div>
+            <!-- Right cluster: meta -->
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="constellation-counter label text-bone/60">
+                0 obojenih
+              </span>
+              <button
+                class="icon-btn constellation-reset"
+                title="Reset"
+                aria-label="Reset"
+              >
+                ↺
+              </button>
+              <button
+                class="constellation-share label bg-accent text-ink px-3 py-1.5 hover:bg-bone transition"
+              >
+                ↓ PNG
+              </button>
+            </div>
+          </div>
+          <div
+            class="flex items-center justify-center"
+            style="min-height: 540px"
+          >
+            <div
+              class="logo-host constellation-host"
+              style="height: 380px; --logo-fill: #4ac5e4; --logo-bg: #f5f1e8"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <p class="mt-20 mb-10 text-bone/60 text-sm">
+        Pick one (or a combination — e.g. boot loader + hover header + cell
+        glow). Tell Claude and I'll wire it into the live site.
+      </p>
+    </div>
+
+    <script>
+      // ===================================================================
+      // Shared: load the logo SVG once, clone into each .logo-host
+      // ===================================================================
+      const LOGO_URL = "/brand/logo.svg";
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      async function injectLogo() {
+        const text = await fetch(LOGO_URL).then((r) => r.text());
+        document.querySelectorAll(".logo-host").forEach((el) => {
+          el.innerHTML = text;
+          const svg = el.querySelector("svg");
+          if (svg) {
+            svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            svg.style.height = "100%";
+            svg.style.width = "auto";
+          }
+        });
+      }
+
+      function cellsOf(host) {
+        return Array.from(
+          host.querySelectorAll('path[fill*="--logo-fill"]'),
+        );
+      }
+
+      function bgCellsOf(host) {
+        return Array.from(host.querySelectorAll('path[fill*="--logo-bg"]'));
+      }
+
+      // ===================================================================
+      // Demo 1: Boot loader
+      //   Each path has an SVG `transform="translate(x,y)"` attribute that
+      //   places the cell. CSS `transform` would override that and snap the
+      //   cell to origin, so we animate **opacity only** — the cells stay
+      //   in place and fade in.
+      // ===================================================================
+      function bootLoader() {
+        document.querySelectorAll(".loader-1").forEach((host) => {
+          const cells = [...cellsOf(host), ...bgCellsOf(host)];
+          if (!cells.length) return;
+          // Reset to hidden.
+          cells.forEach((c) => {
+            c.style.opacity = "0";
+          });
+          const tag = host.parentElement.querySelector(".loader-1-tag");
+          if (tag) tag.style.opacity = "0";
+          // Shuffle so reveal feels random.
+          const shuffled = cells.slice().sort(() => Math.random() - 0.5);
+          const total = 1100; // ms total reveal time
+          const step = total / shuffled.length;
+          shuffled.forEach((c, i) => {
+            setTimeout(() => {
+              c.animate([{ opacity: 0 }, { opacity: 1 }], {
+                duration: 280,
+                fill: "forwards",
+                easing: "ease-out",
+              });
+            }, i * step);
+          });
+          if (tag) {
+            setTimeout(() => {
+              tag.animate([{ opacity: 0 }, { opacity: 1 }], {
+                duration: 400,
+                fill: "forwards",
+              });
+            }, total - 100);
+          }
+        });
+      }
+
+      document.querySelectorAll(".replay-btn-1").forEach((btn) => {
+        btn.addEventListener("click", bootLoader);
+      });
+
+      // ===================================================================
+      // Demo 2: Placeholder twinkle (gentle)
+      // ===================================================================
+      function placeholderTwinkle() {
+        document.querySelectorAll(".placeholder-logo").forEach((host) => {
+          const cells = cellsOf(host);
+          if (!cells.length) return;
+          (function loop() {
+            const cell = cells[Math.floor(Math.random() * cells.length)];
+            cell.animate(
+              [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }],
+              { duration: 700, easing: "ease-in-out" },
+            );
+            setTimeout(loop, 400 + Math.random() * 1200);
+          })();
+        });
+      }
+
+      // ===================================================================
+      // Demo 3: Cursor field — opacity influence only
+      //   No CSS transform on individual cells (it would override the SVG
+      //   translate that positions them). Cells near the cursor stay bright;
+      //   cells far away fade.
+      // ===================================================================
+      function cursorField() {
+        document.querySelectorAll(".cursor-field").forEach((host) => {
+          const cells = cellsOf(host);
+          if (!cells.length) return;
+          cells.forEach((c) => {
+            c.style.transition = "opacity 0.18s ease";
+          });
+          host.addEventListener("pointermove", (e) => {
+            const radius = 140; // px
+            cells.forEach((c) => {
+              const r = c.getBoundingClientRect();
+              const cx = r.left + r.width / 2;
+              const cy = r.top + r.height / 2;
+              const d = Math.hypot(e.clientX - cx, e.clientY - cy);
+              const t = Math.max(0, 1 - d / radius);
+              c.style.opacity = String(0.25 + 0.75 * t);
+            });
+          });
+          host.addEventListener("pointerleave", () => {
+            cells.forEach((c) => {
+              c.style.opacity = "1";
+            });
+          });
+        });
+      }
+
+      // ===================================================================
+      // Demo 4: Audio EQ — brightness wave from the bottom up
+      //   Per-cell translateY would override SVG positioning. Instead we
+      //   ripple a brightness wave through the rows on each beat: the bottom
+      //   row pulses, then the next, then the next. Whole logo pulses on
+      //   beat too via a host scale (allowed because the host has no SVG
+      //   transform of its own).
+      // ===================================================================
+      let eqTimer = null;
+      function audioEq() {
+        document.querySelectorAll(".audio-eq").forEach((host) => {
+          const cells = cellsOf(host);
+          if (!cells.length) return;
+
+          // Group cells by Y so we can stagger by row.
+          const withY = cells.map((c) => {
+            const t = c.getAttribute("transform") || "";
+            const m = t.match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
+            return { cell: c, y: m ? +m[2] : 0 };
+          });
+          const maxY = Math.max(...withY.map((w) => w.y));
+          const rowSize = 41; // grid spacing in this logo
+
+          if (eqTimer) clearInterval(eqTimer);
+          eqTimer = setInterval(() => {
+            // Whole-logo pulse on beat.
+            host.animate(
+              [
+                { transform: "scale(1)", filter: "brightness(1)" },
+                { transform: "scale(1.04)", filter: "brightness(1.35)" },
+                { transform: "scale(1)", filter: "brightness(1)" },
+              ],
+              { duration: 545, easing: "ease-out" },
+            );
+            // Per-row staggered brightness flash.
+            withY.forEach(({ cell, y }) => {
+              const rowsUp = Math.round((maxY - y) / rowSize); // 0=bottom row
+              if (rowsUp > 5) return;
+              const delay = rowsUp * 60;
+              setTimeout(() => {
+                cell.animate(
+                  [
+                    { opacity: 1, filter: "brightness(1)" },
+                    { opacity: 1, filter: "brightness(1.8)" },
+                    { opacity: 1, filter: "brightness(1)" },
+                  ],
+                  { duration: 320, easing: "ease-out" },
+                );
+              }, delay);
+            });
+          }, 545);
+        });
+      }
+      document.querySelectorAll(".bpm-toggle").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (eqTimer) {
+            clearInterval(eqTimer);
+            eqTimer = null;
+            btn.textContent = "▶ Play";
+          } else {
+            audioEq();
+            btn.textContent = "▶ Pause";
+          }
+        });
+      });
+
+      // ===================================================================
+      // Demo 5: Hover-only header
+      // ===================================================================
+      function hoverHeader() {
+        document.querySelectorAll(".hover-target").forEach((root) => {
+          const host = root.querySelector(".hover-logo");
+          if (!host) return;
+          let cells = [];
+          let timer = null;
+          function start() {
+            cells = cellsOf(host);
+            if (!cells.length) return;
+            (function tick() {
+              if (!timer) return;
+              const cell = cells[Math.floor(Math.random() * cells.length)];
+              cell.animate(
+                [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }],
+                { duration: 400, easing: "ease-in-out" },
+              );
+              timer = setTimeout(tick, 80 + Math.random() * 250);
+            })();
+          }
+          root.addEventListener("pointerenter", () => {
+            timer = 1;
+            start();
+          });
+          root.addEventListener("pointerleave", () => {
+            if (timer) clearTimeout(timer);
+            timer = null;
+          });
+        });
+      }
+
+      // ===================================================================
+      // Demo 7: Constellation — pick a colour, drag to paint, save as PNG.
+      // ===================================================================
+      const PALETTE = [
+        { name: "Cyan", value: "#4ac5e4" }, // brand
+        { name: "Bone", value: "#f5f1e8" },
+        { name: "Magenta", value: "#ff2e88" },
+        { name: "Lime", value: "#c4ff00" },
+        { name: "Amber", value: "#d4a574" },
+        { name: "Violet", value: "#a855f7" },
+        { name: "Orange", value: "#ff6b35" },
+      ];
+
+      function constellation() {
+        document.querySelectorAll(".constellation-host").forEach((host) => {
+          const all = [...cellsOf(host), ...bgCellsOf(host)];
+          if (!all.length) return;
+
+          const wrap = host.closest(".demo");
+          const counter = wrap.querySelector(".constellation-counter");
+          const resetBtn = wrap.querySelector(".constellation-reset");
+          const shareBtn = wrap.querySelector(".constellation-share");
+          const paletteEl = wrap.querySelector(".constellation-palette");
+          const eraserBtn = wrap.querySelector(".constellation-eraser");
+          const styleToggle = wrap.querySelector(".constellation-style");
+
+          let painted = 0;
+          let currentColor = PALETTE[0].value;
+          let mode = "paint"; // 'paint' | 'erase'
+          let style = "glow"; // 'glow' (fill + halo) | 'fill' (fill only)
+          let isPainting = false;
+
+          // -- Build the palette UI --
+          PALETTE.forEach((p, i) => {
+            const swatch = document.createElement("button");
+            swatch.className = "palette-swatch";
+            swatch.style.background = p.value;
+            swatch.dataset.color = p.value;
+            swatch.title = p.name;
+            if (i === 0) swatch.classList.add("active");
+            swatch.addEventListener("click", () => {
+              currentColor = p.value;
+              mode = "paint";
+              paletteEl
+                .querySelectorAll(".palette-swatch")
+                .forEach((s) => s.classList.remove("active"));
+              eraserBtn.classList.remove("active");
+              swatch.classList.add("active");
+            });
+            paletteEl.appendChild(swatch);
+          });
+
+          eraserBtn.addEventListener("click", () => {
+            mode = "erase";
+            paletteEl
+              .querySelectorAll(".palette-swatch")
+              .forEach((s) => s.classList.remove("active"));
+            eraserBtn.classList.add("active");
+          });
+
+          // Style toggle: fill+glow vs fill-only.
+          styleToggle.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              style = btn.dataset.mode; // 'glow' | 'fill'
+              styleToggle
+                .querySelectorAll("button")
+                .forEach((b) => b.classList.remove("active"));
+              btn.classList.add("active");
+            });
+          });
+
+          // -- Counter --
+          function updateCounter() {
+            counter.textContent =
+              painted === 0 ? "0 obojenih" : `${painted} obojenih`;
+            counter.classList.toggle("text-accent", painted > 0);
+          }
+          updateCounter();
+
+          // -- Paint / erase a single cell --
+          function applyAt(cell) {
+            if (!(cell instanceof SVGPathElement)) return;
+            if (mode === "erase") {
+              if (cell.dataset.painted !== "1") return;
+              delete cell.dataset.painted;
+              delete cell.dataset.color;
+              cell.style.fill = "";
+              cell.style.filter = "";
+              painted--;
+              updateCounter();
+              return;
+            }
+            // paint mode — always change the actual fill colour. The glow
+            // halo (drop-shadow + brightness) is opt-in via the style toggle.
+            const wasPainted = cell.dataset.painted === "1";
+            cell.dataset.painted = "1";
+            cell.dataset.color = currentColor;
+            cell.style.fill = currentColor;
+            cell.style.filter =
+              style === "glow"
+                ? `drop-shadow(0 0 6px ${currentColor}) drop-shadow(0 0 14px ${currentColor}) brightness(1.2)`
+                : "";
+            if (!wasPainted) {
+              painted++;
+              updateCounter();
+            }
+          }
+
+          // -- Pointer drag handlers --
+          host.addEventListener("pointerdown", (e) => {
+            isPainting = true;
+            host.setPointerCapture?.(e.pointerId);
+            applyAt(e.target);
+            e.preventDefault();
+          });
+          host.addEventListener("pointerover", (e) => {
+            if (!isPainting) return;
+            applyAt(e.target);
+          });
+          // End paint on pointerup anywhere — drag may exit the host.
+          window.addEventListener("pointerup", () => {
+            isPainting = false;
+          });
+          window.addEventListener("pointercancel", () => {
+            isPainting = false;
+          });
+
+          resetBtn?.addEventListener("click", () => {
+            all.forEach((c) => {
+              delete c.dataset.painted;
+              delete c.dataset.color;
+              c.style.fill = "";
+              c.style.filter = "";
+            });
+            painted = 0;
+            updateCounter();
+          });
+
+          shareBtn?.addEventListener("click", () => sharePng(host));
+        });
+      }
+
+      // Render the live SVG to a PNG and trigger a download.
+      function sharePng(host) {
+        const live = host.querySelector("svg");
+        if (!live) return;
+
+        // Clone so we don't mutate the page DOM.
+        const clone = live.cloneNode(true);
+        // Substitute the CSS variable references for concrete colours so the
+        // SVG renders correctly when loaded as an <img>.
+        clone.querySelectorAll("path").forEach((p) => {
+          const fill = p.getAttribute("fill") || "";
+          if (fill.includes("--logo-fill")) p.setAttribute("fill", "#4ac5e4");
+          else if (fill.includes("--logo-bg"))
+            p.setAttribute("fill", "#f5f1e8");
+        });
+
+        // Drop a dark background rect at the start so the export has the
+        // film-festival vibe instead of a transparent canvas.
+        const ns = "http://www.w3.org/2000/svg";
+        const bg = document.createElementNS(ns, "rect");
+        bg.setAttribute("x", "-100");
+        bg.setAttribute("y", "-100");
+        bg.setAttribute("width", "1000");
+        bg.setAttribute("height", "1000");
+        bg.setAttribute("fill", "#0a0a0a");
+        clone.insertBefore(bg, clone.firstChild);
+
+        clone.setAttribute("viewBox", "-100 -100 1000 1000");
+        clone.setAttribute("width", "1600");
+        clone.setAttribute("height", "1600");
+
+        const xml = new XMLSerializer().serializeToString(clone);
+        const svgBlob = new Blob([xml], {
+          type: "image/svg+xml;charset=utf-8",
+        });
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 1600;
+          canvas.height = 1600;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#0a0a0a";
+          ctx.fillRect(0, 0, 1600, 1600);
+          ctx.drawImage(img, 0, 0, 1600, 1600);
+          canvas.toBlob((b) => {
+            if (!b) return;
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(b);
+            a.download = "rokumentarni-constellation.png";
+            a.click();
+            setTimeout(() => {
+              URL.revokeObjectURL(a.href);
+              URL.revokeObjectURL(svgUrl);
+            }, 1000);
+          }, "image/png");
+        };
+        img.onerror = () => {
+          alert("Couldn't render the PNG. Try a different browser.");
+          URL.revokeObjectURL(svgUrl);
+        };
+        img.src = svgUrl;
+      }
+
+      // ===================================================================
+      // Boot all demos after logos are inlined
+      // ===================================================================
+      injectLogo().then(() => {
+        if (reduced) {
+          // Constellation still works in reduced-motion (it's user-driven).
+          constellation();
+          return;
+        }
+        bootLoader();
+        placeholderTwinkle();
+        cursorField();
+        audioEq();
+        hoverHeader();
+        constellation();
+      });
+    </script>
+  </body>
+</html>

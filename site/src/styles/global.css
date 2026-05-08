@@ -6,8 +6,8 @@
   --color-ash: #1a1a1a;
   --color-fog: #2a2a2a;
   --color-bone: #f5f1e8;
-  --color-amber: #d4a574;
-  --color-amber-deep: #a8794a;
+  --color-accent: #4ac5e4;
+  --color-accent-deep: #1d8aa6;
 
   --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -46,14 +46,14 @@ body {
 }
 
 /* Animated underline used on nav and inline links. */
-.underline-amber {
-  background-image: linear-gradient(var(--color-amber), var(--color-amber));
+.underline-accent {
+  background-image: linear-gradient(var(--color-accent), var(--color-accent));
   background-size: 0 1px;
   background-repeat: no-repeat;
   background-position: 0 100%;
   transition: background-size 0.4s ease;
 }
-.underline-amber:hover {
+.underline-accent:hover {
   background-size: 100% 1px;
 }
 
@@ -69,4 +69,21 @@ body {
 /* Slight desaturation on photography to keep them feeling cinematic. */
 .img-bw {
   filter: grayscale(0.6) contrast(1.05) brightness(0.85);
+}
+
+/* Inline-SVG logo helper. The Logo component injects an <svg> into a
+   container with a fixed height — these rules make the SVG fill that
+   container and lock its aspect ratio. CSS variables --logo-fill and
+   --logo-bg cascade into the inlined SVG paths. */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  --logo-fill: var(--color-accent);
+  --logo-bg: var(--color-bone);
+}
+.logo > svg {
+  display: block;
+  height: 100%;
+  width: auto;
 }

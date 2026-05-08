@@ -37,8 +37,8 @@ const filmTitles = [
 
     <div class="relative z-10 mx-auto max-w-7xl px-6 lg:px-10 pb-24 pt-40 w-full">
       <div class="flex items-center gap-4 mb-8">
-        <span class="h-px w-12 bg-amber"></span>
-        <span class="font-mono text-xs uppercase tracking-[0.3em] text-amber">
+        <span class="h-px w-12 bg-accent"></span>
+        <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
           Festival dokumentarnog filma o muzici
         </span>
       </div>
@@ -47,7 +47,7 @@ const filmTitles = [
         class="font-display font-light text-[clamp(4rem,12vw,11rem)] leading-[0.85] tracking-tight"
       >
         Rokumentarni<br />
-        <em class="text-amber font-medium">dani</em>
+        <em class="text-accent font-medium">dani</em>
       </h1>
 
       <div class="mt-12 grid md:grid-cols-3 gap-8 items-end max-w-5xl">
@@ -62,7 +62,7 @@ const filmTitles = [
         <div class="space-y-4 text-sm">
           <div>
             <p
-              class="font-mono text-xs uppercase tracking-[0.25em] text-amber mb-1"
+              class="font-mono text-xs uppercase tracking-[0.25em] text-accent mb-1"
             >
               Datum
             </p>
@@ -70,7 +70,7 @@ const filmTitles = [
           </div>
           <div>
             <p
-              class="font-mono text-xs uppercase tracking-[0.25em] text-amber mb-1"
+              class="font-mono text-xs uppercase tracking-[0.25em] text-accent mb-1"
             >
               Lokacija
             </p>
@@ -82,13 +82,13 @@ const filmTitles = [
       <div class="mt-14 flex flex-wrap gap-4">
         <a
           href="/program/"
-          class="inline-flex items-center gap-3 bg-bone text-ink px-7 py-4 font-mono text-xs uppercase tracking-[0.25em] hover:bg-amber transition"
+          class="inline-flex items-center gap-3 bg-bone text-ink px-7 py-4 font-mono text-xs uppercase tracking-[0.25em] hover:bg-accent transition"
         >
           Pogledaj program <span aria-hidden="true">→</span>
         </a>
         <a
           href="/o-festivalu/"
-          class="inline-flex items-center gap-3 border border-bone/30 px-7 py-4 font-mono text-xs uppercase tracking-[0.25em] hover:border-amber hover:text-amber transition"
+          class="inline-flex items-center gap-3 border border-bone/30 px-7 py-4 font-mono text-xs uppercase tracking-[0.25em] hover:border-accent hover:text-accent transition"
         >
           O festivalu
         </a>
@@ -104,32 +104,32 @@ const filmTitles = [
       {[...filmTitles, ...filmTitles].map((title, i) => (
         <>
           <span class="mx-8">{title}</span>
-          <span class="text-amber">·</span>
+          <span class="text-accent">·</span>
         </>
       ))}
     </div>
   </div>
 
-  <!-- ABOUT TEASER -->
+  <!-- ABOUT — animated logo lives here -->
   <section class="border-b border-bone/10">
     <div
-      class="mx-auto max-w-7xl px-6 lg:px-10 py-32 grid md:grid-cols-12 gap-12"
+      class="mx-auto max-w-7xl px-6 lg:px-10 py-32 grid md:grid-cols-12 gap-12 items-start"
     >
       <div class="md:col-span-4">
-        <p class="font-mono text-xs uppercase tracking-[0.3em] text-amber mb-6">
+        <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6">
           O festivalu
         </p>
         <h2
           class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
         >
-          Muzika je<br /><em class="text-amber">istorija</em><br />koju živimo.
+          Muzika je<br /><em class="text-accent">istorija</em><br />koju živimo.
         </h2>
       </div>
       <div
         class="md:col-span-7 md:col-start-6 space-y-6 text-lg text-bone/80 leading-relaxed"
       >
         <p
-          class="first-letter:font-display first-letter:text-7xl first-letter:float-left first-letter:mr-3 first-letter:leading-[0.85] first-letter:text-amber"
+          class="first-letter:font-display first-letter:text-7xl first-letter:float-left first-letter:mr-3 first-letter:leading-[0.85] first-letter:text-accent"
         >
           Rokumentarni dani su jedinstveni festival dokumentarnog filma o
           muzici u regionu. Već deset godina donosimo priče o izvođačima,
@@ -142,7 +142,7 @@ const filmTitles = [
         </p>
         <a
           href="/o-festivalu/"
-          class="inline-flex items-center gap-3 mt-4 font-mono text-xs uppercase tracking-[0.25em] text-amber underline-amber"
+          class="inline-flex items-center gap-3 mt-4 font-mono text-xs uppercase tracking-[0.25em] text-accent underline-accent"
         >
           Više o nama <span aria-hidden="true">→</span>
         </a>
@@ -160,7 +160,7 @@ const filmTitles = [
             </h2>
             <a
               href="/blog/"
-              class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-amber"
+              class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
             >
               Sve vijesti →
             </a>
@@ -169,14 +169,14 @@ const filmTitles = [
             {posts.map((post) => (
               <li class="group">
                 <a href={`/blog/${post.data.slug ?? post.id}/`}>
-                  <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-amber mb-3">
+                  <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-accent mb-3">
                     {post.data.date.toLocaleDateString("sr-Latn-ME", {
                       day: "numeric",
                       month: "long",
                       year: "numeric",
                     })}
                   </p>
-                  <h3 class="font-display text-2xl leading-snug group-hover:text-amber transition">
+                  <h3 class="font-display text-2xl leading-snug group-hover:text-accent transition">
                     {post.data.title}
                   </h3>
                   {post.data.excerpt && (
