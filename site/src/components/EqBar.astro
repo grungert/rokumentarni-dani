@@ -1,0 +1,141 @@
+---
+/**
+ * Pixel-cell equalizer ornament. Decorative bar of vertical pixel cells
+ * with varying heights — looks like a paused audio meter. On hover of an
+ * ancestor with the Tailwind `group` class, each cell starts pulsing
+ * (phase-staggered so it animates like a real EQ).
+ *
+ * Usage:
+ *   <li class="group">
+ *     <EqBar />
+ *     <h3>...</h3>
+ *   </li>
+ */
+interface Props {
+  /** Number of cells across the bar. */
+  cells?: number;
+  /** Cell width and gap in px. */
+  cellSize?: number;
+  /** Container height in px (taller container = more dramatic peaks). */
+  height?: number;
+  /** Probability a cell is rendered in the accent (cyan) colour. */
+  accent?: number;
+  class?: string;
+}
+
+const {
+  cells = 22,
+  cellSize = 4,
+  height = 28,
+  accent = 0.22,
+  class: className = "",
+} = Astro.props;
+
+// Pre-generated per-cell config — base height (paused state), accent flag,
+// and animation delay phase so hover-pulse looks organic.
+const bars: { base: number; accent: boolean; white: boolean; delay: number }[] =
+  Array.from({ length: cells }, () => ({
+    base: Math.round(30 + Math.random() * 60), // 30..90%
+    accent: Math.random() < accent,
+    white: false,
+    delay: Math.floor(Math.random() * 350),
+  }));
+// Promote one random cell to a full-white "peak" cell — adds a single
+// bright accent that catches the eye against the dim bone bars.
+const whiteIdx = Math.floor(Math.random() * cells);
+bars[whiteIdx].white = true;
+bars[whiteIdx].accent = false; // white wins over accent
+---
+
+<div
+  class:list={["eq-bar", className]}
+  style={`--cell: ${cellSize}px; height: ${height}px;`}
+  aria-hidden="true"
+>
+  {bars.map((b) => (
+    <span
+      class:list={[
+        "eq-cell",
+        b.accent && "is-accent",
+        b.white && "is-white",
+      ]}
+      style={`height: ${b.base}%; --delay: ${b.delay}ms;`}
+    ></span>
+  ))}
+</div>
+
+<style>
+  .eq-bar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--cell);
+    gap: var(--cell);
+    align-items: end;
+    width: fit-content;
+    line-height: 0;
+  }
+  /* Each bar is now a stack of small square segments. We achieve that
+     with a repeating linear-gradient: a `var(--cell)`-tall band of the
+     bar's colour, then a 1px transparent gap. Segment count is implicit
+     in the bar's height — taller bars show more boxes. */
+  .eq-cell {
+    width: var(--cell);
+    --eq-color: var(--color-bone);
+    --eq-alpha: 0.45;
+    background-color: transparent;
+    /* Each segment is a true square: `--cell × --cell` of colour, then a
+       1px transparent gap. The bar's height naturally fits an integer
+       number of these tiles. */
+    background-image: repeating-linear-gradient(
+      to top,
+      var(--eq-color) 0,
+      var(--eq-color) var(--cell),
+      transparent var(--cell),
+      transparent calc(var(--cell) + 1px)
+    );
+    background-size: 100% calc(var(--cell) + 1px);
+    background-position: bottom;
+    background-repeat: repeat-y;
+    opacity: var(--eq-alpha);
+    transition:
+      height 0.45s cubic-bezier(0.2, 0, 0.1, 1),
+      opacity 0.3s ease;
+  }
+  .eq-cell.is-accent {
+    --eq-color: var(--color-accent);
+    --eq-alpha: 0.75;
+  }
+  .eq-cell.is-white {
+    --eq-color: #ffffff;
+    --eq-alpha: 0.95;
+  }
+
+  /* Hover: when an ancestor (.group from Tailwind, or the bar itself) is
+     hovered, the cells pulse. Phase-staggered via per-cell --delay. */
+  @media (prefers-reduced-motion: no-preference) {
+    .eq-bar:hover .eq-cell,
+    :global(.group):hover .eq-bar .eq-cell {
+      animation: eq-pulse 0.85s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+      animation-delay: var(--delay, 0ms);
+    }
+    .eq-bar:hover .eq-cell.is-accent,
+    :global(.group):hover .eq-bar .eq-cell.is-accent {
+      opacity: 1;
+    }
+    .eq-bar:hover .eq-cell.is-white,
+    :global(.group):hover .eq-bar .eq-cell.is-white {
+      opacity: 1;
+    }
+    .eq-bar:hover .eq-cell:not(.is-accent):not(.is-white),
+    :global(.group):hover .eq-bar .eq-cell:not(.is-accent):not(.is-white) {
+      opacity: 0.55;
+    }
+  }
+
+  @keyframes eq-pulse {
+    0%   { height: 18%; }
+    35%  { height: 92%; }
+    65%  { height: 40%; }
+    100% { height: 75%; }
+  }
+</style>

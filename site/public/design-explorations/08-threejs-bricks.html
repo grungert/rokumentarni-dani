@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Three.js cell grid — Rokumentarni dani</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0a0a0a;
+        --bone: #f5f1e8;
+        --cyan: #39c7e2;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: var(--ink); }
+      body {
+        font-family: "Inter", sans-serif;
+        color: var(--bone);
+      }
+      #stage { position: fixed; inset: 0; z-index: 0; cursor: crosshair; }
+      .grain::after {
+        content: "";
+        position: fixed; inset: 0; pointer-events: none; z-index: 50;
+        opacity: 0.18; mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      }
+      .vignette::before {
+        content: "";
+        position: fixed; inset: 0; pointer-events: none; z-index: 40;
+        background: radial-gradient(ellipse at center, transparent 30%, #0a0a0a 95%);
+      }
+      .ui {
+        position: fixed; inset: 0; z-index: 60; pointer-events: none;
+        display: flex; flex-direction: column; justify-content: space-between;
+        padding: 32px clamp(24px, 5vw, 64px);
+      }
+      .ui > * { pointer-events: auto; }
+      /* Click-through for the centred hero so clicks reach the canvas (paint cubes).
+         Only the CTA button + brand label keep their own pointer-events. */
+      .ui .hero { pointer-events: none; }
+      .ui .hero .cta { pointer-events: auto; }
+      .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+        color: rgba(245, 241, 232, 0.55);
+      }
+      .top, .bottom {
+        display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand .dot {
+        width: 10px; height: 10px; border-radius: 999px; background: var(--cyan);
+        box-shadow: 0 0 12px var(--cyan);
+      }
+      .brand .name { font-family: "Cormorant Garamond", serif; font-size: 22px; letter-spacing: -0.01em; }
+      .hero {
+        flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        text-align: center; gap: 18px;
+      }
+      .kicker { color: var(--cyan); }
+      .hero h1 {
+        font-family: "Cormorant Garamond", serif;
+        font-weight: 500;
+        font-size: clamp(48px, 9vw, 132px);
+        line-height: 0.95;
+        letter-spacing: -0.02em;
+        margin: 0;
+        text-shadow: 0 4px 40px rgba(0,0,0,0.5);
+      }
+      .hero h1 em { font-style: italic; color: var(--cyan); }
+      .hero .sub {
+        max-width: 56ch;
+        color: rgba(245, 241, 232, 0.75);
+        font-size: clamp(14px, 1.4vw, 17px);
+        line-height: 1.55;
+      }
+      .cta {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 12px 22px; border: 1px solid rgba(245, 241, 232, 0.2);
+        background: rgba(10, 10, 10, 0.5); backdrop-filter: blur(6px);
+        color: var(--bone); text-decoration: none;
+        font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
+        transition: all 0.25s ease;
+      }
+      .cta:hover {
+        border-color: var(--cyan); color: var(--cyan);
+        box-shadow: 0 0 30px rgba(57, 199, 226, 0.25);
+      }
+      .meta { display: flex; gap: 28px; flex-wrap: wrap; }
+      .meta span { color: rgba(245, 241, 232, 0.65); font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
+      .meta b { color: var(--bone); font-weight: 500; }
+      .hint { color: rgba(245, 241, 232, 0.4); }
+    </style>
+  </head>
+  <body class="grain vignette">
+    <canvas id="stage"></canvas>
+
+    <div class="ui">
+      <div class="top">
+        <div class="brand">
+          <span class="dot"></span>
+          <span class="name">Rokumentarni dani</span>
+        </div>
+        <span class="label">Three.js · cell grid · move your cursor</span>
+      </div>
+
+      <div class="hero">
+        <span class="label kicker">Edition · 2026</span>
+        <h1>Music in <em>motion</em></h1>
+        <p class="sub">Documentary cinema meets the rock stage. Eight nights, twenty films, one festival — held in Cetinje, Montenegro.</p>
+        <a href="#" class="cta">Vidi program →</a>
+      </div>
+
+      <div class="bottom">
+        <div class="meta">
+          <span><b>14–21 Nov</b> · 2026</span>
+          <span><b>Cetinje</b> · ME</span>
+        </div>
+        <span class="label hint">Hold cursor still to see the grid settle</span>
+      </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+      import GUI from "lil-gui";
+
+      // ---------------------------------------------------------------------
+      // Tunable parameters — all exposed in the GUI panel.
+      // ---------------------------------------------------------------------
+      const params = {
+        // Camera
+        projection: "ortho",        // 'ortho' | 'persp'
+        frustumHeight: 16.5,        // ortho size (world units, vertical)
+        fov: 35,                    // perspective only
+        camY: 40,
+        camZ: 0,                    // tilt: pure top-down at 0
+        camX: -0.5,
+        lookY: 4.1,
+
+        // Grid (rebuild on change)
+        cellShape: "cube",          // 'cube' | 'hex'
+        cols: 110,
+        rows: 70,
+        gap: 0.1,                   // absolute world-unit gap between adjacent cells (same on X and Z)
+        cubeSide: 0.98,             // cube side (cube) / hex radius (hex)
+        cubeHeight: 1.55,
+        cornerRadius: 0,            // rounded-cube corner radius (cube only)
+        cornerSegments: 1,          // rounded-cube smoothness (cube only)
+        hexBevelRatio: 0.55,        // top radius / bottom radius (hex only)
+
+        // Hover behaviour
+        hoverRadius: 8.3,
+        hoverLift: 3.7,
+        hoverFalloff: 1.5,          // exponent of (1 - d²/r²)
+
+        // Idle ambient wave
+        waveAmp: 0.06,
+        waveSpeed: 1.15,
+        waveFreqX: 0.44,
+        waveFreqZ: 0.61,
+        idleOrbit: true,
+        idleAmpX: 18.5,
+        idleAmpZ: 14,
+
+        // Lights
+        ambColor: "#1a2026",
+        ambIntensity: 3,
+        keyColor: "#000000",
+        keyIntensity: 0,
+        keyX: -7.5, keyY: 29.5, keyZ: -18.5,
+        fillColor: "#000000",
+        fillIntensity: 1.85,
+        fillX: -40, fillY: 0, fillZ: -0.5,
+        cursorColor: "#39c7e2",     // brand cyan
+        cursorIntensity: 51.5,
+        cursorRange: 22.5,
+        cursorDecay: 1.8,
+        cursorY: 6.3,
+        rimEnabled: false,
+        rimColor: "#d8f218",
+        rimIntensity: 3.65,
+
+        // Material
+        roughness: 1,
+        metalness: 0.72,
+        baseColor: "#000000",
+
+        // Per-cube colour distribution (rebuild on change)
+        cyanPct: 0,                 // 0..100
+        darkPct: 0,                 // 0..100 (additional, on top of cyan)
+        baseJitter: 0,              // 0..1
+        baseHeightMin: 0.2,
+        baseHeightVar: 0,
+
+        // Logo overlay
+        logoEnabled: false,
+        logoCells: 32,
+        logoColor: "#ffffff",
+        logoThreshold: 100,         // 0..255 alpha
+
+        // Click-to-paint
+        paintEnabled: true,
+        paintColor: "#ffffff",
+
+        // Background
+        bgColor: "#0a0a0a",
+        floorColor: "#060606",
+        grain: true,
+        vignette: false,
+
+        // Actions
+        regenerateColors: () => buildColors(),
+        reapplyLogo: () => applyLogo(),
+        copyPreset: () => copyPresetToClipboard(),
+        resetDefaults: () => resetParams(),
+      };
+
+      const DEFAULTS = JSON.parse(JSON.stringify(params));
+
+      // ---------------------------------------------------------------------
+      // Renderer + scene
+      // ---------------------------------------------------------------------
+      const canvas = document.getElementById("stage");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(params.bgColor, 1);
+
+      const scene = new THREE.Scene();
+      const field = new THREE.Group();
+      scene.add(field);
+
+      // ---------------------------------------------------------------------
+      // Cameras (we keep both, swap by params.projection)
+      // ---------------------------------------------------------------------
+      let camera;
+      let orthoCamera, perspCamera;
+      function buildCameras() {
+        const w = window.innerWidth, h = window.innerHeight;
+        const aspect = w / h;
+        const fw = params.frustumHeight * aspect;
+        orthoCamera = new THREE.OrthographicCamera(
+          -fw / 2, fw / 2, params.frustumHeight / 2, -params.frustumHeight / 2,
+          0.1, 400
+        );
+        perspCamera = new THREE.PerspectiveCamera(params.fov, aspect, 0.1, 400);
+        camera = params.projection === "ortho" ? orthoCamera : perspCamera;
+        applyCamera();
+      }
+      function applyCamera() {
+        // Pin camera "up" so world +X is screen-right and world +Z is screen-down,
+        // even when looking straight down (where the default up=(0,1,0) is parallel
+        // to the view direction and makes orientation unstable).
+        camera.up.set(0, 0, -1);
+        camera.position.set(params.camX, params.camY, params.camZ);
+        camera.lookAt(0, params.lookY, 0);
+        if (camera.isOrthographicCamera) {
+          const a = window.innerWidth / window.innerHeight;
+          const fw = params.frustumHeight * a;
+          camera.left = -fw / 2;
+          camera.right = fw / 2;
+          camera.top = params.frustumHeight / 2;
+          camera.bottom = -params.frustumHeight / 2;
+        } else {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.fov = params.fov;
+        }
+        camera.updateProjectionMatrix();
+      }
+      buildCameras();
+
+      // ---------------------------------------------------------------------
+      // Lights (created once, mutated by params)
+      // ---------------------------------------------------------------------
+      const ambLight = new THREE.AmbientLight(params.ambColor, params.ambIntensity);
+      scene.add(ambLight);
+      const keyLight = new THREE.DirectionalLight(params.keyColor, params.keyIntensity);
+      scene.add(keyLight);
+      const fillLight = new THREE.DirectionalLight(params.fillColor, params.fillIntensity);
+      scene.add(fillLight);
+      const cursorLight = new THREE.PointLight(
+        params.cursorColor, params.cursorIntensity, params.cursorRange, params.cursorDecay
+      );
+      scene.add(cursorLight);
+      const rimLight = new THREE.PointLight(params.rimColor, params.rimIntensity, 80, 1.6);
+      rimLight.position.set(28, 6, -28);
+      rimLight.visible = params.rimEnabled;
+      scene.add(rimLight);
+      function applyLights() {
+        ambLight.color.set(params.ambColor);
+        ambLight.intensity = params.ambIntensity;
+        keyLight.color.set(params.keyColor);
+        keyLight.intensity = params.keyIntensity;
+        keyLight.position.set(params.keyX, params.keyY, params.keyZ);
+        fillLight.color.set(params.fillColor);
+        fillLight.intensity = params.fillIntensity;
+        fillLight.position.set(params.fillX, params.fillY, params.fillZ);
+        cursorLight.color.set(params.cursorColor);
+        cursorLight.intensity = params.cursorIntensity;
+        cursorLight.distance = params.cursorRange;
+        cursorLight.decay = params.cursorDecay;
+        rimLight.color.set(params.rimColor);
+        rimLight.intensity = params.rimIntensity;
+        rimLight.visible = params.rimEnabled;
+      }
+
+      // ---------------------------------------------------------------------
+      // Floor
+      // ---------------------------------------------------------------------
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: params.floorColor, roughness: 1.0, metalness: 0.0,
+      });
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.02;
+      scene.add(floor);
+
+      // ---------------------------------------------------------------------
+      // Field — rebuilt whenever grid structure or material params change.
+      // ---------------------------------------------------------------------
+      let geom = null, mat = null, mesh = null;
+      let total = 0;
+      let baseHeight = null, xPositions = null, zPositions = null;
+      const tmp = new THREE.Object3D();
+      const tmpColor = new THREE.Color();
+
+      function rebuildField() {
+        // Clean up the previous mesh
+        if (mesh) {
+          field.remove(mesh);
+          mesh.dispose?.();
+        }
+        if (geom) geom.dispose();
+        if (mat) mat.dispose();
+
+        const isHex = params.cellShape === "hex";
+        if (isHex) {
+          // 6-sided cylinder, pointy-top in the xz plane via thetaStart=π/6.
+          // Top radius slightly smaller than bottom = soft frustum bevel that
+          // catches light along the upper rim, matching the reference image.
+          const topR = params.cubeSide * params.hexBevelRatio;
+          geom = new THREE.CylinderGeometry(
+            topR, params.cubeSide, params.cubeHeight,
+            6, 1, false, Math.PI / 6
+          );
+        } else {
+          // Rounded cubes — soft corners catch the cursor light's specular kick.
+          const maxR = Math.min(params.cubeSide, params.cubeHeight) * 0.49;
+          const r = Math.max(0.001, Math.min(params.cornerRadius, maxR));
+          geom = new RoundedBoxGeometry(
+            params.cubeSide, params.cubeHeight, params.cubeSide,
+            Math.max(1, Math.floor(params.cornerSegments)),
+            r
+          );
+        }
+        geom.translate(0, params.cubeHeight / 2, 0);
+
+        // Material color is always white so per-instance colours are absolute.
+        // (If we used params.baseColor here, painting an instance white would
+        // render as white × baseColor — i.e. black if baseColor is #000000.)
+        // baseColor still drives the "base" tier of cubes via buildColors().
+        mat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: params.roughness,
+          metalness: params.metalness,
+        });
+        // Shader patch: when an instance's colour is (0,0,0), zero out the final
+        // fragment so the metallic specular F0 baseline can't leak any light.
+        // Any non-zero instance colour keeps the full PBR response.
+        // NB: three.js r155+ renamed <output_fragment> to <opaque_fragment>; we
+        // patch both so this works across minor version bumps. We also use the
+        // correct conditional — InstancedMesh.setColorAt enables
+        // USE_INSTANCING_COLOR (not USE_COLOR).
+        mat.onBeforeCompile = (shader) => {
+          const maskSnippet = `
+            #if defined(USE_COLOR) || defined(USE_INSTANCING_COLOR)
+              float instMax_rd = max(max(vColor.r, vColor.g), vColor.b);
+              gl_FragColor.rgb *= step(0.001, instMax_rd);
+            #endif
+          `;
+          let patched = false;
+          for (const tag of ["<opaque_fragment>", "<output_fragment>"]) {
+            const find = `#include ${tag}`;
+            if (shader.fragmentShader.includes(find)) {
+              shader.fragmentShader = shader.fragmentShader.replace(
+                find,
+                find + "\n" + maskSnippet
+              );
+              patched = true;
+              break;
+            }
+          }
+          if (!patched) {
+            console.warn("[bricks] black-mask shader patch could not find an output chunk; specular may leak.");
+          }
+        };
+
+        total = params.cols * params.rows;
+        mesh = new THREE.InstancedMesh(geom, mat, total);
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        field.add(mesh);
+
+        baseHeight = new Float32Array(total);
+        xPositions = new Float32Array(total);
+        zPositions = new Float32Array(total);
+
+        // Pitch (cell-to-cell distance) = native cell footprint + uniform gap.
+        // Cube: footprint = cubeSide on both axes → pitch = cubeSide + gap (identical X and Z).
+        // Hex (pointy-top): X footprint = √3·s, Z footprint = 1.5·s, gap added to both axes equally.
+        const dx = isHex
+          ? Math.sqrt(3) * params.cubeSide + params.gap
+          : params.cubeSide + params.gap;
+        const dz = isHex
+          ? 1.5 * params.cubeSide + params.gap
+          : params.cubeSide + params.gap;
+        const rowOffset = isHex ? dx * 0.5 : 0;
+
+        const offsetX = -(params.cols - 1) * dx * 0.5 - rowOffset * 0.5;
+        const offsetZ = -(params.rows - 1) * dz * 0.5;
+
+        let i = 0;
+        for (let cz = 0; cz < params.rows; cz++) {
+          const rowShift = (cz & 1) ? rowOffset : 0;
+          for (let cx = 0; cx < params.cols; cx++) {
+            const x = offsetX + cx * dx + rowShift;
+            const z = offsetZ + cz * dz;
+            xPositions[i] = x;
+            zPositions[i] = z;
+
+            const sy = params.baseHeightMin + Math.random() * params.baseHeightVar;
+            baseHeight[i] = sy;
+
+            tmp.position.set(x, 0, z);
+            tmp.scale.set(1, sy, 1);
+            tmp.updateMatrix();
+            mesh.setMatrixAt(i, tmp.matrix);
+
+            i++;
+          }
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+
+        // Colours + logo
+        buildColors();
+      }
+
+      function buildColors() {
+        if (!mesh) return;
+        const colorBase = new THREE.Color(params.baseColor);
+        const colorCyan = new THREE.Color(params.cursorColor); // reuse the cursor cyan
+        const colorDark = new THREE.Color(0x222831);
+        const cyanT = params.cyanPct / 100;
+        const darkT = cyanT + params.darkPct / 100;
+        for (let k = 0; k < total; k++) {
+          const r = Math.random();
+          if (r < cyanT) tmpColor.copy(colorCyan);
+          else if (r < darkT) tmpColor.copy(colorDark);
+          else tmpColor.copy(colorBase).multiplyScalar(1 - params.baseJitter * Math.random());
+          mesh.setColorAt(k, tmpColor);
+        }
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+        if (params.logoEnabled) applyLogo();
+      }
+
+      function applyMaterialOnly() {
+        if (!mat) return;
+        // Note: mat.color stays white; baseColor flows only through buildColors().
+        mat.roughness = params.roughness;
+        mat.metalness = params.metalness;
+        mat.needsUpdate = true;
+      }
+
+      // ---------------------------------------------------------------------
+      // Logo overlay — caches the SVG text, rasterises on demand.
+      // ---------------------------------------------------------------------
+      let cachedSvgText = null;
+      async function getSvgText() {
+        if (cachedSvgText) return cachedSvgText;
+        const t = await fetch("/brand/logo.svg").then((r) => r.text());
+        cachedSvgText = t
+          .replace(/fill="var\(--logo-fill[^"]*"/g, 'fill="#ffffff"')
+          .replace(/fill="var\(--logo-bg[^"]*"/g, 'fill="rgba(0,0,0,0)"');
+        return cachedSvgText;
+      }
+      async function applyLogo() {
+        if (!mesh || !params.logoEnabled) return;
+        try {
+          const svgText = await getSvgText();
+          const blob = new Blob([svgText], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.decoding = "async";
+          await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+          const cells = Math.max(8, Math.min(params.logoCells, params.cols, params.rows));
+          const c = document.createElement("canvas");
+          c.width = cells; c.height = cells;
+          const ctx = c.getContext("2d", { willReadFrequently: true });
+          ctx.clearRect(0, 0, cells, cells);
+          ctx.drawImage(img, 0, 0, cells, cells);
+          const data = ctx.getImageData(0, 0, cells, cells).data;
+          URL.revokeObjectURL(url);
+
+          const startX = Math.floor((params.cols - cells) / 2);
+          const startZ = Math.floor((params.rows - cells) / 2);
+          const logoColor = new THREE.Color(params.logoColor);
+          for (let py = 0; py < cells; py++) {
+            for (let px = 0; px < cells; px++) {
+              const a = data[(py * cells + px) * 4 + 3];
+              if (a > params.logoThreshold) {
+                const idx = (startZ + py) * params.cols + (startX + px);
+                mesh.setColorAt(idx, logoColor);
+              }
+            }
+          }
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        } catch (err) {
+          console.warn("[bricks] logo overlay failed:", err);
+        }
+      }
+
+      // ---------------------------------------------------------------------
+      // Initial build
+      // ---------------------------------------------------------------------
+      rebuildField();
+
+      // ---------------------------------------------------------------------
+      // Pointer + resize
+      // ---------------------------------------------------------------------
+      const raycaster = new THREE.Raycaster();
+      const ndc = new THREE.Vector2();
+      const target = new THREE.Vector3(0, 0, 0);
+      const cursorWorld = new THREE.Vector3(0, 0, 0);
+      let hasMoved = false;
+
+      function onPointer(e) {
+        const rect = canvas.getBoundingClientRect();
+        ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        hasMoved = true;
+      }
+      window.addEventListener("pointermove", onPointer);
+      window.addEventListener("pointerdown", onPointer);
+
+      // Click-to-paint: raycast against the InstancedMesh, recolour the hit cube.
+      const paintNDC = new THREE.Vector2();
+      const paintColor = new THREE.Color();
+      function onCanvasClick(e) {
+        if (!params.paintEnabled || !mesh) return;
+        const rect = canvas.getBoundingClientRect();
+        paintNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        paintNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(paintNDC, camera);
+        const hits = raycaster.intersectObject(mesh, false);
+        if (hits.length && hits[0].instanceId !== undefined) {
+          paintColor.set(params.paintColor);
+          mesh.setColorAt(hits[0].instanceId, paintColor);
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        }
+      }
+      canvas.addEventListener("click", onCanvasClick);
+
+      function resize() {
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h, false);
+        applyCamera();
+      }
+      resize();
+      window.addEventListener("resize", resize);
+
+      // ---------------------------------------------------------------------
+      // GUI
+      // ---------------------------------------------------------------------
+      const gui = new GUI({ title: "Tweak panel · brick grid", width: 320 });
+
+      const fCam = gui.addFolder("Camera");
+      fCam.add(params, "projection", { Orthographic: "ortho", Perspective: "persp" })
+        .onChange(() => { camera = params.projection === "ortho" ? orthoCamera : perspCamera; applyCamera(); });
+      fCam.add(params, "frustumHeight", 8, 120, 0.5).name("ortho size").onChange(applyCamera);
+      fCam.add(params, "fov", 10, 90, 1).name("persp fov").onChange(applyCamera);
+      fCam.add(params, "camX", -40, 40, 0.5).name("cam X").onChange(applyCamera);
+      fCam.add(params, "camY", 4, 120, 0.5).name("cam Y (height)").onChange(applyCamera);
+      fCam.add(params, "camZ", -40, 40, 0.5).name("cam Z (tilt)").onChange(applyCamera);
+      fCam.add(params, "lookY", -10, 10, 0.1).name("look-at Y").onChange(applyCamera);
+
+      const fGrid = gui.addFolder("Grid (rebuilds field)");
+      fGrid.add(params, "cellShape", { Cube: "cube", Hex: "hex" }).name("cell shape").onChange(rebuildField);
+      fGrid.add(params, "cols", 20, 220, 1).onFinishChange(rebuildField);
+      fGrid.add(params, "rows", 20, 200, 1).onFinishChange(rebuildField);
+      fGrid.add(params, "gap", -0.5, 1.5, 0.005).name("gap (world units)").onFinishChange(rebuildField);
+      fGrid.add(params, "cubeSide", 0.2, 2.0, 0.01).name("cell radius/side").onFinishChange(rebuildField);
+      fGrid.add(params, "cubeHeight", 0.4, 6.0, 0.05).onFinishChange(rebuildField);
+      fGrid.add(params, "cornerRadius", 0.0, 0.5, 0.005).name("cube corner R").onFinishChange(rebuildField);
+      fGrid.add(params, "cornerSegments", 1, 8, 1).name("cube corner segs").onFinishChange(rebuildField);
+      fGrid.add(params, "hexBevelRatio", 0.5, 1.0, 0.01).name("hex top bevel").onFinishChange(rebuildField);
+
+      const fHover = gui.addFolder("Hover");
+      fHover.add(params, "hoverRadius", 1, 30, 0.1);
+      fHover.add(params, "hoverLift", 0, 12, 0.05);
+      fHover.add(params, "hoverFalloff", 0.5, 6, 0.1);
+
+      const fWave = gui.addFolder("Idle wave");
+      fWave.add(params, "waveAmp", 0, 1.0, 0.01);
+      fWave.add(params, "waveSpeed", 0, 4, 0.05);
+      fWave.add(params, "waveFreqX", 0, 1.0, 0.01);
+      fWave.add(params, "waveFreqZ", 0, 1.0, 0.01);
+      fWave.add(params, "idleOrbit").name("idle orbit (no mouse)");
+      fWave.add(params, "idleAmpX", 0, 30, 0.5);
+      fWave.add(params, "idleAmpZ", 0, 30, 0.5);
+
+      const fLights = gui.addFolder("Lights");
+      const fAmb = fLights.addFolder("Ambient");
+      fAmb.addColor(params, "ambColor").name("color").onChange(applyLights);
+      fAmb.add(params, "ambIntensity", 0, 3, 0.01).name("intensity").onChange(applyLights);
+      const fKey = fLights.addFolder("Key directional");
+      fKey.addColor(params, "keyColor").name("color").onChange(applyLights);
+      fKey.add(params, "keyIntensity", 0, 3, 0.01).name("intensity").onChange(applyLights);
+      fKey.add(params, "keyX", -40, 40, 0.5).onChange(applyLights);
+      fKey.add(params, "keyY", 0, 60, 0.5).onChange(applyLights);
+      fKey.add(params, "keyZ", -40, 40, 0.5).onChange(applyLights);
+      const fFill = fLights.addFolder("Fill directional");
+      fFill.addColor(params, "fillColor").name("color").onChange(applyLights);
+      fFill.add(params, "fillIntensity", 0, 3, 0.01).name("intensity").onChange(applyLights);
+      fFill.add(params, "fillX", -40, 40, 0.5).onChange(applyLights);
+      fFill.add(params, "fillY", 0, 60, 0.5).onChange(applyLights);
+      fFill.add(params, "fillZ", -40, 40, 0.5).onChange(applyLights);
+      const fCursor = fLights.addFolder("Cursor point light");
+      fCursor.addColor(params, "cursorColor").name("color").onChange(() => { applyLights(); buildColors(); });
+      fCursor.add(params, "cursorIntensity", 0, 80, 0.5).onChange(applyLights);
+      fCursor.add(params, "cursorRange", 1, 80, 0.5).onChange(applyLights);
+      fCursor.add(params, "cursorDecay", 0, 4, 0.05).onChange(applyLights);
+      fCursor.add(params, "cursorY", 0.5, 20, 0.1);
+      const fRim = fLights.addFolder("Rim light");
+      fRim.add(params, "rimEnabled").name("enabled").onChange(applyLights);
+      fRim.addColor(params, "rimColor").name("color").onChange(applyLights);
+      fRim.add(params, "rimIntensity", 0, 10, 0.05).onChange(applyLights);
+
+      const fMat = gui.addFolder("Material");
+      fMat.addColor(params, "baseColor").onChange(() => { applyMaterialOnly(); buildColors(); });
+      fMat.add(params, "roughness", 0, 1, 0.01).onChange(applyMaterialOnly);
+      fMat.add(params, "metalness", 0, 1, 0.01).onChange(applyMaterialOnly);
+
+      const fColors = gui.addFolder("Colour distribution");
+      fColors.add(params, "cyanPct", 0, 50, 0.5).name("% cyan").onFinishChange(buildColors);
+      fColors.add(params, "darkPct", 0, 50, 0.5).name("% dark").onFinishChange(buildColors);
+      fColors.add(params, "baseJitter", 0, 1, 0.01).name("base jitter").onFinishChange(buildColors);
+      fColors.add(params, "baseHeightMin", 0.2, 2.0, 0.01).name("min height").onFinishChange(rebuildField);
+      fColors.add(params, "baseHeightVar", 0, 2.0, 0.01).name("height variation").onFinishChange(rebuildField);
+      fColors.add(params, "regenerateColors").name("⚡ regenerate colours");
+
+      const fPaint = gui.addFolder("Click-to-paint");
+      fPaint.add(params, "paintEnabled").name("enabled (click cube)");
+      fPaint.addColor(params, "paintColor").name("paint color");
+
+      const fLogo = gui.addFolder("Logo overlay");
+      fLogo.add(params, "logoEnabled").name("show logo").onChange(() => { buildColors(); });
+      fLogo.add(params, "logoCells", 8, 80, 1).onFinishChange(applyLogo);
+      fLogo.addColor(params, "logoColor").onChange(applyLogo);
+      fLogo.add(params, "logoThreshold", 0, 255, 1).onChange(applyLogo);
+      fLogo.add(params, "reapplyLogo").name("⚡ reapply logo");
+
+      const fBg = gui.addFolder("Background");
+      fBg.addColor(params, "bgColor").onChange(() => renderer.setClearColor(params.bgColor, 1));
+      fBg.addColor(params, "floorColor").onChange(() => floorMat.color.set(params.floorColor));
+      fBg.add(params, "grain").onChange((v) => document.body.classList.toggle("grain", v));
+      fBg.add(params, "vignette").onChange((v) => document.body.classList.toggle("vignette", v));
+
+      const fActions = gui.addFolder("Actions");
+      fActions.add(params, "copyPreset").name("📋 copy preset to clipboard");
+      fActions.add(params, "resetDefaults").name("↺ reset to defaults");
+
+      function copyPresetToClipboard() {
+        const out = {};
+        for (const k of Object.keys(DEFAULTS)) {
+          if (typeof params[k] !== "function") out[k] = params[k];
+        }
+        const text = JSON.stringify(out, null, 2);
+        navigator.clipboard?.writeText(text).then(
+          () => console.log("[bricks] preset copied:", text),
+          () => console.log("[bricks] preset (copy failed):\n" + text)
+        );
+      }
+      function resetParams() {
+        for (const k of Object.keys(DEFAULTS)) {
+          if (typeof DEFAULTS[k] !== "function") params[k] = DEFAULTS[k];
+        }
+        // Refresh every controller
+        for (const c of gui.controllersRecursive()) c.updateDisplay();
+        // Rebuild everything
+        renderer.setClearColor(params.bgColor, 1);
+        floorMat.color.set(params.floorColor);
+        document.body.classList.toggle("grain", params.grain);
+        document.body.classList.toggle("vignette", params.vignette);
+        buildCameras();
+        applyLights();
+        rebuildField();
+      }
+
+      // ---------------------------------------------------------------------
+      // Animation loop
+      // ---------------------------------------------------------------------
+      const clock = new THREE.Clock();
+      function animate() {
+        const t = clock.getElapsedTime();
+
+        if (hasMoved) {
+          raycaster.setFromCamera(ndc, camera);
+          const denom = raycaster.ray.direction.y;
+          if (Math.abs(denom) > 1e-6) {
+            const tt = -raycaster.ray.origin.y / denom;
+            target.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, tt);
+          }
+        } else if (params.idleOrbit) {
+          target.set(Math.cos(t * 0.6) * params.idleAmpX, 0, Math.sin(t * 0.4) * params.idleAmpZ);
+        }
+        cursorWorld.lerp(target, 0.12);
+        cursorLight.position.set(cursorWorld.x, params.cursorY, cursorWorld.z);
+
+        const r2 = params.hoverRadius * params.hoverRadius;
+        const hl = params.hoverLift;
+        const fexp = params.hoverFalloff;
+        const wAmp = params.waveAmp;
+        const wSp = params.waveSpeed;
+        const wFx = params.waveFreqX;
+        const wFz = params.waveFreqZ;
+        for (let k = 0; k < total; k++) {
+          const dx = xPositions[k] - cursorWorld.x;
+          const dz = zPositions[k] - cursorWorld.z;
+          const d2 = dx * dx + dz * dz;
+          let lift = 0;
+          if (d2 < r2) {
+            const f = 1 - d2 / r2;
+            lift = hl * Math.pow(f, fexp);
+          }
+          const wave = wAmp * Math.sin(t * wSp + xPositions[k] * wFx + zPositions[k] * wFz);
+          const sy = baseHeight[k] + lift + wave;
+
+          tmp.position.set(xPositions[k], 0, zPositions[k]);
+          tmp.scale.set(1, sy, 1);
+          tmp.rotation.set(0, 0, 0);
+          tmp.updateMatrix();
+          mesh.setMatrixAt(k, tmp.matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      animate();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Program icons — Rokumentarni dani</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#0a0a0a",
+              ash: "#1a1a1a",
+              bone: "#f5f1e8",
+              accent: "#4ac5e4",
+            },
+            fontFamily: {
+              display: ['"Cormorant Garamond"', "serif"],
+              sans: ["Inter", "sans-serif"],
+              mono: ['"JetBrains Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background: #0a0a0a;
+        color: #f5f1e8;
+        font-family: "Inter", sans-serif;
+      }
+      .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+      .card {
+        background: #1a1a1a;
+        border: 1px solid #ffffff10;
+        position: relative;
+        overflow: hidden;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .card:hover {
+        border-color: #4ac5e4;
+        box-shadow:
+          0 0 0 1px rgba(74, 197, 228, 0.2),
+          0 30px 60px -20px rgba(74, 197, 228, 0.25);
+      }
+      .icon-host {
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .icon-host svg {
+        height: 100%;
+        width: auto;
+        shape-rendering: crispEdges;
+      }
+      .icon-host svg rect {
+        transition: opacity 0.2s ease;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <p class="label text-bone/50">Internal · Program icons</p>
+      <h1
+        class="mt-3 font-display text-5xl md:text-6xl tracking-tight leading-[0.95]"
+      >
+        Eight programs, eight pixels.
+      </h1>
+      <p class="mt-6 text-lg text-bone/70 max-w-2xl">
+        One hand-drawn pixel-art icon per program, in the logo's cell
+        language. Hover any card to see the icon "rebuild" cell by cell.
+        Tell Claude which to ship as-is and which need redrawing.
+      </p>
+
+      <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-bone/10 border border-bone/10">
+        <article class="card p-8 group" data-icon="filmovi">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">01</p>
+          <h2 class="font-display text-3xl mt-2">Filmovi</h2>
+          <p class="text-sm text-bone/60 mt-2">Filmska traka, perforacija</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="livesessions">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">02</p>
+          <h2 class="font-display text-3xl mt-2">Live Sessions</h2>
+          <p class="text-sm text-bone/60 mt-2">Mikrofon na stalku</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="podcast">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">03</p>
+          <h2 class="font-display text-3xl mt-2">Podcast</h2>
+          <p class="text-sm text-bone/60 mt-2">Slušalice</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="opentopics">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">04</p>
+          <h2 class="font-display text-3xl mt-2">Open Topics</h2>
+          <p class="text-sm text-bone/60 mt-2">Oblačić razgovora</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="gifup">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">05</p>
+          <h2 class="font-display text-3xl mt-2">GIF UP</h2>
+          <p class="text-sm text-bone/60 mt-2">Cikličan pokret</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="videodrom">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">06</p>
+          <h2 class="font-display text-3xl mt-2">Videodrom</h2>
+          <p class="text-sm text-bone/60 mt-2">CRT TV sa antenom</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="djsets">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">07</p>
+          <h2 class="font-display text-3xl mt-2">DJ sets</h2>
+          <p class="text-sm text-bone/60 mt-2">Gramofon i ploča</p>
+        </article>
+
+        <article class="card p-8 group" data-icon="radionice">
+          <div class="icon-host"></div>
+          <p class="label text-accent mt-6">08</p>
+          <h2 class="font-display text-3xl mt-2">Radionice</h2>
+          <p class="text-sm text-bone/60 mt-2">Olovka pod uglom</p>
+        </article>
+      </div>
+
+      <p class="mt-16 text-bone/60 text-sm">
+        <span class="label text-accent">Hover</span> any card to replay the
+        cell-by-cell reveal. <span class="label text-accent">Click</span> a
+        card to play it again on demand.
+      </p>
+    </div>
+
+    <script>
+      // ASCII grids: '.' empty, 'b' bone, 'c' cyan, 'w' white peak.
+      // 16 × 16 each — more room for detail and intentional white highlights.
+      const ICONS = {
+        // Horizontal film strip: sprocket holes top + bottom, cyan film
+        // body with a 4×3 white "exposed frame" highlight.
+        filmovi: [
+          "................",
+          "bbbbbbbbbbbbbbbb",
+          "b..b..b..b..b..b",
+          "bbbbbbbbbbbbbbbb",
+          ".cccccccccccccc.",
+          ".cccccccccccccc.",
+          ".ccccccwwwwcccc.",
+          ".ccccccwwwwcccc.",
+          ".ccccccwwwwcccc.",
+          ".cccccccccccccc.",
+          ".cccccccccccccc.",
+          "bbbbbbbbbbbbbbbb",
+          "b..b..b..b..b..b",
+          "bbbbbbbbbbbbbbbb",
+          "................",
+          "................",
+        ],
+        // Electric guitar — bone neck with cyan tuner pegs in the
+        // headstock, asymmetric Strat-style body with a cyan pickup line
+        // and a 2-cell white knob highlight.
+        livesessions: [
+          ".....bb.....",
+          "....bbbb....",
+          "....bccb....",
+          "....bbbb....",
+          ".....bb.....",
+          ".....bb.....",
+          ".....bb.....",
+          "....bbbb....",
+          ".bbbbbbbbb..",
+          "bbbbcccccbb.",
+          "bbbbbwbbbbb.",
+          ".bbbbbbbbb..",
+        ],
+        // Same mic — podcast also uses the microphone metaphor.
+        podcast: [
+          "....cccc....",
+          "....cccc....",
+          "....cccc....",
+          "....cccc....",
+          "....bbbb....",
+          ".....bb.....",
+          ".....bb.....",
+          ".....bb.....",
+          ".....bb.....",
+          "....bbbb....",
+          "...bbbbbb...",
+          "............",
+        ],
+        // Two speech bubbles overlapping. Bone bubble has a 2×2 white
+        // "loud" dot, the smaller cyan reply bubble has its own tail.
+        opentopics: [
+          "................",
+          ".bbbbbbbbbbbb...",
+          ".b..........b...",
+          ".b..bb.ww.bb.b..",
+          ".b..bb.ww.bb.b..",
+          ".b..........b...",
+          ".bbbbbbbbbbb....",
+          "....b...........",
+          "...bb...........",
+          "........cccccccc",
+          ".......cc......c",
+          ".......c.cc.cc.c",
+          ".......c.cc.cc.c",
+          ".......cccccccc.",
+          ".........c......",
+          "..........cc....",
+        ],
+        // Stylised "G": bone outline frame, white play-bar inside, cyan
+        // tail extending right.
+        gifup: [
+          "................",
+          "..bbbbbbbbbbb...",
+          ".bb.........bb..",
+          ".bb...........b.",
+          ".bb...........b.",
+          ".bb.............",
+          ".bb...wwwwwww...",
+          ".bb...wwwwwww...",
+          ".bb...wwwwwww...",
+          ".bb.............",
+          ".bb...ccccccccbb",
+          ".bb...........bb",
+          ".bb...........b.",
+          ".bb.........bb..",
+          "..bbbbbbbbbbb...",
+          "................",
+        ],
+        // CRT TV — bone case, cyan screen, two stub legs.
+        // (Per-user request: adopted from the bootloader-icons reference.)
+        videodrom: [
+          "............",
+          ".bbbbbbbbbb.",
+          ".b........b.",
+          ".b..ccccc.b.",
+          ".b..ccccc.b.",
+          ".b..ccccc.b.",
+          ".b........b.",
+          ".bbbbbbbbbb.",
+          "....b..b....",
+          "...bb..bb...",
+          "............",
+          "............",
+        ],
+        // Vinyl record: concentric bone rings, cyan label, 3-cell white
+        // spindle highlight.
+        djsets: [
+          "................",
+          ".....bbbbbb.....",
+          "...bbbbbbbbbb...",
+          "..bbbbbbbbbbbb..",
+          ".bbb.cccccc.bbb.",
+          ".bb.ccccccccc.bb",
+          "bb.ccccccccccc.b",
+          "b.cccccccwccccbb",
+          "b.cccccwwwcccc.b",
+          "b.ccccccwccccc.b",
+          "bb.ccccccccccc.b",
+          ".bb.cccccccc.bb.",
+          ".bbb.cccccc.bbb.",
+          "..bbbbbbbbbbbb..",
+          "...bbbbbbbbbb...",
+          ".....bbbbbb.....",
+        ],
+        // Pencil diagonal: white graphite tip → cyan ferrule → bone wood
+        // → tiny white eraser nub at the back.
+        radionice: [
+          "ww..............",
+          ".www............",
+          "..www...........",
+          "...ccc..........",
+          "....cc..........",
+          ".....bbb........",
+          "......bbb.......",
+          ".......bbb......",
+          "........bbb.....",
+          ".........bbb....",
+          "..........bbb...",
+          "...........bbb..",
+          "............bbb.",
+          ".............bbb",
+          "..............ww",
+          "................",
+        ],
+      };
+
+      const COLORS = {
+        b: "#f5f1e8",
+        c: "#4ac5e4",
+        w: "#ffffff",
+      };
+      const OPACITY = {
+        b: 0.85,
+        c: 0.95,
+        w: 1.0,
+      };
+
+      function renderIcon(host, grid) {
+        const rows = grid.length;
+        const cols = grid[0].length;
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", `0 0 ${cols} ${rows}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const ch = grid[y][x];
+            if (!COLORS[ch]) continue;
+            const rect = document.createElementNS(ns, "rect");
+            rect.setAttribute("x", x);
+            rect.setAttribute("y", y);
+            rect.setAttribute("width", 1);
+            rect.setAttribute("height", 1);
+            rect.setAttribute("fill", COLORS[ch]);
+            rect.style.opacity = String(OPACITY[ch]);
+            svg.appendChild(rect);
+          }
+        }
+        host.innerHTML = "";
+        host.appendChild(svg);
+        return svg;
+      }
+
+      function bootReveal(svg) {
+        const cells = Array.from(svg.querySelectorAll("rect"));
+        if (!cells.length) return;
+        // Snapshot original opacities so we can restore on completion.
+        const originals = cells.map((c) => c.style.opacity || "1");
+        // Shuffle order
+        const order = cells.slice();
+        for (let i = order.length - 1; i > 0; i--) {
+          const j = (Math.random() * (i + 1)) | 0;
+          const t = order[i];
+          order[i] = order[j];
+          order[j] = t;
+        }
+        // Hide all → reveal one by one
+        cells.forEach((c) => (c.style.opacity = "0"));
+        const total = 700;
+        order.forEach((cell, i) => {
+          setTimeout(() => {
+            cell.animate(
+              [{ opacity: 0 }, { opacity: originals[cells.indexOf(cell)] }],
+              { duration: 240, fill: "forwards", easing: "ease-out" },
+            );
+          }, (i / order.length) * total);
+        });
+      }
+
+      // Initial render + hover/click triggers
+      const cards = document.querySelectorAll("[data-icon]");
+      cards.forEach((card) => {
+        const host = card.querySelector(".icon-host");
+        const grid = ICONS[card.dataset.icon];
+        if (!grid) return;
+        const svg = renderIcon(host, grid);
+
+        let timer = null;
+        card.addEventListener("mouseenter", () => {
+          if (timer) clearTimeout(timer);
+          bootReveal(svg);
+        });
+        card.addEventListener("click", () => bootReveal(svg));
+      });
+    </script>
+  </body>
+</html>

@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 
@@ -28,6 +29,7 @@ const fullTitle =
       rel="stylesheet"
     />
 
+    <ClientRouter />
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
   </head>
@@ -37,5 +39,75 @@ const fullTitle =
       <slot />
     </main>
     <SiteFooter />
+
+    <!-- Pixel flicker overlay shown during route changes -->
+    <div id="page-flicker" aria-hidden="true"></div>
+
+    <script is:inline>
+      // Persists across navigations because ClientRouter preserves elements
+      // marked with `transition:persist` plus inline scripts in the body
+      // run once. Listeners stay attached for the lifetime of the tab.
+      (function () {
+        const flicker = document.getElementById("page-flicker");
+        if (!flicker) return;
+        const COLS = 40;
+        const ROWS = 24;
+        if (!flicker.children.length) {
+          for (let i = 0; i < COLS * ROWS; i++) {
+            flicker.appendChild(document.createElement("div"));
+          }
+        }
+        const cells = Array.from(flicker.children);
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        function shuffle(arr) {
+          for (let i = arr.length - 1; i > 0; i--) {
+            const j = (Math.random() * (i + 1)) | 0;
+            const t = arr[i];
+            arr[i] = arr[j];
+            arr[j] = t;
+          }
+        }
+
+        function flashIn() {
+          if (reduced) {
+            flicker.classList.add("is-active");
+            cells.forEach((c) => (c.style.opacity = "1"));
+            return;
+          }
+          flicker.classList.add("is-active");
+          const order = cells.slice();
+          shuffle(order);
+          const total = 260;
+          order.forEach((cell, i) => {
+            setTimeout(
+              () => (cell.style.opacity = "1"),
+              (i / order.length) * total,
+            );
+          });
+        }
+
+        function flashOut() {
+          if (reduced) {
+            cells.forEach((c) => (c.style.opacity = "0"));
+            flicker.classList.remove("is-active");
+            return;
+          }
+          const order = cells.slice();
+          shuffle(order);
+          const total = 280;
+          order.forEach((cell, i) => {
+            setTimeout(
+              () => (cell.style.opacity = "0"),
+              (i / order.length) * total,
+            );
+          });
+          setTimeout(() => flicker.classList.remove("is-active"), total + 50);
+        }
+
+        document.addEventListener("astro:before-preparation", flashIn);
+        document.addEventListener("astro:after-swap", flashOut);
+      })();
+    </script>
   </body>
 </html>

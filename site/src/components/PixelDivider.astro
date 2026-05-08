@@ -1,0 +1,102 @@
+---
+/**
+ * Horizontal divider in the pixel-art language of the festival logo.
+ * Uses HTML cells sized to be **square** (6×6px on a 6px-pitch grid),
+ * so it reads as actual pixels rather than stretched dashes.
+ *
+ * Usage:
+ *   <PixelDivider />                        // default sparse / film-strip
+ *   <PixelDivider variant="dense" />        // tighter, more cells lit
+ *   <PixelDivider variant="dots" />         // even row of single dots
+ *   <PixelDivider variant="punchcard" />    // regular pattern, no random
+ */
+type Variant = "sparse" | "dense" | "dots" | "punchcard";
+
+interface Props {
+  variant?: Variant;
+  /** Override cell size in px. */
+  size?: number;
+  /** Override total cell count (enough to cover wide screens). */
+  cells?: number;
+  class?: string;
+}
+
+const {
+  variant = "sparse",
+  size = 6,
+  cells: cellsProp,
+  class: className = "",
+} = Astro.props;
+
+// Defaults per variant — cell count and on/accent probabilities.
+const defaults: Record<Variant, { cells: number; on: number; accent: number }> =
+  {
+    sparse:    { cells: 240, on: 0.42, accent: 0.18 },
+    dense:     { cells: 240, on: 0.78, accent: 0.22 },
+    dots:      { cells: 240, on: 1.0,  accent: 0.0  },
+    punchcard: { cells: 240, on: 1.0,  accent: 0.0  },
+  };
+
+const cfg = defaults[variant];
+const total = cellsProp ?? cfg.cells;
+
+const pattern: ("empty" | "bone" | "accent")[] = Array.from(
+  { length: total },
+  (_, i) => {
+    if (variant === "punchcard") {
+      // Regular pattern: cell every 3 positions.
+      return i % 3 === 0 ? "bone" : "empty";
+    }
+    if (Math.random() > cfg.on) return "empty";
+    return Math.random() < cfg.accent ? "accent" : "bone";
+  },
+);
+
+const sizePx = `${size}px`;
+---
+
+<div
+  class:list={["pixel-divider", `variant-${variant}`, className]}
+  style={`--cell: ${sizePx};`}
+  aria-hidden="true"
+>
+  {pattern.map((kind) => <span class:list={["cell", kind]} />)}
+</div>
+
+<style>
+  .pixel-divider {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--cell);
+    gap: var(--cell);
+    height: var(--cell);
+    width: 100%;
+    overflow: hidden;
+    padding: calc(var(--cell) * 2) 0;
+    box-sizing: content-box;
+  }
+  .cell {
+    width: var(--cell);
+    height: var(--cell);
+    background: transparent;
+  }
+  .bone {
+    background: var(--color-bone);
+    opacity: 0.22;
+  }
+  .accent {
+    background: var(--color-accent);
+    opacity: 0.65;
+  }
+
+  /* Dots variant — keep cells but make them tiny circles, all bone. */
+  .pixel-divider.variant-dots .cell {
+    border-radius: 999px;
+    transform: scale(0.55);
+  }
+
+  /* Dense variant tunes opacities up a touch for visual weight. */
+  .pixel-divider.variant-dense .bone {
+    opacity: 0.32;
+  }
+</style>

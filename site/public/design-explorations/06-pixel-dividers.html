@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="me">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixel divider styles — Rokumentarni dani</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#0a0a0a",
+              ash: "#1a1a1a",
+              bone: "#f5f1e8",
+              accent: "#4ac5e4",
+            },
+            fontFamily: {
+              display: ['"Cormorant Garamond"', "serif"],
+              sans: ["Inter", "sans-serif"],
+              mono: ['"JetBrains Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      :root {
+        --color-bone: #f5f1e8;
+        --color-accent: #4ac5e4;
+      }
+      body {
+        background: #0a0a0a;
+        color: #f5f1e8;
+        font-family: "Inter", sans-serif;
+      }
+      .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+
+      /* ====== Shared cell layout ====== */
+      .pd {
+        display: grid;
+        grid-auto-flow: column;
+        gap: var(--cell, 6px);
+        grid-auto-columns: var(--cell, 6px);
+        height: var(--cell, 6px);
+        width: 100%;
+        overflow: hidden;
+        margin: 12px 0;
+      }
+      .pd > .c {
+        width: var(--cell, 6px);
+        height: var(--cell, 6px);
+      }
+      .pd > .b {
+        background: var(--color-bone);
+        opacity: 0.22;
+      }
+      .pd > .a {
+        background: var(--color-accent);
+        opacity: 0.65;
+      }
+
+      /* Variant-specific tweaks */
+      .pd.dots > .c {
+        background: var(--color-bone);
+        opacity: 0.4;
+        border-radius: 999px;
+        transform: scale(0.55);
+      }
+      .pd.dots > .a {
+        background: var(--color-accent);
+        opacity: 0.8;
+      }
+      .pd.dense > .b {
+        opacity: 0.36;
+      }
+      /* Equalizer — variable heights. Container is bigger; cells stretch up. */
+      .pd.eq {
+        height: 24px;
+        align-items: end;
+      }
+      .pd.eq > .c {
+        background: var(--color-bone);
+        opacity: 0.5;
+      }
+      .pd.eq > .a {
+        background: var(--color-accent);
+        opacity: 0.85;
+      }
+      /* Gradient fade — cells styled by position via mask */
+      .pd.fade {
+        mask-image: linear-gradient(
+          to right,
+          transparent 0,
+          black 20%,
+          black 80%,
+          transparent 100%
+        );
+      }
+      /* Striped — like a film-strip perforation, regular spacing */
+      .pd.strip > .c {
+        background: var(--color-bone);
+        opacity: 0.32;
+      }
+
+      /* Wider variant uses a bigger cell */
+      .pd.big {
+        --cell: 10px;
+      }
+      .pd.tiny {
+        --cell: 3px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="mx-auto max-w-5xl px-6 py-16">
+      <p class="label text-bone/50">Internal · Pixel divider styles</p>
+      <h1
+        class="mt-3 font-display text-5xl md:text-6xl tracking-tight leading-[0.95]"
+      >
+        Pick a divider.
+      </h1>
+      <p class="mt-6 text-lg text-bone/70 max-w-2xl">
+        Six variants. All use square pixel cells (no more stretched dashes).
+        Tell Claude which one to ship — different sections can get different
+        variants if you want a rhythm of styles down the page.
+      </p>
+
+      <!-- Variant blocks -->
+      <section class="mt-16 space-y-12">
+        <!-- 1. Sparse / film-strip (recommended default) -->
+        <article>
+          <p class="label text-accent mb-3">
+            01 · Sparse film-strip · current default
+          </p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Random scattered cells, ~40% lit, mostly bone with the occasional
+            cyan dot. Reads as film-strip perforation.
+          </p>
+          <div id="pd-sparse" class="pd"></div>
+        </article>
+
+        <!-- 2. Dense -->
+        <article>
+          <p class="label text-accent mb-3">02 · Dense</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Tighter, ~75% lit. More structural, almost a barcode. Stronger
+            visual punctuation between sections.
+          </p>
+          <div id="pd-dense" class="pd dense"></div>
+        </article>
+
+        <!-- 3. Dots -->
+        <article>
+          <p class="label text-accent mb-3">03 · Dots</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Every cell rendered as a tiny dot, regular pitch. Subtle,
+            calm — almost a pinstripe.
+          </p>
+          <div id="pd-dots" class="pd dots"></div>
+        </article>
+
+        <!-- 4. Punchcard -->
+        <article>
+          <p class="label text-accent mb-3">04 · Punchcard</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Regular pattern (every 3rd cell lit). Mechanical, grid-like —
+            ticket-stub or punchcard feel.
+          </p>
+          <div id="pd-punch" class="pd"></div>
+        </article>
+
+        <!-- 5. Equalizer -->
+        <article>
+          <p class="label text-accent mb-3">05 · Equalizer (taller)</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Same cells but taller and varying heights — reads as a static
+            audio EQ. Most "music-y" of the bunch.
+          </p>
+          <div id="pd-eq" class="pd eq"></div>
+        </article>
+
+        <!-- 6. Fade -->
+        <article>
+          <p class="label text-accent mb-3">06 · Fade ends</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Sparse pattern but with the left and right edges fading to
+            transparent — divider feels like it floats.
+          </p>
+          <div id="pd-fade" class="pd fade"></div>
+        </article>
+
+        <!-- 7. Bigger cells (for chunkier pixel feel) -->
+        <article>
+          <p class="label text-accent mb-3">07 · Big cells (10px)</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Same sparse pattern but 10×10 cells instead of 6×6. Reads more
+            like a poster, less like background detail.
+          </p>
+          <div id="pd-big" class="pd big"></div>
+        </article>
+
+        <!-- 8. Tiny -->
+        <article>
+          <p class="label text-accent mb-3">08 · Tiny cells (3px)</p>
+          <p class="text-bone/60 max-w-xl mb-2">
+            Half the size — feels like display noise / fine grain. Almost
+            invisible at glance, only noticed when scrolled past.
+          </p>
+          <div id="pd-tiny" class="pd tiny"></div>
+        </article>
+      </section>
+
+      <p class="mt-20 mb-10 text-bone/60 text-sm">
+        Tell Claude which numbered variant to ship — or whether different
+        sections should rotate through several.
+      </p>
+    </div>
+
+    <script>
+      // Generate cells client-side with the same logic as the Astro
+      // component, so the showcase reflects what the real component
+      // would render.
+      const TOTAL = 220;
+
+      function buildSparse(el, density = 0.42, accent = 0.18) {
+        for (let i = 0; i < TOTAL; i++) {
+          const span = document.createElement("span");
+          span.className = "c";
+          if (Math.random() <= density) {
+            span.classList.add(Math.random() < accent ? "a" : "b");
+          }
+          el.appendChild(span);
+        }
+      }
+      function buildDense(el) {
+        buildSparse(el, 0.78, 0.22);
+      }
+      function buildDots(el, accent = 0.18) {
+        for (let i = 0; i < TOTAL; i++) {
+          const span = document.createElement("span");
+          span.className = "c";
+          if (Math.random() < accent) span.classList.add("a");
+          el.appendChild(span);
+        }
+      }
+      function buildPunchcard(el) {
+        for (let i = 0; i < TOTAL; i++) {
+          const span = document.createElement("span");
+          span.className = "c";
+          if (i % 3 === 0) span.classList.add("b");
+          el.appendChild(span);
+        }
+      }
+      function buildEq(el) {
+        // Cells with random heights between 30–100% of container.
+        for (let i = 0; i < TOTAL; i++) {
+          const span = document.createElement("span");
+          span.className = "c";
+          const accent = Math.random() < 0.18;
+          if (accent) span.classList.add("a");
+          else span.classList.add("b");
+          const h = 30 + Math.random() * 70;
+          span.style.height = h + "%";
+          el.appendChild(span);
+        }
+      }
+
+      buildSparse(document.getElementById("pd-sparse"));
+      buildDense(document.getElementById("pd-dense"));
+      buildDots(document.getElementById("pd-dots"));
+      buildPunchcard(document.getElementById("pd-punch"));
+      buildEq(document.getElementById("pd-eq"));
+      buildSparse(document.getElementById("pd-fade"));
+      buildSparse(document.getElementById("pd-big"));
+      buildSparse(document.getElementById("pd-tiny"));
+    </script>
+  </body>
+</html>

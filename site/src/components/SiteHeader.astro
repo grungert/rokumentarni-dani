@@ -1,17 +1,18 @@
 ---
 import Logo from "./Logo.astro";
 
+// Program is now the primary CTA — it adopts the cyan-bg Karte styling.
+// The rest of the nav stays as plain mono-caps links.
 const nav = [
-  { href: "/program/", label: "Program" },
-  { href: "/filmovi/", label: "Filmovi" },
   { href: "/o-festivalu/", label: "O festivalu" },
+  { href: "/program/", label: "Program", primary: true },
+  { href: "/filmovi/", label: "Filmovi" },
   { href: "/galerija/", label: "Galerija" },
   { href: "/blog/", label: "Novosti" },
   { href: "/kontakt/", label: "Kontakt" },
 ];
 
 const currentPath = Astro.url.pathname;
-const editionYear = new Date().getFullYear();
 ---
 
 <header
@@ -20,19 +21,32 @@ const editionYear = new Date().getFullYear();
   <div
     class="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between"
   >
-    <a href="/" class="flex items-center gap-3">
-      <Logo variant="mark" class="h-7" twinkle />
-      <span class="font-display text-2xl tracking-tight leading-none">Rokumentarni</span>
-      <span class="font-mono text-[10px] uppercase tracking-[0.25em] text-accent">
-        Dani · {editionYear}
-      </span>
+    <a
+      href="/"
+      class="flex items-center"
+      aria-label="Rokumentarni dani — početna"
+    >
+      <Logo variant="full" class="h-8" twinkle />
     </a>
 
     <nav class="hidden md:block">
-      <ul class="flex gap-8 text-xs font-mono uppercase tracking-[0.25em]">
+      <ul class="flex items-center gap-7 text-xs font-mono uppercase tracking-[0.25em]">
         {
           nav.map((item) => {
             const active = currentPath.startsWith(item.href);
+            if (item.primary) {
+              return (
+                <li>
+                  <a
+                    href={item.href}
+                    class="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-ink bg-accent px-4 py-2 hover:bg-bone transition"
+                  >
+                    {item.label}
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </li>
+              );
+            }
             return (
               <li>
                 <a
@@ -50,13 +64,5 @@ const editionYear = new Date().getFullYear();
         }
       </ul>
     </nav>
-
-    <a
-      href="/program/"
-      class="hidden md:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-ink bg-accent px-4 py-2 hover:bg-bone transition"
-    >
-      Karte
-      <span aria-hidden="true">→</span>
-    </a>
   </div>
 </header>

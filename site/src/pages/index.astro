@@ -1,21 +1,170 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import PixelDivider from "../components/PixelDivider.astro";
+import EqBar from "../components/EqBar.astro";
 
 const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
   .slice(0, 3);
 
-const heroImage = "/media/2023/11/lennon-1024x584.jpg";
+// Hero slideshow — first image is rendered server-side as a fallback, the
+// rest preload and cycle on the client with a mosaic-dissolve transition.
+const heroImages = [
+  "/media/2023/11/lennon-1024x584.jpg",
+  "/media/2023/11/bella-1024x587.jpg",
+  "/media/2023/11/littlerichard-1024x576.jpg",
+  "/media/2022/12/DAN3-1024x587.jpg",
+  "/media/2022/12/DAN5-1024x587.jpg",
+];
+const heroImage = heroImages[0];
 
-// Films to scroll across the marquee. Replace with real selection later.
-const filmTitles = [
-  "In the Court of Crimson King",
-  "Searching for Sugar Man",
-  "Anvil! The Story of Anvil",
-  "20 Feet from Stardom",
-  "Beware of Mr. Baker",
-  "Sound City",
+// Fallback header image for any news post that doesn't have a
+// featuredImage yet. Edit freely.
+const newsFallbackImage = "/media/2022/12/DAN3-1024x587.jpg";
+
+// Schedule snippets to scroll across the marquee.
+// Each item: day · date · city. Edit yearly.
+const scheduleItems = [
+  "Dan I · 12 Dec · Niksić",
+  "Dan II · 13 Dec · Podgorica",
+  "Dan III · 14 Dec · Kotor",
+  "Dan IV · 15 Dec · Niksić",
+  "Dan V · 16 Dec · Podgorica",
+];
+
+// All the things the festival actually does, beyond the headline films.
+const programs = [
+  {
+    n: "01",
+    title: "Filmovi",
+    desc: "Selekcija dokumentaraca o muzici — premjere, regionalne projekcije i klasici žanra.",
+  },
+  {
+    n: "02",
+    title: "Live Sessions",
+    desc: "Snimljene originalne izvedbe crnogorskih muzičara, dostupne na našem YouTube kanalu.",
+    href: "https://www.youtube.com/@BucanPas",
+    external: true,
+  },
+  {
+    n: "03",
+    title: "Podcast",
+    desc: "Razgovori sa autorima filmova, muzičarima i kustosima — između projekcija i nakon festivala.",
+    href: "https://www.youtube.com/@BucanPas",
+    external: true,
+  },
+  {
+    n: "04",
+    title: "Open Topics",
+    desc: "Paneli i razgovori o muzici, filmu, kontrakulturi i položaju autora u regionu.",
+  },
+  {
+    n: "05",
+    title: "GIF UP",
+    desc: "Izložba digitalnog aktivizma — animirani radovi o slobodi izražavanja i medijskoj pismenosti.",
+  },
+  {
+    n: "06",
+    title: "Videodrom",
+    desc: "Selekcija kratkih muzičkih spotova i video-radova domaćih i regionalnih autora.",
+  },
+  {
+    n: "07",
+    title: "DJ sets",
+    desc: "Otvaranje i zatvaranje festivala uz selektore iz Crne Gore i regiona.",
+  },
+  {
+    n: "08",
+    title: "Radionice",
+    desc: "Edukativni programi: kritika muzičkog filma, audio-vizuelni rad sa mentorima.",
+  },
+];
+
+// Quick stats strip — keep numbers honest, edit yearly.
+const stats = [
+  { value: "10", label: "Godina festivala" },
+  { value: "IX", label: "Završenih izdanja" },
+  { value: "3", label: "Grada" },
+  { value: "∞", label: "Besplatan ulaz" },
+];
+
+// Past festival photos — pulled from /extracted/media/, swap freely.
+const photoStrip = [
+  "/media/2022/12/DAN1-1024x587.jpg",
+  "/media/2022/12/DAN2-1024x587.jpg",
+  "/media/2022/12/DAN3-1024x587.jpg",
+  "/media/2022/12/DAN4-1024x587.jpg",
+  "/media/2022/12/DAN5-1024x587.jpg",
+];
+
+// Live Sessions on the BucanPas YouTube channel. Add/swap freely.
+const liveSessions = [
+  {
+    id: "amoqTYC3TQ8",
+    artist: "Bacili & Bellerophontes",
+    title: "Rokumentarni dani Live Sessions",
+  },
+  {
+    id: "tJ4dnWwYHYo",
+    artist: "Anja Zagorac",
+    title: "Rokumentarni dani Live Sessions",
+  },
+  {
+    id: "Y1K-84ZZqj4",
+    artist: "Autogeni trening",
+    title: "Rokumentarni dani Live Sessions · Unplugged",
+  },
+];
+
+// Partners. `logo` is a URL/path to a logo file when you have one — until
+// then the wordmark is rendered as styled text. Drop logos under
+// site/public/partners/ and reference them as e.g. "/partners/smart.svg".
+const partners = [
+  {
+    name: "SMART Balkan",
+    url: "https://smartbalkan.org/",
+    logo: null,
+  },
+  {
+    name: "MFA Norway",
+    fullName: "Ministarstvo vanjskih poslova Norveške",
+    url: "https://www.regjeringen.no/en/dep/ud/",
+    logo: null,
+  },
+  { name: "CPCD", url: "https://cpcd.ba/", logo: null },
+  { name: "CRPM", url: "https://crpm.org.mk/", logo: null },
+  { name: "IDM", url: "https://idmalbania.org/", logo: null },
+  {
+    name: "CK Nikšić",
+    fullName: "Centar za kulturu Nikšić",
+    url: null,
+    logo: null,
+  },
+];
+
+const locations = [
+  {
+    city: "Niksić",
+    role: "Domaćin festivala",
+    venues: ["Blues Brothers Bar", "Centar za kulturu", "JU Zahumlje"],
+    blurb:
+      "Glavna stanica festivala — odakle je sve počelo i gdje se festival vraća svake godine.",
+  },
+  {
+    city: "Podgorica",
+    role: "Glavni grad",
+    venues: ["201 Engaging Space"],
+    blurb:
+      "Projekcije i razgovori u srcu prijestonice, na pola puta između publike i scene.",
+  },
+  {
+    city: "Kotor",
+    role: "Primorska stanica",
+    venues: ["Lokacija svake godine drugačija"],
+    blurb:
+      "Završetak festivala uz Bokokotorski zaliv — film, more i muzika kao trostruko ogledalo.",
+  },
 ];
 ---
 
@@ -24,33 +173,47 @@ const filmTitles = [
   description="Festival dokumentarnog filma o muzici"
 >
   <!-- HERO -->
-  <section class="relative min-h-screen flex items-end overflow-hidden vignette">
+  <section
+    class="relative min-h-screen flex items-end overflow-hidden vignette"
+    data-hero-images={JSON.stringify(heroImages)}
+  >
+    <!-- noscript / first-paint fallback so SSR users see the photo too -->
     <img
       src={heroImage}
       alt=""
-      class="absolute inset-0 w-full h-full object-cover img-bw"
+      class="hero-bg hero-fallback absolute inset-0 w-full h-full object-cover img-bw"
     />
+    <!-- Slideshow: JS replaces the fallback with a canvas at runtime -->
+    <canvas
+      class="hero-bg hero-canvas absolute inset-0 w-full h-full"
+      style="display:none"
+      aria-hidden="true"
+    ></canvas>
     <div
       class="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent"
     >
     </div>
 
     <div class="relative z-10 mx-auto max-w-7xl px-6 lg:px-10 pb-24 pt-40 w-full">
-      <div class="flex items-center gap-4 mb-8">
-        <span class="h-px w-12 bg-accent"></span>
+      <div class="flex items-center gap-4 mb-8 hero-rise" style="--hero-delay: 0.05s">
+        <span class="h-px w-12 bg-accent hero-rule"></span>
         <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
           Festival dokumentarnog filma o muzici
         </span>
       </div>
 
       <h1
-        class="font-display font-light text-[clamp(4rem,12vw,11rem)] leading-[0.85] tracking-tight"
+        class="font-display font-light text-[clamp(4rem,12vw,11rem)] leading-[0.85] tracking-tight hero-rise"
+        style="--hero-delay: 0.2s"
       >
         Rokumentarni<br />
         <em class="text-accent font-medium">dani</em>
       </h1>
 
-      <div class="mt-12 grid md:grid-cols-3 gap-8 items-end max-w-5xl">
+      <div
+        class="mt-12 grid md:grid-cols-3 gap-8 items-end max-w-5xl hero-rise"
+        style="--hero-delay: 0.45s"
+      >
         <div class="md:col-span-2">
           <p
             class="font-display text-2xl md:text-3xl text-bone/85 leading-snug max-w-2xl"
@@ -79,7 +242,10 @@ const filmTitles = [
         </div>
       </div>
 
-      <div class="mt-14 flex flex-wrap gap-4">
+      <div
+        class="mt-14 flex flex-wrap gap-4 hero-rise"
+        style="--hero-delay: 0.65s"
+      >
         <a
           href="/program/"
           class="inline-flex items-center gap-3 bg-bone text-ink px-7 py-4 font-mono text-xs uppercase tracking-[0.25em] hover:bg-accent transition"
@@ -94,26 +260,40 @@ const filmTitles = [
         </a>
       </div>
     </div>
+
   </section>
 
-  <!-- MARQUEE -->
-  <div class="border-y border-bone/10 py-5 overflow-hidden">
+  <!-- MARQUEE — festival schedule, scrolling. Pixel-cube separator
+       between items in the logo language (cyan border + white core). -->
+  <div class="py-5 overflow-hidden">
     <div
-      class="marquee whitespace-nowrap font-display text-3xl md:text-5xl text-bone/30 italic"
+      class="marquee whitespace-nowrap font-display text-3xl md:text-5xl text-bone/55 italic"
     >
-      {[...filmTitles, ...filmTitles].map((title, i) => (
+      {[...scheduleItems, ...scheduleItems].map((item) => (
         <>
-          <span class="mx-8">{title}</span>
-          <span class="text-accent">·</span>
+          <span class="mx-8">{item}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="10"
+            height="10"
+            viewBox="0 0 1 1"
+            shape-rendering="crispEdges"
+            class="inline-block align-middle mx-4 not-italic"
+            aria-hidden="true"
+          >
+            <rect width="1" height="1" fill="#4ac5e4" />
+          </svg>
         </>
       ))}
     </div>
   </div>
 
+  <PixelDivider />
+
   <!-- ABOUT — animated logo lives here -->
-  <section class="border-b border-bone/10">
+  <section class="">
     <div
-      class="mx-auto max-w-7xl px-6 lg:px-10 py-32 grid md:grid-cols-12 gap-12 items-start"
+      class="reveal mx-auto max-w-7xl px-6 lg:px-10 py-32 grid md:grid-cols-12 gap-12 items-start"
     >
       <div class="md:col-span-4">
         <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6">
@@ -150,11 +330,1026 @@ const filmTitles = [
     </div>
   </section>
 
+  <PixelDivider />
+
+  <!-- STATS — festival in numbers -->
+  <section class="">
+    <div class="mx-auto max-w-7xl px-6 lg:px-10 py-20">
+      <ul class="reveal-stagger grid grid-cols-2 md:grid-cols-4 gap-3">
+        {
+          stats.map((s) => (
+            <li class="bg-ink p-10 text-center flex flex-col gap-3 border border-bone/10">
+              <p
+                class="font-display font-light text-7xl md:text-8xl leading-none tracking-tight text-accent"
+                data-stat={s.value}
+              >
+                {s.value}
+              </p>
+              <p class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60">
+                {s.label}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <PixelDivider />
+
+  <!-- PROGRAMS — what the festival actually does -->
+  <section class="">
+    <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
+      <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-4">
+            Šta radimo
+          </p>
+          <h2
+            class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
+          >
+            Više od <em class="text-accent">filma</em>.
+          </h2>
+        </div>
+        <p class="text-bone/60 max-w-md">
+          Festival nije samo bioskop. Filmovi su jezgro, ali ih okružuje
+          mreža programa — od originalnih live-session snimaka do
+          edukativnih radionica.
+        </p>
+      </div>
+
+      <ul class="reveal-stagger grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {
+          programs.map((p) => {
+            const inner = (
+              <div class="program-card bg-ink p-8 h-full flex flex-col group border border-bone/10">
+                <div class="flex items-center justify-between gap-4 mb-6">
+                  <p class="font-mono text-xs tracking-[0.25em] text-accent">
+                    {p.n}
+                  </p>
+                  <EqBar cells={16} cellSize={3} height={22} accent={0.25} />
+                </div>
+                <h3 class="font-display text-3xl leading-tight mb-3 group-hover:text-accent transition">
+                  {p.title}
+                </h3>
+                <p class="text-sm text-bone/60 leading-relaxed mb-6">
+                  {p.desc}
+                </p>
+                {p.href && (
+                  <p class="mt-auto font-mono text-[10px] uppercase tracking-[0.25em] text-accent">
+                    {p.external ? "YouTube ↗" : "Saznaj više →"}
+                  </p>
+                )}
+              </div>
+            );
+            return (
+              <li>
+                {p.href ? (
+                  <a
+                    href={p.href}
+                    target={p.external ? "_blank" : undefined}
+                    rel={p.external ? "noopener" : undefined}
+                    class="block h-full"
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  inner
+                )}
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </section>
+
+  <PixelDivider />
+
+  <!-- LOCATIONS — three cities -->
+  <section class=" bg-ash">
+    <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
+      <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-4">
+            Gdje smo
+          </p>
+          <h2
+            class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
+          >
+            Tri grada, jedan<br /><em class="text-accent">festival</em>.
+          </h2>
+        </div>
+      </div>
+
+      <ul class="reveal-stagger grid md:grid-cols-3 gap-3">
+        {
+          locations.map((loc, i) => (
+            <li class="bg-ink p-10 flex flex-col gap-6 border border-bone/10">
+              <p class="font-mono text-xs tracking-[0.25em] text-accent">
+                {String(i + 1).padStart(2, "0")} · {loc.role}
+              </p>
+              <h3 class="font-display text-5xl md:text-6xl leading-[0.9] tracking-tight">
+                {loc.city}
+              </h3>
+              <p class="text-bone/70 leading-relaxed">{loc.blurb}</p>
+              <ul class="mt-auto space-y-1.5 pt-4 border-t border-bone/10">
+                {loc.venues.map((v) => (
+                  <li class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60">
+                    {v}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <PixelDivider />
+
+  <!-- LIVE SESSIONS — interactive 3-card video switcher -->
+  <section class="group">
+    <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
+      <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
+        <div>
+          <EqBar class="mb-4" cells={28} cellSize={4} height={32} accent={0.3} />
+          <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-4">
+            Live Sessions
+          </p>
+          <h2
+            class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
+          >
+            Originalne <em class="text-accent">izvedbe</em><br />
+            crnogorskih muzičara.
+          </h2>
+        </div>
+        <a
+          href="https://www.youtube.com/@BucanPas"
+          target="_blank"
+          rel="noopener"
+          class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
+        >
+          Sve sesije na YouTube ↗
+        </a>
+      </div>
+
+      <ul class="live-grid reveal-stagger grid md:grid-cols-3 gap-4">
+        {
+          liveSessions.map((s, i) => (
+            <li
+              class:list={[
+                "live-card group relative overflow-hidden bg-ash border border-bone/10 transition cursor-pointer",
+                i === 0 ? "is-active" : "",
+              ]}
+              data-session-id={s.id}
+              data-index={i}
+              data-artist={s.artist}
+              data-title={s.title}
+            >
+              <div class="aspect-video relative">
+                <img
+                  src={`https://img.youtube.com/vi/${s.id}/maxresdefault.jpg`}
+                  alt={s.artist}
+                  loading="lazy"
+                  class="thumb absolute inset-0 w-full h-full object-cover img-bw transition group-hover:filter-none"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent pointer-events-none" />
+                <!-- Wrapper is unclickable; only the inner button takes clicks. -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <button
+                    type="button"
+                    class="play-button pointer-events-auto inline-flex items-center justify-center w-16 h-16 rounded-full bg-ink/70 border border-accent/40 transition cursor-pointer hover:bg-accent hover:text-ink hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label={`Open ${s.artist} session`}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3l13 7-13 7z" /></svg>
+                  </button>
+                </div>
+                <div class="iframe-mount absolute inset-0 pointer-events-none" />
+                <div class="absolute bottom-0 inset-x-0 p-5 pointer-events-none">
+                  <p class="font-mono text-[10px] uppercase tracking-[0.25em] text-accent mb-2">
+                    {String(i + 1).padStart(2, "0")} / {liveSessions.length}
+                  </p>
+                  <h3 class="font-display text-2xl md:text-3xl leading-tight">
+                    {s.artist}
+                  </h3>
+                  <p class="text-xs text-bone/60 mt-1">{s.title}</p>
+                </div>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- LIVE SESSIONS MODAL — fullscreen player with prev/next + close -->
+  <div
+    id="live-modal"
+    class="fixed inset-0 z-[60] pointer-events-none opacity-0 transition-opacity duration-300"
+    aria-hidden="true"
+    role="dialog"
+    aria-label="Live session player"
+  >
+    <div class="modal-backdrop absolute inset-0 bg-ink/95 backdrop-blur-md grain"></div>
+
+    <div class="relative h-full w-full flex flex-col p-6 md:p-10">
+      <!-- Top bar -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <p class="modal-counter font-mono text-xs uppercase tracking-[0.3em] text-accent"></p>
+          <span class="hidden md:block w-12 h-px bg-accent/40"></span>
+          <p class="modal-eyebrow hidden md:block font-mono text-[10px] uppercase tracking-[0.3em] text-bone/50">
+            Rokumentarni dani · Live Sessions
+          </p>
+        </div>
+        <button
+          class="modal-close inline-flex items-center justify-center w-10 h-10 border border-bone/20 hover:border-accent hover:text-accent transition"
+          aria-label="Close"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <line x1="2" y1="2" x2="12" y2="12" />
+            <line x1="12" y1="2" x2="2" y2="12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Center: video -->
+      <div class="flex-1 flex items-center justify-center min-h-0 py-6">
+        <div class="modal-video relative aspect-video w-full max-w-6xl mx-auto">
+          <!-- Pixel-cube corner accents -->
+          <span class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-accent"></span>
+          <span class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-accent"></span>
+          <span class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-accent"></span>
+          <span class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-accent"></span>
+
+          <div
+            class="absolute inset-0 ring-1 ring-accent/40 pointer-events-none"
+            style="box-shadow: 0 0 80px -10px rgba(74, 197, 228, 0.35);"
+          ></div>
+
+          <div class="modal-mount absolute inset-0 bg-ash"></div>
+        </div>
+      </div>
+
+      <!-- Bottom: title + nav -->
+      <div class="flex items-end justify-between gap-6 flex-wrap">
+        <div class="min-w-0">
+          <p class="modal-artist font-display text-3xl md:text-5xl leading-none tracking-tight"></p>
+          <p class="modal-title font-mono text-[10px] md:text-xs uppercase tracking-[0.25em] text-bone/55 mt-2"></p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            class="modal-prev inline-flex items-center justify-center w-10 h-10 border border-bone/20 hover:border-accent hover:text-accent transition"
+            aria-label="Previous session"
+          >
+            <span aria-hidden="true">←</span>
+          </button>
+          <button
+            class="modal-next inline-flex items-center justify-center w-10 h-10 border border-bone/20 hover:border-accent hover:text-accent transition"
+            aria-label="Next session"
+          >
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <PixelDivider />
+
+  <!-- PHOTO STRIP — atmospheric horizontal gallery -->
+  <section class=" overflow-hidden">
+    <div class="mx-auto max-w-7xl px-6 lg:px-10 py-20">
+      <div class="reveal flex items-end justify-between mb-10">
+        <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+          Iz arhive
+        </p>
+        <a
+          href="/galerija/"
+          class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
+        >
+          Cijela galerija →
+        </a>
+      </div>
+      <ul class="reveal-stagger grid grid-cols-2 md:grid-cols-5 gap-2">
+        {
+          photoStrip.map((src, i) => (
+            <li
+              class="photo-tile photo-mosaic aspect-[4/5] bg-ash relative overflow-hidden"
+              data-mosaic
+            >
+              <img
+                src={src}
+                alt={`Festival photo ${i + 1}`}
+                loading="lazy"
+                class="absolute inset-0 w-full h-full object-cover photo-img"
+              />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <style is:global>
+    /* Perspective lets the active card's rotateX/rotateY (set by the
+       cursor-tilt script via --rx and --ry) create real depth. */
+    .live-grid {
+      perspective: 1400px;
+    }
+    .live-card {
+      transform-style: preserve-3d;
+      transition:
+        transform 0.5s cubic-bezier(0.2, 0, 0.1, 1),
+        box-shadow 0.5s ease,
+        border-color 0.3s ease;
+      will-change: transform;
+    }
+    .live-card.is-active {
+      transform:
+        translateY(-12px)
+        rotateX(var(--rx, 0deg))
+        rotateY(var(--ry, 0deg));
+      border-color: var(--color-accent);
+      box-shadow: 0 30px 60px -20px rgba(74, 197, 228, 0.25);
+    }
+    /* While the cursor is over the card we drop the easing so tilt is
+       responsive. The script removes this when the cursor leaves. */
+    .live-card.is-tilting {
+      transition:
+        transform 0.08s linear,
+        box-shadow 0.5s ease,
+        border-color 0.3s ease;
+    }
+    .live-card:not(.is-active) .img-bw {
+      filter: grayscale(0.85) contrast(1.05) brightness(0.55);
+    }
+    .live-card.is-active .img-bw {
+      filter: grayscale(0) contrast(1) brightness(0.95);
+    }
+
+    /* Modal open state — pointer-events on, fade in. */
+    #live-modal.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #live-modal.is-open .modal-video {
+      animation: modal-pop 0.45s cubic-bezier(0.2, 0, 0.1, 1) both;
+    }
+    @keyframes modal-pop {
+      from {
+        transform: scale(0.96);
+        opacity: 0.3;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    body.modal-open {
+      overflow: hidden;
+    }
+    .live-card.is-playing .play-icon,
+    .live-card.is-playing .thumb {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .live-card .iframe-mount iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
+
+  <script is:inline>
+    // Wait for the rest of the body to parse before we wire up handlers —
+    // this script tag is in the middle of the page, so News and Partners
+    // wouldn't exist yet without DOMContentLoaded.
+    function rdInitHomepage() {
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // ===================================================================
+      // Hero slideshow — mosaic dissolve between photos (canvas).
+      //
+      // The transition mimics the logo's cell language: the outgoing
+      // image breaks into a 24×14 grid and tiles fade away in random
+      // order to reveal the incoming image underneath.
+      // ===================================================================
+      const hero = document.querySelector("[data-hero-images]");
+      if (hero) {
+        let raw = "[]";
+        try { raw = hero.dataset.heroImages || "[]"; } catch (_) {}
+        let list = [];
+        try { list = JSON.parse(raw); } catch (_) {}
+        const canvas = hero.querySelector(".hero-canvas");
+        const fallback = hero.querySelector(".hero-fallback");
+        if (canvas && list.length >= 2) {
+          const ctx = canvas.getContext("2d");
+          const off = document.createElement("canvas");
+          const offCtx = off.getContext("2d");
+
+          function resize() {
+            const r = hero.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(r.width * dpr);
+            canvas.height = Math.round(r.height * dpr);
+            canvas.style.width = r.width + "px";
+            canvas.style.height = r.height + "px";
+            off.width = canvas.width;
+            off.height = canvas.height;
+          }
+
+          function drawCover(target, img) {
+            const cw = canvas.width;
+            const ch = canvas.height;
+            const ir = img.naturalWidth / img.naturalHeight;
+            const cr = cw / ch;
+            let dw, dh, dx, dy;
+            if (ir > cr) {
+              dh = ch; dw = ch * ir;
+              dx = (cw - dw) / 2; dy = 0;
+            } else {
+              dw = cw; dh = cw / ir;
+              dx = 0; dy = (ch - dh) / 2;
+            }
+            target.drawImage(img, dx, dy, dw, dh);
+          }
+
+          // Preload everything before swapping the fallback out.
+          const loaded = list.map(
+            (src) =>
+              new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
+              }),
+          );
+
+          Promise.all(loaded).then((imgs) => {
+            const valid = imgs.filter(Boolean);
+            if (valid.length < 2) return;
+
+            resize();
+            window.addEventListener("resize", resize);
+
+            let current = 0;
+            drawCover(ctx, valid[current]);
+            canvas.style.display = "";
+            if (fallback) fallback.style.display = "none";
+
+            // Smaller cubes for finer pixel grain (~13px squares on a
+            // 1280×720 canvas). With opacity-fade per cell, each cell has
+            // its own fade window so the dissolve looks painterly rather
+            // than chunky.
+            const COLS = 96;
+            const ROWS = 56;
+
+            function transitionTo(nextIdx) {
+              const fromImg = valid[current];
+              const toImg = valid[nextIdx];
+              const cw = canvas.width;
+              const ch = canvas.height;
+
+              // Snapshot the current frame to the offscreen canvas.
+              offCtx.clearRect(0, 0, cw, ch);
+              drawCover(offCtx, fromImg);
+
+              // Build cell list. A small fraction get a "brand flash"
+               // colour (cyan or white) — during that cell's fade window
+               // we paint a brand-colour block over the dissolving image
+               // so the transition sparkles in the festival's palette.
+              const cells = [];
+              for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                  const roll = Math.random();
+                  let flash = null;
+                  if (roll < 0.04) flash = "#ffffff";
+                  else if (roll < 0.14) flash = "#4ac5e4";
+                  cells.push([c, r, flash]);
+                }
+              }
+              for (let i = cells.length - 1; i > 0; i--) {
+                const j = (Math.random() * (i + 1)) | 0;
+                const tmp = cells[i];
+                cells[i] = cells[j];
+                cells[j] = tmp;
+              }
+
+              const totalDuration = 1800;
+              const fadeDuration = 280; // ms each cell takes to fade out
+              const staggerWindow = totalDuration - fadeDuration;
+              const start = performance.now();
+
+              function frame(now) {
+                const elapsed = now - start;
+                const t = Math.min(1, elapsed / totalDuration);
+
+                // Base layer: incoming image
+                drawCover(ctx, toImg);
+
+                // Overlay: each outgoing cell with its own opacity based
+                // on individual fade window. Branded cells additionally
+                // get a colour flash that peaks at mid-fade.
+                for (let i = 0; i < cells.length; i++) {
+                  const cellStart = (i / cells.length) * staggerWindow;
+                  const cellAge = elapsed - cellStart;
+                  if (cellAge >= fadeDuration) continue; // already gone
+                  const alpha = cellAge <= 0
+                    ? 1
+                    : 1 - cellAge / fadeDuration;
+
+                  const [c, r, flash] = cells[i];
+                  const x = Math.round((c * cw) / COLS);
+                  const y = Math.round((r * ch) / ROWS);
+                  const x2 = Math.round(((c + 1) * cw) / COLS);
+                  const y2 = Math.round(((r + 1) * ch) / ROWS);
+                  const w = x2 - x;
+                  const h = y2 - y;
+
+                  // Outgoing image cell, fading.
+                  ctx.globalAlpha = alpha;
+                  ctx.drawImage(off, x, y, w, h, x, y, w, h);
+
+                  // Brand-colour flash on selected cells. Bell curve so
+                  // the colour rises and falls over the fade window.
+                  if (flash && cellAge > 0) {
+                    const p = cellAge / fadeDuration; // 0..1
+                    const bell = 4 * p * (1 - p); // 0 → 1 (mid) → 0
+                    if (bell > 0.01) {
+                      ctx.globalAlpha = bell;
+                      ctx.fillStyle = flash;
+                      ctx.fillRect(x, y, w, h);
+                    }
+                  }
+                }
+                ctx.globalAlpha = 1;
+
+                if (t < 1) requestAnimationFrame(frame);
+                else current = nextIdx;
+              }
+              requestAnimationFrame(frame);
+            }
+
+            // Auto-advance every 7s. Pause when section is off-screen.
+            let timer = null;
+            function tick() {
+              const next = (current + 1) % valid.length;
+              if (reduced) {
+                drawCover(ctx, valid[next]);
+                current = next;
+              } else {
+                transitionTo(next);
+              }
+            }
+            function start() {
+              if (timer) return;
+              timer = setInterval(tick, 7000);
+            }
+            function stop() {
+              if (timer) {
+                clearInterval(timer);
+                timer = null;
+              }
+            }
+            if ("IntersectionObserver" in window) {
+              const sio = new IntersectionObserver(
+                (entries) => {
+                  entries.forEach((e) => (e.isIntersecting ? start() : stop()));
+                },
+                { threshold: 0.1 },
+              );
+              sio.observe(hero);
+            } else {
+              start();
+            }
+          });
+        }
+      }
+
+      // ===================================================================
+      // Live Sessions — click any card → fullscreen modal with player.
+      // Modal supports prev/next, Escape to close, click outside to close,
+      // arrow-key navigation. The first card stays "active" by default for
+      // the visual lift / desaturation, but click no longer plays inline.
+      // ===================================================================
+      const cards = document.querySelectorAll(".live-card");
+      const modal = document.getElementById("live-modal");
+      if (cards.length && modal) {
+        const total = cards.length;
+        let currentIdx = -1;
+        const mount = modal.querySelector(".modal-mount");
+        const counterEl = modal.querySelector(".modal-counter");
+        const artistEl = modal.querySelector(".modal-artist");
+        const titleEl = modal.querySelector(".modal-title");
+        const closeBtn = modal.querySelector(".modal-close");
+        const prevBtn = modal.querySelector(".modal-prev");
+        const nextBtn = modal.querySelector(".modal-next");
+        const backdrop = modal.querySelector(".modal-backdrop");
+
+        function openModal(idx) {
+          if (idx < 0 || idx >= total) return;
+          const card = cards[idx];
+          const id = card.dataset.sessionId;
+          if (!id) return;
+          currentIdx = idx;
+
+          counterEl.textContent =
+            `${String(idx + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+          artistEl.textContent = card.dataset.artist || "";
+          titleEl.textContent = card.dataset.title || "";
+
+          // (Re)create iframe — destroy any previous one so the previous
+          // video stops playing.
+          const iframe = document.createElement("iframe");
+          iframe.src =
+            `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+          iframe.allow =
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+          iframe.allowFullscreen = true;
+          iframe.style.cssText = "width:100%;height:100%;border:0;";
+          mount.innerHTML = "";
+          mount.appendChild(iframe);
+
+          modal.classList.add("is-open");
+          modal.setAttribute("aria-hidden", "false");
+          document.body.classList.add("modal-open");
+        }
+
+        function closeModal() {
+          modal.classList.remove("is-open");
+          modal.setAttribute("aria-hidden", "true");
+          document.body.classList.remove("modal-open");
+          // Stop the video (drop the iframe).
+          mount.innerHTML = "";
+        }
+
+        function navigate(delta) {
+          if (currentIdx < 0) return;
+          const next = (currentIdx + delta + total) % total;
+          openModal(next);
+        }
+
+        // Card-body click toggles which card is "active" (visual lift +
+        // de-saturate), but doesn't open the modal. Only the play button
+        // does that — and it also sets the card active so the focused
+        // card matches what's playing.
+        function setActive(card) {
+          cards.forEach((c) => {
+            c.classList.toggle("is-active", c === card);
+            if (c !== card) {
+              c.classList.remove("is-tilting");
+              c.style.removeProperty("--rx");
+              c.style.removeProperty("--ry");
+            }
+          });
+        }
+
+        cards.forEach((card, i) => {
+          card.addEventListener("click", () => setActive(card));
+          const playBtn = card.querySelector(".play-button");
+          if (playBtn) {
+            playBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              setActive(card);
+              openModal(i);
+            });
+          }
+        });
+        closeBtn.addEventListener("click", closeModal);
+        backdrop.addEventListener("click", closeModal);
+        prevBtn.addEventListener("click", () => navigate(-1));
+        nextBtn.addEventListener("click", () => navigate(1));
+
+        document.addEventListener("keydown", (e) => {
+          if (!modal.classList.contains("is-open")) return;
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeModal();
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            navigate(-1);
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            navigate(1);
+          }
+        });
+
+        if (reduced) return;
+        // Cursor-tilt parallax on the active card stays.
+        cards.forEach((card) => {
+          card.addEventListener("pointerenter", () => {
+            if (card.classList.contains("is-active")) {
+              card.classList.add("is-tilting");
+            }
+          });
+          card.addEventListener("pointermove", (e) => {
+            if (!card.classList.contains("is-active")) return;
+            const rect = card.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            const max = 5;
+            card.style.setProperty("--ry", `${x * max}deg`);
+            card.style.setProperty("--rx", `${-y * max}deg`);
+          });
+          card.addEventListener("pointerleave", () => {
+            card.classList.remove("is-tilting");
+            card.style.removeProperty("--rx");
+            card.style.removeProperty("--ry");
+          });
+        });
+      }
+
+      // ===================================================================
+      // Scroll-into-view reveals — both `.reveal` and `.reveal-stagger`.
+      // Honors prefers-reduced-motion (CSS already disables the transitions
+      // so we just mark visible immediately).
+      // ===================================================================
+      const targets = document.querySelectorAll(".reveal, .reveal-stagger");
+      if (reduced) {
+        targets.forEach((t) => t.classList.add("is-visible"));
+      } else if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("is-visible");
+                io.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.12, rootMargin: "0px 0px -60px 0px" },
+        );
+        targets.forEach((t) => io.observe(t));
+      } else {
+        targets.forEach((t) => t.classList.add("is-visible"));
+      }
+
+      // ===================================================================
+      // Photo mosaic hover — same canvas dissolve language as the hero.
+      // For each [data-mosaic] tile: render a B&W canvas on top of the
+      // colour <img>; on hover, dissolve the canvas to transparent (cells
+      // fading + a few cyan/white flashes); on leave, dissolve back.
+      // ===================================================================
+      const photoTiles = document.querySelectorAll("[data-mosaic]");
+      photoTiles.forEach((tile) => {
+        const img = tile.querySelector(".photo-img");
+        if (!img) return;
+
+        function setup() {
+          if (!img.naturalWidth) return;
+          const canvas = document.createElement("canvas");
+          canvas.className = "photo-mosaic-canvas";
+          tile.appendChild(canvas);
+          tile.classList.add("is-mosaic");
+
+          const ctx = canvas.getContext("2d");
+          const off = document.createElement("canvas");
+          const offCtx = off.getContext("2d");
+          let cw = 0;
+          let ch = 0;
+          let animId = null;
+
+          function resize() {
+            const rect = tile.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return false;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            cw = Math.round(rect.width * dpr);
+            ch = Math.round(rect.height * dpr);
+            canvas.width = cw;
+            canvas.height = ch;
+            canvas.style.width = rect.width + "px";
+            canvas.style.height = rect.height + "px";
+            off.width = cw;
+            off.height = ch;
+            return true;
+          }
+
+          function drawCover(targetCtx, image) {
+            const ir = image.naturalWidth / image.naturalHeight;
+            const cr = cw / ch;
+            let dw, dh, dx, dy;
+            if (ir > cr) {
+              dh = ch; dw = ch * ir;
+              dx = (cw - dw) / 2; dy = 0;
+            } else {
+              dw = cw; dh = cw / ir;
+              dx = 0; dy = (ch - dh) / 2;
+            }
+            targetCtx.drawImage(image, dx, dy, dw, dh);
+          }
+
+          function paintBW(alpha = 1) {
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.filter = "grayscale(1) contrast(1.05) brightness(0.78)";
+            ctx.globalAlpha = alpha;
+            drawCover(ctx, img);
+            ctx.filter = "none";
+            ctx.globalAlpha = 1;
+          }
+
+          function bakeBWOffscreen() {
+            offCtx.clearRect(0, 0, cw, ch);
+            offCtx.filter = "grayscale(1) contrast(1.05) brightness(0.78)";
+            drawCover(offCtx, img);
+            offCtx.filter = "none";
+          }
+
+          if (!resize()) return;
+          paintBW();
+          window.addEventListener("resize", () => {
+            if (resize() && animId === null) paintBW();
+          });
+
+          // direction: "out" (B&W → transparent, reveal colour),
+          //            "in"  (transparent → B&W, hide colour)
+          function animateMosaic(direction) {
+            if (animId) cancelAnimationFrame(animId);
+            if (!resize()) return;
+            bakeBWOffscreen();
+
+            // Plain mosaic dissolve — opacity-only, no colour flashes.
+            const COLS = 36;
+            const ROWS = 45;
+            const cells = [];
+            for (let r = 0; r < ROWS; r++) {
+              for (let c = 0; c < COLS; c++) {
+                cells.push([c, r]);
+              }
+            }
+            for (let i = cells.length - 1; i > 0; i--) {
+              const j = (Math.random() * (i + 1)) | 0;
+              const tmp = cells[i];
+              cells[i] = cells[j];
+              cells[j] = tmp;
+            }
+
+            const totalDuration = 450;
+            const fadeDuration = 120;
+            const staggerWindow = totalDuration - fadeDuration;
+            const start = performance.now();
+
+            function frame(now) {
+              const elapsed = now - start;
+              ctx.clearRect(0, 0, cw, ch);
+              for (let i = 0; i < cells.length; i++) {
+                const cellStart = (i / cells.length) * staggerWindow;
+                const cellAge = elapsed - cellStart;
+                let alpha;
+                if (direction === "out") {
+                  if (cellAge >= fadeDuration) continue;
+                  alpha = cellAge <= 0 ? 1 : 1 - cellAge / fadeDuration;
+                } else {
+                  if (cellAge < 0) continue;
+                  alpha =
+                    cellAge >= fadeDuration ? 1 : cellAge / fadeDuration;
+                }
+
+                const [c, r] = cells[i];
+                const x = Math.round((c * cw) / COLS);
+                const y = Math.round((r * ch) / ROWS);
+                const x2 = Math.round(((c + 1) * cw) / COLS);
+                const y2 = Math.round(((r + 1) * ch) / ROWS);
+                const w = x2 - x;
+                const h = y2 - y;
+
+                ctx.globalAlpha = alpha;
+                ctx.drawImage(off, x, y, w, h, x, y, w, h);
+              }
+              ctx.globalAlpha = 1;
+
+              if (elapsed < totalDuration) {
+                animId = requestAnimationFrame(frame);
+              } else {
+                animId = null;
+                if (direction === "out") {
+                  ctx.clearRect(0, 0, cw, ch);
+                } else {
+                  paintBW();
+                }
+              }
+            }
+            animId = requestAnimationFrame(frame);
+          }
+
+          if (reduced) {
+            tile.addEventListener("mouseenter", () =>
+              ctx.clearRect(0, 0, cw, ch),
+            );
+            tile.addEventListener("mouseleave", () => paintBW());
+          } else {
+            tile.addEventListener("mouseenter", () => animateMosaic("out"));
+            tile.addEventListener("mouseleave", () => animateMosaic("in"));
+          }
+        }
+
+        if (img.complete && img.naturalWidth > 0) {
+          setup();
+        } else {
+          img.addEventListener("load", setup, { once: true });
+        }
+      });
+
+      // ===================================================================
+      // Stats counter — animate digit values from 0 → target on first reveal.
+      // Roman numerals cycle through I…IX. Other glyphs (∞) just fade in.
+      // ===================================================================
+      const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+      const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+
+      function animateNumber(el, target, duration = 1200) {
+        const start = performance.now();
+        function tick(now) {
+          const t = Math.min(1, (now - start) / duration);
+          el.textContent = String(Math.round(easeOutCubic(t) * target));
+          if (t < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+      function animateRoman(el, target, duration = 1200) {
+        const idx = ROMAN.indexOf(target);
+        if (idx < 0) {
+          el.textContent = target;
+          return;
+        }
+        const start = performance.now();
+        function tick(now) {
+          const t = Math.min(1, (now - start) / duration);
+          el.textContent = ROMAN[Math.round(easeOutCubic(t) * idx)];
+          if (t < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+
+      const stats = document.querySelectorAll("[data-stat]");
+      if (stats.length) {
+        const finals = new Map(
+          [...stats].map((el) => [el, el.dataset.stat]),
+        );
+        // Hold initial values blank-ish so the count-up has somewhere to go.
+        if (!reduced) {
+          stats.forEach((el) => {
+            const v = el.dataset.stat;
+            if (/^\d+$/.test(v)) el.textContent = "0";
+            else if (ROMAN.indexOf(v) >= 0) el.textContent = "I";
+          });
+        }
+        const section = stats[0].closest("section");
+        const trigger = () => {
+          stats.forEach((el) => {
+            const v = finals.get(el);
+            if (reduced) {
+              el.textContent = v;
+              return;
+            }
+            if (/^\d+$/.test(v)) animateNumber(el, parseInt(v, 10));
+            else if (ROMAN.indexOf(v) >= 0) animateRoman(el, v);
+            else el.textContent = v;
+          });
+        };
+        if (reduced || !("IntersectionObserver" in window) || !section) {
+          trigger();
+        } else {
+          const so = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                  trigger();
+                  so.disconnect();
+                }
+              });
+            },
+            { threshold: 0.4 },
+          );
+          so.observe(section);
+        }
+      }
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", rdInitHomepage);
+    } else {
+      rdInitHomepage();
+    }
+  </script>
+
+  <PixelDivider />
+
   {
     posts.length > 0 && (
       <section class="bg-ash">
         <div class="mx-auto max-w-7xl px-6 lg:px-10 py-24">
-          <div class="flex items-end justify-between mb-12">
+          <div class="reveal flex items-end justify-between mb-12">
             <h2 class="font-display font-light text-4xl md:text-5xl tracking-tight">
               Novosti
             </h2>
@@ -165,31 +1360,96 @@ const filmTitles = [
               Sve vijesti →
             </a>
           </div>
-          <ul class="grid md:grid-cols-3 gap-10">
-            {posts.map((post) => (
-              <li class="group">
-                <a href={`/blog/${post.data.slug ?? post.id}/`}>
-                  <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-accent mb-3">
-                    {post.data.date.toLocaleDateString("sr-Latn-ME", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </p>
-                  <h3 class="font-display text-2xl leading-snug group-hover:text-accent transition">
-                    {post.data.title}
-                  </h3>
-                  {post.data.excerpt && (
-                    <p class="mt-3 text-sm text-bone/60 leading-relaxed line-clamp-3">
-                      {post.data.excerpt}
+          <ul class="reveal-stagger grid md:grid-cols-3 gap-10">
+            {posts.map((post) => {
+              const headerImg = post.data.featuredImage ?? newsFallbackImage;
+              return (
+                <li class="group">
+                  <a href={`/blog/${post.data.slug ?? post.id}/`} class="block">
+                    <div class="aspect-[16/10] mb-5 overflow-hidden bg-fog">
+                      <img
+                        src={headerImg}
+                        alt={post.data.title}
+                        loading="lazy"
+                        class="w-full h-full object-cover img-bw transition duration-700 group-hover:scale-105 group-hover:filter-none"
+                      />
+                    </div>
+                    <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-accent mb-3 transition-colors duration-500">
+                      {post.data.date.toLocaleDateString("sr-Latn-ME", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
                     </p>
-                  )}
-                </a>
-              </li>
-            ))}
+                    <h3 class="font-display text-2xl leading-snug text-bone transition-colors duration-500 ease-out group-hover:text-accent">
+                      {post.data.title}
+                    </h3>
+                    {post.data.excerpt && (
+                      <p class="mt-3 text-sm text-bone/60 leading-relaxed line-clamp-3 transition-colors duration-500 group-hover:text-bone/85">
+                        {post.data.excerpt}
+                      </p>
+                    )}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </section>
     )
   }
+
+  <PixelDivider />
+
+  <!-- PARTNERS — funder logo strip -->
+  <section>
+    <div class="mx-auto max-w-7xl px-6 lg:px-10 py-16">
+      <p class="reveal text-center font-mono text-xs uppercase tracking-[0.3em] text-accent mb-10">
+        Podržavaju festival
+      </p>
+      <ul
+        class="reveal-stagger grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
+      >
+        {
+          partners.map((p) => {
+            const inner = (
+              <div class="bg-ink h-24 px-6 flex items-center justify-center text-center transition border border-bone/10 group-hover:bg-ash group-hover:border-accent/30">
+                {p.logo ? (
+                  <img
+                    src={p.logo}
+                    alt={p.fullName ?? p.name}
+                    class="max-h-12 w-auto opacity-70 transition group-hover:opacity-100"
+                  />
+                ) : (
+                  <span class="font-mono text-xs uppercase tracking-[0.2em] text-bone/55 group-hover:text-bone transition">
+                    {p.name}
+                  </span>
+                )}
+              </div>
+            );
+            return (
+              <li class="group">
+                {p.url ? (
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener"
+                    class="block h-full"
+                    title={p.fullName ?? p.name}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  inner
+                )}
+              </li>
+            );
+          })
+        }
+      </ul>
+      <p class="mt-6 text-center text-[11px] text-bone/40 font-mono uppercase tracking-[0.2em]">
+        Festival je realizovan uz podršku partnera iz Crne Gore i regiona.
+      </p>
+    </div>
+  </section>
 </BaseLayout>
