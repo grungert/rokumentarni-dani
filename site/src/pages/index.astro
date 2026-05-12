@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import EqBar from "../components/EqBar.astro";
 import BrickGrid from "../components/BrickGrid.astro";
+import VinylRecord from "../components/VinylRecord.astro";
 
 const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
@@ -481,8 +482,8 @@ const locations = [
   <!-- LIVE SESSIONS — interactive 3-card video switcher -->
   <section class="group">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
-      <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
-        <div>
+      <div class="reveal grid md:grid-cols-12 gap-10 items-center mb-16">
+        <div class="md:col-span-8">
           <EqBar class="mb-4" cells={28} cellSize={4} height={32} accent={0.3} />
           <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-4">
             Live Sessions
@@ -493,15 +494,20 @@ const locations = [
             Originalne <em class="text-accent">izvedbe</em><br />
             crnogorskih muzičara.
           </h2>
+          <a
+            href="https://www.youtube.com/@BucanPas"
+            target="_blank"
+            rel="noopener"
+            class="mt-6 inline-flex font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
+          >
+            Sve sesije na YouTube ↗
+          </a>
         </div>
-        <a
-          href="https://www.youtube.com/@BucanPas"
-          target="_blank"
-          rel="noopener"
-          class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
-        >
-          Sve sesije na YouTube ↗
-        </a>
+        <div class="md:col-span-4 flex justify-center md:justify-end">
+          <div class="aspect-square w-full max-w-[220px]">
+            <VinylRecord />
+          </div>
+        </div>
       </div>
 
       <ul class="live-grid reveal-stagger grid md:grid-cols-3 gap-4">

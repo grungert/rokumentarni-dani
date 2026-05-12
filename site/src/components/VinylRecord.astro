@@ -1,0 +1,353 @@
+---
+// 3D vinyl record — slowly rotating, drag-to-spin, label colour follows the
+// theme accent. Sits transparent so it lives nicely in any section.
+interface Props {
+  class?: string;
+}
+const { class: className = "" } = Astro.props;
+---
+
+<canvas
+  class:list={["rd-vinyl-canvas", className]}
+  data-rd-vinyl
+  aria-hidden="true"></canvas>
+
+<style>
+  .rd-vinyl-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  .rd-vinyl-canvas:active { cursor: grabbing; }
+</style>
+
+<script>
+  import * as THREE from "three";
+
+  function readAccent(): string {
+    return (
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-accent")
+        .trim() || "#4ac5e4"
+    );
+  }
+
+  /** Cache + load the brand SVG, rasterised onto a square canvas with the
+   *  fill paths set dark and the bg paths transparent. White elsewhere so
+   *  material.color (the accent) shows through the label. */
+  let cachedLabelTexture: THREE.CanvasTexture | null = null;
+  let labelTextureLoading: Promise<THREE.CanvasTexture | null> | null = null;
+
+  function loadLabelTexture(): Promise<THREE.CanvasTexture | null> {
+    if (cachedLabelTexture) return Promise.resolve(cachedLabelTexture);
+    if (labelTextureLoading) return labelTextureLoading;
+    labelTextureLoading = (async () => {
+      try {
+        const svgText = await fetch("/brand/logo.svg").then((r) => r.text());
+        const customised = svgText
+          .replace(/fill="var\(--logo-fill[^"]*"/g, 'fill="#0a0a0a"')
+          .replace(/fill="var\(--logo-bg[^"]*"/g, 'fill="rgba(0,0,0,0)"');
+        const blob = new Blob([customised], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.decoding = "async";
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = rej;
+          img.src = url;
+        });
+        const SIZE = 512;
+        const c = document.createElement("canvas");
+        c.width = c.height = SIZE;
+        const ctx = c.getContext("2d")!;
+        // White outside the logo so the accent (material.color) shows
+        // through everywhere except where the logo silhouette is.
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, SIZE, SIZE);
+        // Centre the logo with breathing room — ~14% padding so it sits
+        // nicely inside the round label.
+        const pad = Math.round(SIZE * 0.14);
+        ctx.drawImage(img, pad, pad, SIZE - pad * 2, SIZE - pad * 2);
+        URL.revokeObjectURL(url);
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 8;
+        cachedLabelTexture = tex;
+        return tex;
+      } catch (err) {
+        console.warn("[VinylRecord] logo texture failed:", err);
+        return null;
+      }
+    })();
+    return labelTextureLoading;
+  }
+
+  /** Draw concentric grooves onto a canvas → CanvasTexture for the disc faces. */
+  function createGrooveTexture(): THREE.CanvasTexture {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1024;
+    const ctx = c.getContext("2d")!;
+    // Base disc black
+    ctx.fillStyle = "#070707";
+    ctx.fillRect(0, 0, 1024, 1024);
+    const cx = 512, cy = 512;
+    // Grooves
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.lineWidth = 1;
+    for (let r = 150; r < 500; r += 5) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // A brighter inner ring near the label
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 175, 0, Math.PI * 2);
+    ctx.stroke();
+    // Subtle outer rim highlight
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 498, 0, Math.PI * 2);
+    ctx.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  function initVinyl(canvas: HTMLCanvasElement) {
+    if (canvas.dataset.rdInit) return;
+    canvas.dataset.rdInit = "1";
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas, antialias: true, alpha: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearAlpha(0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+    // Pulled back so the tilted disc fits the canvas with margin (was 2.8,
+    // which had the disc cropped at top + bottom of its bounding box).
+    camera.position.set(0, 1.5, 4.6);
+    camera.lookAt(0, 0, 0);
+
+    // Lighting — soft key + cool fill + warm rim. Vinyl reads metallic-ish.
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    key.position.set(3, 5, 4);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x88aacc, 0.45);
+    fill.position.set(-4, 2, 2);
+    scene.add(fill);
+    const rim = new THREE.PointLight(0xffe6b8, 2.0, 12, 1.6);
+    rim.position.set(-2, 3, -2);
+    scene.add(rim);
+
+    // Cursor-tracking accent light — mirrors the BrickGrid cursor halo so
+    // the same coloured "spotlight" that lights the cubes also kisses the
+    // vinyl. Position is driven by the global pointer (mapped from the
+    // canvas's bounding rect into scene units below).
+    const cursorLight = new THREE.PointLight(
+      new THREE.Color(readAccent()),
+      3.5,
+      6,
+      1.8
+    );
+    cursorLight.position.set(0, 0, 2);
+    scene.add(cursorLight);
+
+    // Cursor-tracking rig: three nested groups so Euler rotations compose
+    // intuitively.
+    //   yaw   — rotates around world Y (cursor X drives this).
+    //   pitch — inside yaw, rotates around the yaw-rotated X (cursor Y).
+    //           Holds the base recline so the face reads as a record.
+    //   spin  — inside pitch, continuous Y spin around the disc's own
+    //           normal (and absorbs drag inertia).
+    const yaw = new THREE.Group();
+    scene.add(yaw);
+    const pitch = new THREE.Group();
+    yaw.add(pitch);
+    const spin = new THREE.Group();
+    pitch.add(spin);
+
+    const BASE_PITCH = 0.6;   // base recline; +rad pitches the face toward camera
+    const RANGE_PITCH = 0.35; // ± rad of pitch driven by cursor Y
+    const RANGE_YAW = 0.8;    // ± rad of yaw driven by cursor X
+    pitch.rotation.x = BASE_PITCH;
+    pitch.rotation.z = 0.05;  // subtle permanent lean — character
+
+    const grooveTex = createGrooveTexture();
+
+    // Disc body — thin cylinder so the side is visible when tilted.
+    const discMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0a0a,
+      roughness: 0.42,
+      metalness: 0.55,
+    });
+    const disc = new THREE.Mesh(
+      new THREE.CylinderGeometry(1, 1, 0.04, 128),
+      discMat
+    );
+    spin.add(disc);
+
+    // Top and bottom faces with the groove texture.
+    const faceMat = new THREE.MeshStandardMaterial({
+      map: grooveTex,
+      roughness: 0.38,
+      metalness: 0.65,
+    });
+    const topFace = new THREE.Mesh(new THREE.CircleGeometry(1, 128), faceMat);
+    topFace.rotation.x = -Math.PI / 2;
+    topFace.position.y = 0.021;
+    spin.add(topFace);
+
+    const bottomFace = new THREE.Mesh(new THREE.CircleGeometry(1, 128), faceMat);
+    bottomFace.rotation.x = Math.PI / 2;
+    bottomFace.position.y = -0.021;
+    spin.add(bottomFace);
+
+    // Centre label — colour follows --color-accent live. The brand logo
+    // is rasterised onto a CanvasTexture and used as `map`, so the
+    // silhouette renders dark on top of the accent-coloured label.
+    const labelMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(readAccent()),
+      roughness: 0.65,
+      metalness: 0.0,
+    });
+    const labelTop = new THREE.Mesh(
+      new THREE.CircleGeometry(0.36, 64),
+      labelMat
+    );
+    labelTop.rotation.x = -Math.PI / 2;
+    labelTop.position.y = 0.0215;
+    spin.add(labelTop);
+
+    const labelBottom = new THREE.Mesh(
+      new THREE.CircleGeometry(0.36, 64),
+      labelMat
+    );
+    labelBottom.rotation.x = Math.PI / 2;
+    labelBottom.position.y = -0.0215;
+    spin.add(labelBottom);
+
+    // Attach the logo texture once it's loaded (async, cached after first).
+    loadLabelTexture().then((tex) => {
+      if (!tex) return;
+      labelMat.map = tex;
+      labelMat.needsUpdate = true;
+    });
+
+    // Centre spindle hole.
+    const hole = new THREE.Mesh(
+      new THREE.CircleGeometry(0.048, 24),
+      new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide })
+    );
+    hole.rotation.x = -Math.PI / 2;
+    hole.position.y = 0.022;
+    spin.add(hole);
+
+    // Resize handling.
+    function resize() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (w === 0 || h === 0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    // Theme change → recolour label + cursor light.
+    function onThemeChange() {
+      const c = readAccent();
+      labelMat.color.set(c);
+      cursorLight.color.set(c);
+    }
+    document.addEventListener("rd:theme-change", onThemeChange);
+
+    // Global cursor tracking — drives BOTH the yaw/pitch tilt AND the
+    // position of the accent point light.
+    let targetYaw = 0;
+    let targetPitch = BASE_PITCH;
+    function onGlobalPointer(e: PointerEvent) {
+      // Viewport-normalised cursor (-1 .. 1) → drives the rotation.
+      const vx = (e.clientX / window.innerWidth) * 2 - 1;
+      const vy = (e.clientY / window.innerHeight) * 2 - 1;
+      targetYaw = vx * RANGE_YAW;
+      targetPitch = BASE_PITCH + vy * RANGE_PITCH;
+
+      // Canvas-relative cursor → drives the light position in scene units.
+      const rect = canvas.getBoundingClientRect();
+      const cx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const cy = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      // Map into approximate scene-space (vinyl is ~1 unit radius).
+      cursorLight.position.x = cx * 2.4;
+      cursorLight.position.y = cy * 1.8;
+    }
+    window.addEventListener("pointermove", onGlobalPointer);
+
+    // Drag-to-spin (adds extra angular velocity on top of the idle spin).
+    let dragging = false;
+    let lastX = 0;
+    let extraVel = 0;
+    canvas.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      lastX = e.clientX;
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      extraVel += dx * 0.0012;
+      lastX = e.clientX;
+    });
+    function endDrag() { dragging = false; }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    canvas.addEventListener("pointerleave", endDrag);
+
+    // Hover speeds the idle spin up gently.
+    let hoverBoost = 0;
+    canvas.addEventListener("pointerenter", () => { hoverBoost = 1; });
+    canvas.addEventListener("pointerleave", () => { hoverBoost = 0; });
+
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const baseSpeed = reduced ? 0 : 0.005;
+
+    function animate() {
+      if (!canvas.isConnected) {
+        ro.disconnect();
+        document.removeEventListener("rd:theme-change", onThemeChange);
+        window.removeEventListener("pointermove", onGlobalPointer);
+        renderer.dispose();
+        return;
+      }
+      // Smooth lerp yaw + pitch toward the cursor-driven targets.
+      yaw.rotation.y += (targetYaw - yaw.rotation.y) * 0.08;
+      pitch.rotation.x += (targetPitch - pitch.rotation.x) * 0.08;
+      // Idle spin + hover boost + drag inertia.
+      const targetBoost = hoverBoost * 0.006;
+      spin.rotation.y += baseSpeed + targetBoost + extraVel;
+      extraVel *= 0.94; // ease back
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  function autoInit() {
+    document
+      .querySelectorAll<HTMLCanvasElement>("[data-rd-vinyl]")
+      .forEach(initVinyl);
+  }
+
+  document.addEventListener("astro:page-load", autoInit);
+  if (document.readyState !== "loading") autoInit();
+  else document.addEventListener("DOMContentLoaded", autoInit);
+</script>
