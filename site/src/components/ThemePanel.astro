@@ -1,0 +1,251 @@
+---
+// Floating theme picker. Lives in BaseLayout so it appears on every page.
+// Overrides `--color-accent` (and a derived deeper shade `--color-accent-deep`)
+// on :root, so every Tailwind utility that resolves `var(--color-accent)`
+// (text-accent, bg-accent, border-accent, etc.) updates instantly.
+//
+// Notifies the BrickGrid via a custom `rd:theme-change` event on document,
+// which the component listens for to repaint its cursor light.
+---
+
+<div class="rd-theme-panel" data-rd-theme-panel>
+  <button
+    type="button"
+    class="rd-theme-toggle"
+    aria-label="Open theme picker"
+    aria-expanded="false"
+  >
+    <!-- Palette icon -->
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12c0 4.418 3.582 8 8 8h2.5a1.5 1.5 0 0 0 0-3 1.5 1.5 0 0 1 0-3H17a5 5 0 0 0 0-10"/>
+      <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/>
+      <circle cx="12" cy="7" r="1.2" fill="currentColor"/>
+      <circle cx="16.5" cy="10.5" r="1.2" fill="currentColor"/>
+    </svg>
+  </button>
+
+  <div class="rd-theme-pop" role="dialog" aria-label="Theme picker">
+    <p class="rd-theme-title">Accent color</p>
+    <ul class="rd-theme-swatches">
+      <li><button type="button" data-color="#4ac5e4" data-name="Cyan"     style="--swatch:#4ac5e4" aria-label="Cyan"></button></li>
+      <li><button type="button" data-color="#d4a574" data-name="Amber"    style="--swatch:#d4a574" aria-label="Amber"></button></li>
+      <li><button type="button" data-color="#ff3d6e" data-name="Magenta"  style="--swatch:#ff3d6e" aria-label="Magenta"></button></li>
+      <li><button type="button" data-color="#b8e63a" data-name="Lime"     style="--swatch:#b8e63a" aria-label="Lime"></button></li>
+      <li><button type="button" data-color="#ff7a5e" data-name="Coral"    style="--swatch:#ff7a5e" aria-label="Coral"></button></li>
+      <li><button type="button" data-color="#a86bff" data-name="Violet"   style="--swatch:#a86bff" aria-label="Violet"></button></li>
+      <li><button type="button" data-color="#f5f1e8" data-name="Bone"     style="--swatch:#f5f1e8" aria-label="Bone"></button></li>
+    </ul>
+
+    <label class="rd-theme-custom">
+      <span>Custom</span>
+      <input type="color" data-rd-theme-custom value="#4ac5e4" />
+    </label>
+
+    <button type="button" class="rd-theme-reset" data-rd-theme-reset>Reset</button>
+  </div>
+</div>
+
+<style>
+  .rd-theme-panel {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 70;
+    color: var(--color-bone, #f5f1e8);
+    font-family: var(--font-mono, ui-monospace, monospace);
+  }
+  .rd-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(245, 241, 232, 0.2);
+    background: rgba(10, 10, 10, 0.7);
+    backdrop-filter: blur(8px);
+    color: var(--color-accent, #4ac5e4);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, transform 0.2s;
+  }
+  .rd-theme-toggle:hover {
+    border-color: var(--color-accent, #4ac5e4);
+    transform: translateY(-1px);
+  }
+  .rd-theme-pop {
+    position: absolute;
+    right: 0;
+    bottom: 48px;
+    min-width: 220px;
+    padding: 14px;
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .rd-theme-panel.is-open .rd-theme-pop {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .rd-theme-title {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+    margin: 0 0 10px 0;
+  }
+  .rd-theme-swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .rd-theme-swatches button {
+    width: 22px;
+    height: 22px;
+    background: var(--swatch);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .rd-theme-swatches button:hover {
+    transform: scale(1.1);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  .rd-theme-swatches button.is-active {
+    outline: 2px solid var(--color-bone, #f5f1e8);
+    outline-offset: 2px;
+  }
+  .rd-theme-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 241, 232, 0.55);
+  }
+  .rd-theme-custom input[type="color"] {
+    width: 32px;
+    height: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .rd-theme-reset {
+    margin-top: 10px;
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    background: transparent;
+    color: rgba(245, 241, 232, 0.6);
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .rd-theme-reset:hover {
+    border-color: var(--color-accent, #4ac5e4);
+    color: var(--color-accent, #4ac5e4);
+  }
+</style>
+
+<script>
+  // Persists the chosen accent across navigations + tabs.
+  const STORAGE_KEY = "rd-theme-accent";
+  const DEFAULT_ACCENT = "#4ac5e4";
+
+  function dimDeep(hex: string, factor = 0.55): string {
+    // Crude darker variant: lerp toward black.
+    const m = /^#?([0-9a-f]{3,8})$/i.exec(hex.trim());
+    if (!m) return hex;
+    let s = m[1];
+    if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+    if (s.length > 6) s = s.slice(0, 6);
+    const r = parseInt(s.slice(0, 2), 16);
+    const g = parseInt(s.slice(2, 4), 16);
+    const b = parseInt(s.slice(4, 6), 16);
+    const f = Math.max(0, Math.min(1, factor));
+    const toHex = (n: number) => n.toString(16).padStart(2, "0");
+    return "#" + toHex(Math.round(r * f)) + toHex(Math.round(g * f)) + toHex(Math.round(b * f));
+  }
+
+  function applyAccent(color: string, opts: { persist?: boolean } = {}) {
+    const root = document.documentElement;
+    root.style.setProperty("--color-accent", color);
+    root.style.setProperty("--color-accent-deep", dimDeep(color, 0.55));
+    if (opts.persist !== false) {
+      try { localStorage.setItem(STORAGE_KEY, color); } catch {}
+    }
+    document.dispatchEvent(new CustomEvent("rd:theme-change", { detail: { accent: color } }));
+    document.querySelectorAll<HTMLButtonElement>("[data-rd-theme-panel] [data-color]")
+      .forEach((b) => b.classList.toggle("is-active", b.dataset.color?.toLowerCase() === color.toLowerCase()));
+    const customInput = document.querySelector<HTMLInputElement>("[data-rd-theme-custom]");
+    if (customInput) customInput.value = color;
+  }
+
+  function readStoredAccent(): string {
+    try { return localStorage.getItem(STORAGE_KEY) || DEFAULT_ACCENT; }
+    catch { return DEFAULT_ACCENT; }
+  }
+
+  function wirePanel() {
+    const panels = document.querySelectorAll<HTMLElement>("[data-rd-theme-panel]");
+    panels.forEach((panel) => {
+      if (panel.dataset.rdInit) return;
+      panel.dataset.rdInit = "1";
+
+      const toggle = panel.querySelector<HTMLButtonElement>(".rd-theme-toggle");
+      const pop = panel.querySelector<HTMLElement>(".rd-theme-pop");
+
+      toggle?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = panel.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", String(open));
+      });
+      document.addEventListener("click", (e) => {
+        if (!panel.contains(e.target as Node)) panel.classList.remove("is-open");
+      });
+      pop?.addEventListener("click", (e) => e.stopPropagation());
+
+      panel.querySelectorAll<HTMLButtonElement>("[data-color]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const c = btn.dataset.color;
+          if (c) applyAccent(c);
+        });
+      });
+
+      const customInput = panel.querySelector<HTMLInputElement>("[data-rd-theme-custom]");
+      customInput?.addEventListener("input", (e) => {
+        const v = (e.target as HTMLInputElement).value;
+        if (v) applyAccent(v);
+      });
+
+      const resetBtn = panel.querySelector<HTMLButtonElement>("[data-rd-theme-reset]");
+      resetBtn?.addEventListener("click", () => {
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        applyAccent(DEFAULT_ACCENT, { persist: false });
+      });
+    });
+  }
+
+  function boot() {
+    applyAccent(readStoredAccent(), { persist: false });
+    wirePanel();
+  }
+
+  document.addEventListener("astro:page-load", boot);
+  if (document.readyState !== "loading") boot();
+  else document.addEventListener("DOMContentLoaded", boot);
+</script>

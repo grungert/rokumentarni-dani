@@ -3,6 +3,7 @@ import "../styles/global.css";
 import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import ThemePanel from "../components/ThemePanel.astro";
 
 interface Props {
   title: string;
@@ -39,6 +40,9 @@ const fullTitle =
       <slot />
     </main>
     <SiteFooter />
+
+    <!-- Floating accent-color picker (persists choice in localStorage). -->
+    <ThemePanel />
 
     <!-- Pixel flicker overlay shown during route changes -->
     <div id="page-flicker" aria-hidden="true"></div>

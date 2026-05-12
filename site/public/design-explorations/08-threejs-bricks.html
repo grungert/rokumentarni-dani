@@ -378,36 +378,13 @@
           roughness: params.roughness,
           metalness: params.metalness,
         });
-        // Shader patch: when an instance's colour is (0,0,0), zero out the final
-        // fragment so the metallic specular F0 baseline can't leak any light.
-        // Any non-zero instance colour keeps the full PBR response.
-        // NB: three.js r155+ renamed <output_fragment> to <opaque_fragment>; we
-        // patch both so this works across minor version bumps. We also use the
-        // correct conditional — InstancedMesh.setColorAt enables
-        // USE_INSTANCING_COLOR (not USE_COLOR).
-        mat.onBeforeCompile = (shader) => {
-          const maskSnippet = `
-            #if defined(USE_COLOR) || defined(USE_INSTANCING_COLOR)
-              float instMax_rd = max(max(vColor.r, vColor.g), vColor.b);
-              gl_FragColor.rgb *= step(0.001, instMax_rd);
-            #endif
-          `;
-          let patched = false;
-          for (const tag of ["<opaque_fragment>", "<output_fragment>"]) {
-            const find = `#include ${tag}`;
-            if (shader.fragmentShader.includes(find)) {
-              shader.fragmentShader = shader.fragmentShader.replace(
-                find,
-                find + "\n" + maskSnippet
-              );
-              patched = true;
-              break;
-            }
-          }
-          if (!patched) {
-            console.warn("[bricks] black-mask shader patch could not find an output chunk; specular may leak.");
-          }
-        };
+        // No shader mask — the cubes need to respond to the cursor light so the
+        // halo is visible on the field. With baseColor = (0,0,0):
+        //  - ambient × diffuseColor ≈ 0  → no uniform tint, cubes stay dark at rest
+        //  - cursor specular × F0(metal=0.72, base=0) ≈ ~1% reflection of the
+        //    cyan light → a faint halo around the cursor on unpainted cubes
+        //  - painted cubes (instance colour white) reflect ~100% → very bright,
+        //    so they pop against the dark field.
 
         total = params.cols * params.rows;
         mesh = new THREE.InstancedMesh(geom, mat, total);

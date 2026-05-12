@@ -1,8 +1,8 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import PixelDivider from "../components/PixelDivider.astro";
 import EqBar from "../components/EqBar.astro";
+import BrickGrid from "../components/BrickGrid.astro";
 
 const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
@@ -172,7 +172,21 @@ const locations = [
   title="Rokumentarni dani"
   description="Festival dokumentarnog filma o muzici"
 >
-  <!-- HERO -->
+  <!-- Brick-grid backdrop. Fixed-position canvas behind every section.
+       `-z-10` keeps it below body's in-flow content (header, footer, sections)
+       — without it the canvas would default to z=auto and paint on top of
+       the header/footer, hiding them. Body's bg-ink still paints below z=-10
+       so the canvas reads on a black backdrop.
+       Hero photo + .bg-ash sections cover it via their own background;
+       black sections reveal it (cyan halo follows the cursor).
+       interactive=true → clicking on a visible cube paints it white. The
+       canvas itself stays pointer-events:none so it doesn't block links /
+       buttons; the painter listens at window level and skips clicks whose
+       target is an interactive element. -->
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+
+  <div class="relative z-10">
+    <!-- HERO -->
   <section
     class="relative min-h-screen flex items-end overflow-hidden vignette"
     data-hero-images={JSON.stringify(heroImages)}
@@ -278,17 +292,16 @@ const locations = [
             height="10"
             viewBox="0 0 1 1"
             shape-rendering="crispEdges"
-            class="inline-block align-middle mx-4 not-italic"
+            class="inline-block align-middle mx-4 not-italic text-accent"
             aria-hidden="true"
           >
-            <rect width="1" height="1" fill="#4ac5e4" />
+            <rect width="1" height="1" fill="currentColor" />
           </svg>
         </>
       ))}
     </div>
   </div>
 
-  <PixelDivider />
 
   <!-- ABOUT — animated logo lives here -->
   <section class="">
@@ -330,7 +343,6 @@ const locations = [
     </div>
   </section>
 
-  <PixelDivider />
 
   <!-- STATS — festival in numbers -->
   <section class="">
@@ -355,7 +367,6 @@ const locations = [
     </div>
   </section>
 
-  <PixelDivider />
 
   <!-- PROGRAMS — what the festival actually does -->
   <section class="">
@@ -424,7 +435,6 @@ const locations = [
     </div>
   </section>
 
-  <PixelDivider />
 
   <!-- LOCATIONS — three cities -->
   <section class=" bg-ash">
@@ -467,7 +477,6 @@ const locations = [
     </div>
   </section>
 
-  <PixelDivider />
 
   <!-- LIVE SESSIONS — interactive 3-card video switcher -->
   <section class="group">
@@ -626,7 +635,6 @@ const locations = [
     </div>
   </div>
 
-  <PixelDivider />
 
   <!-- PHOTO STRIP — atmospheric horizontal gallery -->
   <section class=" overflow-hidden">
@@ -663,6 +671,24 @@ const locations = [
   </section>
 
   <style is:global>
+    /* Homepage only: kill the body grain overlay so it doesn't sit on top
+       of the brick-grid backdrop. Other pages keep their grain. */
+    body.grain::before {
+      display: none !important;
+    }
+
+    /* Homepage only: push the ink colour down to <html> and make <body>
+       transparent. Without this, body's bg-ink is opaque and paints over
+       anything with z-index < 0 — so the brick-grid canvas at -z-10 was
+       invisible. Now html paints the ink, canvas sits above it, and all
+       in-flow content (header, footer, sections) stays in front. */
+    html {
+      background: var(--color-ink, #0a0a0a);
+    }
+    body {
+      background: transparent !important;
+    }
+
     /* Perspective lets the active card's rotateX/rotateY (set by the
        cursor-tilt script via --rx and --ry) create real depth. */
     .live-grid {
@@ -830,13 +856,19 @@ const locations = [
                // colour (cyan or white) — during that cell's fade window
                // we paint a brand-colour block over the dissolving image
                // so the transition sparkles in the festival's palette.
+              // Read the current accent from the CSS variable so the dissolve
+              // sparkles in whatever palette the ThemePanel is set to.
+              const accent =
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--color-accent")
+                  .trim() || "#4ac5e4";
               const cells = [];
               for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                   const roll = Math.random();
                   let flash = null;
                   if (roll < 0.04) flash = "#ffffff";
-                  else if (roll < 0.14) flash = "#4ac5e4";
+                  else if (roll < 0.14) flash = accent;
                   cells.push([c, r, flash]);
                 }
               }
@@ -1343,7 +1375,6 @@ const locations = [
     }
   </script>
 
-  <PixelDivider />
 
   {
     posts.length > 0 && (
@@ -1399,7 +1430,6 @@ const locations = [
     )
   }
 
-  <PixelDivider />
 
   <!-- PARTNERS — funder logo strip -->
   <section>
@@ -1452,4 +1482,6 @@ const locations = [
       </p>
     </div>
   </section>
+  </div>
+  <!-- /relative z-10 wrapper for brick-grid backdrop -->
 </BaseLayout>

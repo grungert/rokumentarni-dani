@@ -1,0 +1,405 @@
+---
+// Three.js brick-grid background — black field of rounded cubes that lift
+// under the cursor halo and can be painted by clicking. Position with a
+// `class` prop (e.g. "absolute inset-0" inside a `relative` parent).
+//
+// All structural params are baked-in defaults; expose only the few you'll
+// reasonably tweak per page (cursor / paint colours, intensity).
+
+interface Props {
+  class?: string;
+  /** When true, clicks paint cubes white. When false (default) the canvas is
+   *  pointer-event-transparent so it can sit behind interactive page content. */
+  interactive?: boolean;
+  paintColor?: string;
+  cursorColor?: string;
+  cursorIntensity?: number;
+}
+
+const {
+  class: className = "",
+  interactive = false,
+  paintColor = "#ffffff",
+  cursorColor = "#39c7e2",
+  cursorIntensity = 51.5,
+} = Astro.props;
+
+const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorIntensity });
+---
+
+<canvas
+  class:list={["brick-grid-canvas", className, { "is-interactive": interactive }]}
+  data-rd-brick-grid={config}
+  aria-hidden="true"></canvas>
+
+<style>
+  .brick-grid-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* default: click-through so it can be a backdrop */
+  }
+  .brick-grid-canvas.is-interactive {
+    pointer-events: auto;
+    cursor: crosshair;
+  }
+</style>
+
+<script>
+  import * as THREE from "three";
+  import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+  function initBrickGrid(canvas: HTMLCanvasElement) {
+    let cfg: any = {};
+    try { cfg = JSON.parse(canvas.dataset.rdBrickGrid || "{}"); } catch {}
+
+    // ---- Preset (locked from the design exploration) ----
+    const COLS = 110;
+    const ROWS = 70;
+    const GAP = 0.1;
+    const CUBE_SIDE = 0.98;
+    const CUBE_HEIGHT = 1.55;
+    const CORNER_RADIUS = 0.001;
+    const CORNER_SEGMENTS = 1;
+    const FRUSTUM_HEIGHT = 16.5;
+    const CAM_X = -0.5;
+    const CAM_Y = 40;
+    const CAM_Z = 0;
+    const LOOK_Y = 4.1;
+    const HOVER_RADIUS = 8.3;
+    const HOVER_LIFT = 3.7;
+    const HOVER_FALLOFF = 1.5;
+    const WAVE_AMP = 0.06;
+    const WAVE_SPEED = 1.15;
+    const WAVE_FREQ_X = 0.44;
+    const WAVE_FREQ_Z = 0.61;
+    const IDLE_AMP_X = 18.5;
+    const IDLE_AMP_Z = 14;
+    const AMB_COLOR = 0x1a2026;
+    const AMB_INTENSITY = 3;
+    // Pull the brand accent from the CSS variable so the theme picker
+    // (ThemePanel) drives this too. Prop value is the fallback.
+    function readAccentVar(): string {
+      const v = getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-accent")
+        .trim();
+      return v || cfg.cursorColor || "#39c7e2";
+    }
+    const CURSOR_COLOR = readAccentVar();
+    const CURSOR_INTENSITY = cfg.cursorIntensity ?? 51.5;
+    const CURSOR_RANGE = 22.5;
+    const CURSOR_DECAY = 1.8;
+    const CURSOR_Y = 7.5;   // Must stay above the tallest possible cube top
+                            // (~6.5: base 0.2 + hover 3.7 + paint 0.25 + wave 0.06,
+                            //  all × CUBE_HEIGHT 1.55). Below that, the top
+                            //  face's normal flips away from the light → black.
+    const ROUGHNESS = 1;
+    const METALNESS = 0.72;
+    const PAINT_COLOR = cfg.paintColor || "#ffffff";
+    const BASE_HEIGHT = 0.2;
+    const PAINTED_LIFT_TARGET = 0.25;  // extra Y-scale added to painted cubes ("a little higher")
+    const PAINTED_LIFT_RATE = 0.06;    // per-frame ease toward the target
+    // Click ripple — a wavefront expands outward from the click point and
+    // briefly lifts cubes in its path before decaying.
+    const RIPPLE_SPEED = 13;           // world units / sec the wavefront travels
+    const RIPPLE_AMPLITUDE = 0.55;     // peak Y-scale boost at the wavefront
+    const RIPPLE_DURATION = 2.2;       // seconds before the ripple fully fades
+    const RIPPLE_WIDTH = 3.2;          // world units of the wavefront's spread
+    const RIPPLE_GLOW_COLOR = 0x10181c; // muted dark cyan — just slightly above black
+
+    // ---- Renderer / scene / camera ----
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearAlpha(0); // transparent — let page background show through
+
+    const scene = new THREE.Scene();
+
+    const aspect = (canvas.clientWidth || window.innerWidth) /
+                   (canvas.clientHeight || window.innerHeight);
+    const fw = FRUSTUM_HEIGHT * aspect;
+    const camera = new THREE.OrthographicCamera(
+      -fw / 2, fw / 2, FRUSTUM_HEIGHT / 2, -FRUSTUM_HEIGHT / 2, 0.1, 400
+    );
+    camera.up.set(0, 0, -1);
+    camera.position.set(CAM_X, CAM_Y, CAM_Z);
+    camera.lookAt(0, LOOK_Y, 0);
+
+    // ---- Lights ----
+    scene.add(new THREE.AmbientLight(AMB_COLOR, AMB_INTENSITY));
+    const cursorLight = new THREE.PointLight(
+      CURSOR_COLOR, CURSOR_INTENSITY, CURSOR_RANGE, CURSOR_DECAY
+    );
+    cursorLight.position.set(0, CURSOR_Y, 0);
+    scene.add(cursorLight);
+
+
+    // ---- Geometry & material ----
+    const maxR = Math.min(CUBE_SIDE, CUBE_HEIGHT) * 0.49;
+    const r = Math.max(0.001, Math.min(CORNER_RADIUS, maxR));
+    const geom = new RoundedBoxGeometry(
+      CUBE_SIDE, CUBE_HEIGHT, CUBE_SIDE,
+      Math.max(1, Math.floor(CORNER_SEGMENTS)),
+      r
+    );
+    geom.translate(0, CUBE_HEIGHT / 2, 0);
+
+    // Material color is white so per-instance colours are absolute (so a
+    // painted (white) instance reads as actual white, not white × baseColor).
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: ROUGHNESS,
+      metalness: METALNESS,
+    });
+
+    const total = COLS * ROWS;
+    const mesh = new THREE.InstancedMesh(geom, mat, total);
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(mesh);
+
+    // ---- Build the field: every cube black at boot ----
+    const tmp = new THREE.Object3D();
+    const blackColor = new THREE.Color(0x000000);
+    const baseHeight = new Float32Array(total);
+    const xPositions = new Float32Array(total);
+    const zPositions = new Float32Array(total);
+    // Painted cubes: `painted[i] = 1` once clicked; paintedLift eases up
+    // to PAINTED_LIFT_TARGET so the pop reads as motion, not a snap.
+    const painted = new Uint8Array(total);
+    const paintedLift = new Float32Array(total);
+
+    // Active ripples — each click pushes one in. The wavefront propagates
+    // outward and lifts cubes briefly as it passes.
+    interface Ripple { x: number; z: number; t: number }
+    const ripples: Ripple[] = [];
+
+    // Per-cube glow that eases in when a ripple wavefront passes and decays
+    // back to zero, so the wave is *visible* travelling through dark cubes.
+    const rippleGlow = new Float32Array(total);
+    const baseBlack = new THREE.Color(0x000000);
+    const baseWhite = new THREE.Color(0xffffff);
+    const glowColor = new THREE.Color(RIPPLE_GLOW_COLOR);
+    const colorScratch = new THREE.Color();
+
+    const dx = CUBE_SIDE + GAP;
+    const dz = CUBE_SIDE + GAP;
+    const offsetX = -(COLS - 1) * dx * 0.5;
+    const offsetZ = -(ROWS - 1) * dz * 0.5;
+
+    let idx = 0;
+    for (let cz = 0; cz < ROWS; cz++) {
+      for (let cx = 0; cx < COLS; cx++) {
+        const x = offsetX + cx * dx;
+        const z = offsetZ + cz * dz;
+        xPositions[idx] = x;
+        zPositions[idx] = z;
+        baseHeight[idx] = BASE_HEIGHT;
+        tmp.position.set(x, 0, z);
+        tmp.scale.set(1, BASE_HEIGHT, 1);
+        tmp.updateMatrix();
+        mesh.setMatrixAt(idx, tmp.matrix);
+        mesh.setColorAt(idx, blackColor);
+        idx++;
+      }
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+    // ---- Pointer + click-to-paint ----
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const target = new THREE.Vector3(0, 0, 0);
+    const cursorWorld = new THREE.Vector3(0, 0, 0);
+    const IDLE_AFTER_MS = 10000;          // after this long without a move, drift on auto-pilot
+    let lastMoveTime = -Infinity;         // never moved yet
+
+    function onPointer(e: PointerEvent) {
+      const rect = canvas.getBoundingClientRect();
+      ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      lastMoveTime = performance.now();
+    }
+    window.addEventListener("pointermove", onPointer);
+
+    // React to ThemePanel changes — repaint the cursor light so the field's
+    // accent halo matches the rest of the site.
+    function onThemeChange() {
+      cursorLight.color.set(readAccentVar());
+    }
+    document.addEventListener("rd:theme-change", onThemeChange);
+
+    // Click-to-paint. Listens on window so it works even when the canvas is
+    // pointer-events:none (sitting behind page content as a backdrop). We
+    // skip clicks that landed on interactive page elements so links / buttons
+    // still work normally — empty space and plain text propagate to a paint.
+    const interactive = !!cfg.interactive;
+    const paintNDC = new THREE.Vector2();
+    const paintColor = new THREE.Color(PAINT_COLOR);
+    const SKIP_PAINT_SELECTOR = "a, button, input, textarea, select, label, [role='button'], [role='link']";
+    function onClick(e: MouseEvent) {
+      const tgt = e.target as Element | null;
+      if (tgt && typeof tgt.closest === "function" && tgt.closest(SKIP_PAINT_SELECTOR)) return;
+      const rect = canvas.getBoundingClientRect();
+      paintNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      paintNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(paintNDC, camera);
+      const hits = raycaster.intersectObject(mesh, false);
+      if (hits.length && hits[0].instanceId !== undefined) {
+        const id = hits[0].instanceId;
+        // Toggle: an already-painted cube returns to black + drops back down.
+        // The colour blend and lift both follow `painted[id]` in the loop
+        // below, so we just flip the flag here.
+        painted[id] = painted[id] ? 0 : 1;
+        // Ripple every click (paint and un-paint) for visual feedback.
+        ripples.push({
+          x: xPositions[id],
+          z: zPositions[id],
+          t: performance.now() / 1000,
+        });
+      }
+    }
+    if (interactive) window.addEventListener("click", onClick);
+
+    // ---- Resize handler (uses the canvas's actual size, not the window) ----
+    function resize() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (w === 0 || h === 0) return;
+      renderer.setSize(w, h, false);
+      const a = w / h;
+      const fwNow = FRUSTUM_HEIGHT * a;
+      camera.left = -fwNow / 2;
+      camera.right = fwNow / 2;
+      camera.top = FRUSTUM_HEIGHT / 2;
+      camera.bottom = -FRUSTUM_HEIGHT / 2;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    // ---- Animation loop ----
+    const clock = new THREE.Clock();
+    function animate() {
+      // Auto-cleanup on detach (e.g. Astro page swap removes the canvas).
+      if (!canvas.isConnected) {
+        ro.disconnect();
+        window.removeEventListener("pointermove", onPointer);
+        document.removeEventListener("rd:theme-change", onThemeChange);
+        if (interactive) window.removeEventListener("click", onClick);
+        geom.dispose();
+        mat.dispose();
+        renderer.dispose();
+        return;
+      }
+      const t = clock.getElapsedTime();
+
+      const isIdle = performance.now() - lastMoveTime > IDLE_AFTER_MS;
+      if (!isIdle) {
+        raycaster.setFromCamera(ndc, camera);
+        const denom = raycaster.ray.direction.y;
+        if (Math.abs(denom) > 1e-6) {
+          const tt = -raycaster.ray.origin.y / denom;
+          target.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, tt);
+        }
+      } else {
+        // Auto-pilot: orbit. The existing target.lerp(0.12) smooths the
+        // hand-off from cursor-follow to orbit so it doesn't snap.
+        target.set(
+          Math.cos(t * 0.6) * IDLE_AMP_X,
+          0,
+          Math.sin(t * 0.4) * IDLE_AMP_Z
+        );
+      }
+      cursorWorld.lerp(target, 0.12);
+      cursorLight.position.set(cursorWorld.x, CURSOR_Y, cursorWorld.z);
+
+      const r2 = HOVER_RADIUS * HOVER_RADIUS;
+      // Prune expired ripples once per frame so the per-cube loop stays cheap.
+      const nowSec = performance.now() / 1000;
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        if (nowSec - ripples[i].t > RIPPLE_DURATION) ripples.splice(i, 1);
+      }
+      const rippleCount = ripples.length;
+      for (let k = 0; k < total; k++) {
+        const dxk = xPositions[k] - cursorWorld.x;
+        const dzk = zPositions[k] - cursorWorld.z;
+        const d2 = dxk * dxk + dzk * dzk;
+        let lift = 0;
+        if (d2 < r2) {
+          const f = 1 - d2 / r2;
+          lift = HOVER_LIFT * Math.pow(f, HOVER_FALLOFF);
+        }
+        const wave = WAVE_AMP * Math.sin(
+          t * WAVE_SPEED +
+          xPositions[k] * WAVE_FREQ_X +
+          zPositions[k] * WAVE_FREQ_Z
+        );
+        // Lift eases up while painted, eases back down when un-painted, so
+        // toggling a cube animates the height in both directions.
+        const liftTarget = painted[k] ? PAINTED_LIFT_TARGET : 0;
+        const liftDelta = liftTarget - paintedLift[k];
+        if (Math.abs(liftDelta) > 1e-4) {
+          paintedLift[k] += Math.sign(liftDelta) *
+            Math.min(Math.abs(liftDelta), PAINTED_LIFT_RATE);
+        }
+        // Sum contributions from any active ripples — each one is a moving
+        // ring whose radius = (age × speed) and whose height profile is a
+        // cosine bump within RIPPLE_WIDTH of the wavefront. We also pick up
+        // the strongest profile to drive the cube's cyan glow, so the wave
+        // is *visible* travelling through dark cubes.
+        let rippleLift = 0;
+        let glowTarget = 0;
+        for (let ri = 0; ri < rippleCount; ri++) {
+          const r = ripples[ri];
+          const age = nowSec - r.t;
+          const dxR = xPositions[k] - r.x;
+          const dzR = zPositions[k] - r.z;
+          const dist = Math.sqrt(dxR * dxR + dzR * dzR);
+          const offset = dist - age * RIPPLE_SPEED;
+          if (offset > -RIPPLE_WIDTH && offset < RIPPLE_WIDTH) {
+            const decay = 1 - age / RIPPLE_DURATION;
+            // cos bell centred on the wavefront, zero at ±RIPPLE_WIDTH
+            const profile = Math.cos((offset / RIPPLE_WIDTH) * (Math.PI / 2));
+            const weight = decay * profile;
+            rippleLift += RIPPLE_AMPLITUDE * weight;
+            if (weight > glowTarget) glowTarget = weight;
+          }
+        }
+        // Ease glow toward its current target — sharp attack, soft decay.
+        rippleGlow[k] += (glowTarget - rippleGlow[k]) * (glowTarget > rippleGlow[k] ? 0.4 : 0.08);
+        const sy = baseHeight[k] + lift + wave + paintedLift[k] + rippleLift;
+
+        // Per-instance colour each frame: painted cubes stay white, the rest
+        // stay black; both blend toward cyan in proportion to the ripple glow.
+        const base = painted[k] ? baseWhite : baseBlack;
+        colorScratch.copy(base).lerp(glowColor, Math.min(1, rippleGlow[k] * 0.9));
+        mesh.setColorAt(k, colorScratch);
+
+        tmp.position.set(xPositions[k], 0, zPositions[k]);
+        tmp.scale.set(1, sy, 1);
+        tmp.rotation.set(0, 0, 0);
+        tmp.updateMatrix();
+        mesh.setMatrixAt(k, tmp.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  function autoInit() {
+    document.querySelectorAll<HTMLCanvasElement>(".brick-grid-canvas").forEach((c) => {
+      if (c.dataset.rdBrickInit) return;
+      c.dataset.rdBrickInit = "1";
+      initBrickGrid(c);
+    });
+  }
+
+  // Run on first load AND on every Astro view-transition page swap.
+  document.addEventListener("astro:page-load", autoInit);
+  if (document.readyState !== "loading") autoInit();
+  else document.addEventListener("DOMContentLoaded", autoInit);
+</script>
