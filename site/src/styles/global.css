@@ -128,10 +128,10 @@ body {
   position: relative;
 }
 .program-card:hover {
-  background-color: var(--color-ash);
+  background-color: rgba(28, 28, 30, 0.6);
   box-shadow:
-    0 0 0 1px rgba(74, 197, 228, 0.35),
-    0 0 40px -8px rgba(74, 197, 228, 0.35);
+    0 0 0 1px var(--color-accent, rgba(74, 197, 228, 0.5)),
+    0 0 40px -8px var(--color-accent, rgba(74, 197, 228, 0.35));
   z-index: 1;
 }
 

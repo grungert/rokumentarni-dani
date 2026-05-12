@@ -4,6 +4,7 @@ import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import ThemePanel from "../components/ThemePanel.astro";
+import VhsMode from "../components/VhsMode.astro";
 
 interface Props {
   title: string;
@@ -43,6 +44,9 @@ const fullTitle =
 
     <!-- Floating accent-color picker (persists choice in localStorage). -->
     <ThemePanel />
+
+    <!-- Konami code easter egg → VHS mode. ↑↑↓↓←→←→BA -->
+    <VhsMode />
 
     <!-- Pixel flicker overlay shown during route changes -->
     <div id="page-flicker" aria-hidden="true"></div>

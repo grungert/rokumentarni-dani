@@ -52,6 +52,18 @@
       <input type="color" data-rd-theme-custom value="#4ac5e4" />
     </label>
 
+    <p class="rd-theme-title rd-theme-title-divider">Effects</p>
+    <button
+      type="button"
+      class="rd-theme-vhs"
+      data-rd-vhs-toggle
+      aria-pressed="false"
+    >
+      <span class="rd-vhs-dot" aria-hidden="true"></span>
+      <span>VHS mode</span>
+      <span class="rd-vhs-hint" aria-hidden="true">↑↑↓↓←→←→BA</span>
+    </button>
+
     <button type="button" class="rd-theme-reset" data-rd-theme-reset>Reset</button>
   </div>
 </div>
@@ -167,8 +179,57 @@
     background: transparent;
     cursor: pointer;
   }
+  .rd-theme-title-divider {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(245, 241, 232, 0.08);
+  }
+  .rd-theme-vhs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(245, 241, 232, 0.12);
+    background: transparent;
+    color: rgba(245, 241, 232, 0.65);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s, background 0.18s;
+  }
+  .rd-theme-vhs:hover {
+    border-color: var(--color-accent, #4ac5e4);
+    color: var(--color-accent, #4ac5e4);
+  }
+  .rd-theme-vhs.is-on {
+    border-color: var(--color-accent, #4ac5e4);
+    color: var(--color-accent, #4ac5e4);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .rd-vhs-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(245, 241, 232, 0.18);
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .rd-theme-vhs.is-on .rd-vhs-dot {
+    background: var(--color-accent, #4ac5e4);
+    box-shadow: 0 0 8px var(--color-accent, #4ac5e4);
+  }
+  .rd-vhs-hint {
+    margin-left: auto;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: rgba(245, 241, 232, 0.35);
+  }
+
   .rd-theme-reset {
-    margin-top: 10px;
+    margin-top: 4px;
     width: 100%;
     padding: 6px 10px;
     border: 1px solid rgba(245, 241, 232, 0.12);
@@ -263,6 +324,23 @@
         try { localStorage.removeItem(STORAGE_KEY); } catch {}
         applyAccent(DEFAULT_ACCENT, { persist: false });
       });
+
+      // VHS toggle — delegates to the global in VhsMode.astro so both
+      // routes (this button + the Konami code) share one persisted state.
+      const vhsBtn = panel.querySelector<HTMLButtonElement>("[data-rd-vhs-toggle]");
+      function syncVhsBtn() {
+        const on = document.documentElement.classList.contains("is-vhs");
+        vhsBtn?.classList.toggle("is-on", on);
+        vhsBtn?.setAttribute("aria-pressed", String(on));
+      }
+      vhsBtn?.addEventListener("click", () => {
+        // @ts-ignore — installed by VhsMode.astro
+        if (typeof window.rdToggleVhs === "function") window.rdToggleVhs();
+        else document.documentElement.classList.toggle("is-vhs");
+        syncVhsBtn();
+      });
+      document.addEventListener("rd:vhs-change", syncVhsBtn);
+      syncVhsBtn();
     });
   }
 
