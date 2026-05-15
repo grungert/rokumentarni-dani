@@ -1,10 +1,15 @@
 ---
-// Three.js brick-grid background — black field of rounded cubes that lift
-// under the cursor halo and can be painted by clicking. Position with a
-// `class` prop (e.g. "absolute inset-0" inside a `relative` parent).
+// Three.js brick-grid background — field of rounded cubes that lift under the
+// cursor halo and can be painted by clicking. Position with a `class` prop
+// (e.g. "absolute inset-0" inside a `relative` parent).
 //
-// All structural params are baked-in defaults; expose only the few you'll
-// reasonably tweak per page (cursor / paint colours, intensity).
+// Variants reshape the grid per-surface (home/footer/film/programme/edicije/dim).
+// `loadAssemble` plays a one-shot intro: cubes fly out from the centre point
+// into the lattice over ~1.5s on first mount (skipped under reduced-motion).
+// `letterbox` adds 2.39:1 black bars top/bottom and `grain` lays a fine SVG
+// noise overlay across the canvas for a filmic feel.
+
+type Variant = "home" | "footer" | "film" | "programme" | "edicije" | "dim";
 
 interface Props {
   class?: string;
@@ -14,6 +19,16 @@ interface Props {
   paintColor?: string;
   cursorColor?: string;
   cursorIntensity?: number;
+  /** Per-surface grid configuration. */
+  variant?: Variant;
+  /** Play the fly-out-from-centre intro on first mount. Default true. */
+  loadAssemble?: boolean;
+  /** Render 2.39:1 letterbox bars over the canvas. */
+  letterbox?: boolean;
+  /** Lay an animated film-grain SVG noise on top of the canvas. */
+  grain?: boolean;
+  /** Run the cube update at silent-film cadence (~12fps) instead of 60fps. */
+  slowCadence?: boolean;
 }
 
 const {
@@ -22,17 +37,50 @@ const {
   paintColor = "#ffffff",
   cursorColor = "#39c7e2",
   cursorIntensity = 51.5,
+  variant = "home",
+  loadAssemble = true,
+  letterbox = false,
+  grain = false,
+  slowCadence = false,
 } = Astro.props;
 
-const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorIntensity });
+const config = JSON.stringify({
+  interactive,
+  paintColor,
+  cursorColor,
+  cursorIntensity,
+  variant,
+  loadAssemble,
+  slowCadence,
+});
 ---
 
-<canvas
-  class:list={["brick-grid-canvas", className, { "is-interactive": interactive }]}
-  data-rd-brick-grid={config}
-  aria-hidden="true"></canvas>
+<div
+  class:list={[
+    "brick-grid-wrap",
+    className,
+    `is-variant-${variant}`,
+    { "has-letterbox": letterbox, "has-grain": grain },
+  ]}
+>
+  <canvas
+    class:list={["brick-grid-canvas", { "is-interactive": interactive }]}
+    data-rd-brick-grid={config}
+    aria-hidden="true"></canvas>
+  {grain && <span class="brick-grid-grain" aria-hidden="true"></span>}
+</div>
 
 <style>
+  /* The consumer always passes a positioning utility (`fixed inset-0`,
+     `absolute inset-0`, …) so the wrapper picks up its frame from there.
+     We intentionally do NOT set `position` here — Tailwind utilities live
+     in a CSS layer and would lose to an unlayered scoped declaration, no
+     matter the specificity, which would push the wrap into document flow
+     and shove the next section down by ~100vh. */
+  .brick-grid-wrap {
+    display: block;
+    overflow: hidden;
+  }
   .brick-grid-canvas {
     display: block;
     width: 100%;
@@ -42,6 +90,47 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
   .brick-grid-canvas.is-interactive {
     pointer-events: auto;
     cursor: crosshair;
+  }
+  /* 2.39:1 letterbox bars — pure black bands above + below the live area.
+     8% of the wrapper's height per band reads as a cinemascope crop without
+     swallowing too much of the cube field. */
+  .brick-grid-wrap.has-letterbox::before,
+  .brick-grid-wrap.has-letterbox::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8%;
+    background: #000;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .brick-grid-wrap.has-letterbox::before { top: 0; }
+  .brick-grid-wrap.has-letterbox::after { bottom: 0; }
+  /* Film grain — fine SVG turbulence tiled and slowly drifted so individual
+     frames never repeat exactly. mix-blend-mode: overlay so the grain rides
+     the cube colours instead of washing them out. */
+  .brick-grid-grain {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.09;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.85 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 220px 220px;
+    animation: brick-grid-grain-drift 1.4s steps(6) infinite;
+  }
+  @keyframes brick-grid-grain-drift {
+    0%   { background-position: 0 0; }
+    20%  { background-position: -40px 30px; }
+    40%  { background-position: 35px -20px; }
+    60%  { background-position: -25px -35px; }
+    80%  { background-position: 30px 15px; }
+    100% { background-position: 0 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .brick-grid-grain { animation: none; }
   }
 </style>
 
@@ -53,30 +142,118 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     let cfg: any = {};
     try { cfg = JSON.parse(canvas.dataset.rdBrickGrid || "{}"); } catch {}
 
+    // ---- Per-variant overrides ----
+    // Each surface gets a tuned grid: density, camera framing, cursor reach,
+    // idle-drift envelope, and audio behaviour. `home` is the canonical full
+    // 110×70 field; the others trim it down or change its rhythm. The cube
+    // material and ambient-light logic are shared.
+    const VARIANTS: Record<string, {
+      cols: number; rows: number; frustumHeight: number;
+      hoverRadius: number; hoverLift: number;
+      idleAmpX: number; idleAmpZ: number;
+      audioReactive: boolean; beatFlash: boolean;
+      matOpacityMul: number;
+    }> = {
+      // Homepage — the canonical "stage" the festival plays on. Denser
+      // 220×140 grid so painted glyphs (section symbols) read with
+      // finer-grained pixel-art detail.
+      home: {
+        cols: 220, rows: 140, frustumHeight: 16.5,
+        hoverRadius: 8.3, hoverLift: 3.7,
+        idleAmpX: 18.5, idleAmpZ: 14,
+        audioReactive: true, beatFlash: true,
+        matOpacityMul: 1,
+      },
+      // Footer pixel-strip — wide and shallow, drifts mostly horizontally
+      // so it reads as a "tape head" track running under the site footer.
+      footer: {
+        cols: 110, rows: 8, frustumHeight: 2.4,
+        hoverRadius: 4.5, hoverLift: 1.6,
+        idleAmpX: 20, idleAmpZ: 0.6,
+        audioReactive: false, beatFlash: false,
+        matOpacityMul: 0.85,
+      },
+      // Film-detail variant — letterboxed 2.39:1 frame, quiet motion, grain
+      // applied separately via the wrapper. Acts as the projector window.
+      film: {
+        cols: 110, rows: 28, frustumHeight: 6.5,
+        hoverRadius: 6, hoverLift: 2.4,
+        idleAmpX: 10, idleAmpZ: 3.5,
+        audioReactive: false, beatFlash: false,
+        matOpacityMul: 1,
+      },
+      // Programme — narrower, taller. Columns later anchor to programme days.
+      programme: {
+        cols: 60, rows: 70, frustumHeight: 16.5,
+        hoverRadius: 7, hoverLift: 3.2,
+        idleAmpX: 10, idleAmpZ: 14,
+        audioReactive: false, beatFlash: false,
+        matOpacityMul: 0.95,
+      },
+      // Edicije archive — wide, time-banded. Rows later map to festival years.
+      edicije: {
+        cols: 110, rows: 40, frustumHeight: 10,
+        hoverRadius: 7, hoverLift: 3,
+        idleAmpX: 14, idleAmpZ: 7,
+        audioReactive: false, beatFlash: false,
+        matOpacityMul: 0.95,
+      },
+      // Dim — a quiet, low-energy variant for inside-pages (blog, 404).
+      dim: {
+        cols: 110, rows: 70, frustumHeight: 16.5,
+        hoverRadius: 6.5, hoverLift: 2.6,
+        idleAmpX: 12, idleAmpZ: 9,
+        audioReactive: false, beatFlash: false,
+        matOpacityMul: 0.55,
+      },
+    };
+    const variantKey: string = (cfg.variant in VARIANTS) ? cfg.variant : "home";
+    const V = VARIANTS[variantKey];
+
     // ---- Preset (locked from the design exploration) ----
-    const COLS = 110;
-    const ROWS = 70;
-    const GAP = 0.1;
-    const CUBE_SIDE = 0.98;
+    const COLS = V.cols;
+    const ROWS = V.rows;
+    // Cubes are smaller on the home variant so the dense 220×140 grid
+    // still fits the same visible frustum window. The values sit between
+    // the original 110×70 size and a fully halved one — fine glyph detail
+    // without the field reading as TV static.
+    const isDense = variantKey === "home";
+    const GAP = isDense ? 0.07 : 0.1;
+    const CUBE_SIDE = isDense ? 0.66 : 0.98;
     const CUBE_HEIGHT = 1.55;
     const CORNER_RADIUS = 0.001;
     const CORNER_SEGMENTS = 1;
-    const FRUSTUM_HEIGHT = 16.5;
+    const FRUSTUM_HEIGHT = V.frustumHeight;
     const CAM_X = -0.5;
     const CAM_Y = 40;
     const CAM_Z = 0;
     const LOOK_Y = 4.1;
-    const HOVER_RADIUS = 8.3;
-    const HOVER_LIFT = 3.7;
+    const HOVER_RADIUS = V.hoverRadius;
+    const HOVER_LIFT = V.hoverLift;
     const HOVER_FALLOFF = 1.5;
     const WAVE_AMP = 0.06;
     const WAVE_SPEED = 1.15;
     const WAVE_FREQ_X = 0.44;
     const WAVE_FREQ_Z = 0.61;
-    const IDLE_AMP_X = 18.5;
-    const IDLE_AMP_Z = 14;
-    const AMB_COLOR = 0x1a2026;
-    const AMB_INTENSITY = 3;
+    const IDLE_AMP_X = V.idleAmpX;
+    const IDLE_AMP_Z = V.idleAmpZ;
+    const AMB_COLOR_DARK = 0x1a2026;
+    const AMB_COLOR_LIGHT = 0xffffff;
+    const AMB_INTENSITY_DARK = 0.9;   // dim — idle cubes nearly disappear into the page
+    const AMB_INTENSITY_LIGHT = 5.5;  // bright so the white base actually reads white
+    // Brick base/paint colours flip between modes so cubes always sit near
+    // the page bg when idle and pop in the contrast tone when painted.
+    const BASE_COLOR_DARK = 0x000000;
+    const BASE_COLOR_LIGHT = 0xffffff;
+    const PAINT_COLOR_DARK = 0xffffff;
+    const PAINT_COLOR_LIGHT = 0xcbc4b3;
+    const MAT_OPACITY_DARK = 0.35;
+    const MAT_OPACITY_LIGHT = 0.85;
+    const METALNESS_DARK = 0.72;
+    const METALNESS_LIGHT = 0.1;       // diffuse-heavy so ambient actually lights white
+    function isLightMode() {
+      return document.documentElement.classList.contains("theme-light");
+    }
     // Pull the brand accent from the CSS variable so the theme picker
     // (ThemePanel) drives this too. Prop value is the fallback.
     function readAccentVar(): string {
@@ -125,7 +302,11 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     camera.lookAt(0, LOOK_Y, 0);
 
     // ---- Lights ----
-    scene.add(new THREE.AmbientLight(AMB_COLOR, AMB_INTENSITY));
+    const ambient = new THREE.AmbientLight(
+      isLightMode() ? AMB_COLOR_LIGHT : AMB_COLOR_DARK,
+      isLightMode() ? AMB_INTENSITY_LIGHT : AMB_INTENSITY_DARK
+    );
+    scene.add(ambient);
     const cursorLight = new THREE.PointLight(
       CURSOR_COLOR, CURSOR_INTENSITY, CURSOR_RANGE, CURSOR_DECAY
     );
@@ -145,10 +326,17 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
 
     // Material color is white so per-instance colours are absolute (so a
     // painted (white) instance reads as actual white, not white × baseColor).
+    // Transparent + no depthWrite lets the field blend into the page bg as
+    // a soft backdrop instead of a wall of solid blocks. Safe with our
+    // orthographic top-down camera because the cubes never overlap in
+    // screen space, so depth-sort artifacts can't show up.
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: ROUGHNESS,
-      metalness: METALNESS,
+      metalness: isLightMode() ? METALNESS_LIGHT : METALNESS_DARK,
+      transparent: true,
+      opacity: (isLightMode() ? MAT_OPACITY_LIGHT : MAT_OPACITY_DARK) * V.matOpacityMul,
+      depthWrite: false,
     });
 
     const total = COLS * ROWS;
@@ -156,9 +344,11 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     scene.add(mesh);
 
-    // ---- Build the field: every cube black at boot ----
+    // ---- Build the field: every cube starts at the mode's base color ----
     const tmp = new THREE.Object3D();
-    const blackColor = new THREE.Color(0x000000);
+    const initBaseColor = new THREE.Color(
+      isLightMode() ? BASE_COLOR_LIGHT : BASE_COLOR_DARK
+    );
     const baseHeight = new Float32Array(total);
     const xPositions = new Float32Array(total);
     const zPositions = new Float32Array(total);
@@ -175,9 +365,14 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     // Per-cube glow that eases in when a ripple wavefront passes and decays
     // back to zero, so the wave is *visible* travelling through dark cubes.
     const rippleGlow = new Float32Array(total);
-    const baseBlack = new THREE.Color(0x000000);
-    const baseWhite = new THREE.Color(0xffffff);
+    // Per-cube beat-flash: every detected bass kick splashes a random batch
+    // of cubes to 1.0 here; the loop decays it each frame and blends the
+    // cube colour toward the live theme accent in proportion.
+    const beatGlow = new Float32Array(total);
+    const baseDim = new THREE.Color(isLightMode() ? BASE_COLOR_LIGHT : BASE_COLOR_DARK);
+    const basePaint = new THREE.Color(isLightMode() ? PAINT_COLOR_LIGHT : PAINT_COLOR_DARK);
     const glowColor = new THREE.Color(RIPPLE_GLOW_COLOR);
+    const accentColor = new THREE.Color(readAccentVar());
     const colorScratch = new THREE.Color();
 
     const dx = CUBE_SIDE + GAP;
@@ -197,7 +392,7 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
         tmp.scale.set(1, BASE_HEIGHT, 1);
         tmp.updateMatrix();
         mesh.setMatrixAt(idx, tmp.matrix);
-        mesh.setColorAt(idx, blackColor);
+        mesh.setColorAt(idx, initBaseColor);
         idx++;
       }
     }
@@ -220,12 +415,28 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     }
     window.addEventListener("pointermove", onPointer);
 
-    // React to ThemePanel changes — repaint the cursor light so the field's
-    // accent halo matches the rest of the site.
+    // React to ThemePanel changes — repaint the cursor light AND the
+    // accent colour used for the beat-flash so they all stay in sync.
     function onThemeChange() {
-      cursorLight.color.set(readAccentVar());
+      const c = readAccentVar();
+      cursorLight.color.set(c);
+      accentColor.set(c);
     }
     document.addEventListener("rd:theme-change", onThemeChange);
+
+    // React to light/dark mode swap — flip base/paint/ambient colours so
+    // unhovered cubes always sit near the page background.
+    function onModeChange() {
+      const light = isLightMode();
+      ambient.color.setHex(light ? AMB_COLOR_LIGHT : AMB_COLOR_DARK);
+      ambient.intensity = light ? AMB_INTENSITY_LIGHT : AMB_INTENSITY_DARK;
+      baseDim.setHex(light ? BASE_COLOR_LIGHT : BASE_COLOR_DARK);
+      basePaint.setHex(light ? PAINT_COLOR_LIGHT : PAINT_COLOR_DARK);
+      mat.opacity = (light ? MAT_OPACITY_LIGHT : MAT_OPACITY_DARK) * V.matOpacityMul;
+      mat.metalness = light ? METALNESS_LIGHT : METALNESS_DARK;
+      mat.needsUpdate = true;
+    }
+    document.addEventListener("rd:mode-change", onModeChange);
 
     // Click-to-paint. Listens on window so it works even when the canvas is
     // pointer-events:none (sitting behind page content as a backdrop). We
@@ -259,6 +470,22 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     }
     if (interactive) window.addEventListener("click", onClick);
 
+    // ---- External paint API — drives section-symbol overlays. Only the
+    // `home` variant exposes this; secondary BrickGrids (footer/inside
+    // pages) keep their own state untouched. paintCells() accepts an
+    // array of [col, row] pairs in 0..COLS-1 / 0..ROWS-1 grid coords. ----
+    if (variantKey === "home") {
+      const api = ((window as any).rdBrickGrid ||= {});
+      api.paintCells = (cells: [number, number][]) => {
+        painted.fill(0);
+        for (const [cx, cy] of cells) {
+          if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) continue;
+          painted[cy * COLS + cx] = 1;
+        }
+      };
+      api.clearCells = () => painted.fill(0);
+    }
+
     // ---- Resize handler (uses the canvas's actual size, not the window) ----
     function resize() {
       const w = canvas.clientWidth;
@@ -277,23 +504,92 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
 
+    // Audio-reactive params — driven by VinylRecord's synth loop FFT bins
+    // exposed at window.rdAudioBins (Uint8Array). Each column maps to one
+    // bin so the field becomes a horizontal equaliser; row weight falls off
+    // from the centre so the audio rides as a ridge across the middle of
+    // the grid rather than a wall of square bars. Bass also pulses the
+    // cursor-light intensity for an extra "kick" beat.
+    const AUDIO_LIFT_AMP = 3.4;        // peak audio-driven lift per cube
+    const AUDIO_BIN_RANGE = 36;        // use first N bins (~0–6kHz musical range)
+    const AUDIO_BASS_BOOST = 0.55;     // cursor-light intensity bump on bass
+    // Beat flash — on every rising-edge bass kick, light up N random cubes
+    // in the accent colour. They then decay back to black/painted-white.
+    const BEAT_THRESHOLD_HI = 0.45;    // trigger when bass crosses up through this
+    const BEAT_THRESHOLD_LO = 0.28;    // re-arm only after bass falls below this
+    const BEAT_SPLASH_COUNT = 22;      // cubes to flash per beat
+    const BEAT_DECAY = 0.93;           // multiplicative per-frame decay
+    let prevBass = 0;
+    let beatArmed = true;
+    // Pre-compute row weight: 1 at centre row, 0 at top/bottom edges.
+    const rowWeight = new Float32Array(ROWS);
+    const rowCenter = (ROWS - 1) / 2;
+    for (let r = 0; r < ROWS; r++) {
+      const d = Math.abs(r - rowCenter) / rowCenter;
+      rowWeight[r] = Math.max(0, 1 - d * d); // quadratic falloff = soft ridge
+    }
+
+    // ---- Column-wipe entrance ----
+    // The grid assembles left-to-right: each column gets a stagger delay
+    // and its cubes ease Y-scale from 0 to full over ENTRANCE_RISE_MS with
+    // ease-out cubic. X/Z positions stay fixed so the lattice never jumps
+    // around (and click raycasting works correctly during the tween).
+    // Reads like a tape head scanning across the field. Honours
+    // prefers-reduced-motion (instant placement, no wipe).
+    const prefersReducedMotion =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false;
+    const ENTRANCE_COL_STAGGER_MS = 14;
+    const ENTRANCE_RISE_MS = 720;
+    const ENTRANCE_TOTAL_MS = ENTRANCE_COL_STAGGER_MS * COLS + ENTRANCE_RISE_MS;
+    const entranceStart =
+      cfg.loadAssemble !== false && !prefersReducedMotion
+        ? performance.now()
+        : -Infinity;
+    let entranceActive = entranceStart > -Infinity;
+
+    // ---- Silent-film cadence ----
+    // When `slowCadence` is on, cube state ticks at ~12fps even though the
+    // renderer keeps drawing at 60. Static cubes between ticks give the
+    // grid the staccato rhythm of a hand-cranked projector.
+    const slowCadence = !!cfg.slowCadence;
+    const SLOW_CADENCE_INTERVAL_MS = 1000 / 12;
+    let lastTickMs = -Infinity;
+
     // ---- Animation loop ----
-    const clock = new THREE.Clock();
     function animate() {
       // Auto-cleanup on detach (e.g. Astro page swap removes the canvas).
       if (!canvas.isConnected) {
         ro.disconnect();
         window.removeEventListener("pointermove", onPointer);
         document.removeEventListener("rd:theme-change", onThemeChange);
+        document.removeEventListener("rd:mode-change", onModeChange);
         if (interactive) window.removeEventListener("click", onClick);
         geom.dispose();
         mat.dispose();
         renderer.dispose();
         return;
       }
-      const t = clock.getElapsedTime();
+      const nowMs = performance.now();
+      const t = nowMs / 1000;
 
-      const isIdle = performance.now() - lastMoveTime > IDLE_AFTER_MS;
+      // Column-wipe entrance — once the total duration has elapsed, freeze
+      // the flag so we skip per-cube delay math for the rest of the session.
+      const entranceElapsed = entranceActive ? nowMs - entranceStart : 0;
+      if (entranceActive && entranceElapsed >= ENTRANCE_TOTAL_MS) {
+        entranceActive = false;
+      }
+
+      // Silent-film cadence — only refresh the cube matrices/colours every
+      // ~1/12s. Always update during the entrance so it stays smooth.
+      let updateCubes = true;
+      if (slowCadence && !entranceActive) {
+        if (nowMs - lastTickMs < SLOW_CADENCE_INTERVAL_MS) updateCubes = false;
+        else lastTickMs = nowMs;
+      }
+
+      const isIdle = nowMs - lastMoveTime > IDLE_AFTER_MS;
       if (!isIdle) {
         raycaster.setFromCamera(ndc, camera);
         const denom = raycaster.ray.direction.y;
@@ -320,7 +616,39 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
         if (nowSec - ripples[i].t > RIPPLE_DURATION) ripples.splice(i, 1);
       }
       const rippleCount = ripples.length;
-      for (let k = 0; k < total; k++) {
+
+      // Audio bins (Uint8Array, 128 entries) — set by VinylRecord while its
+      // synth loop is playing. Only consumed when the variant opts in
+      // (currently `home`); other surfaces stay quiet so the music doesn't
+      // bleed into footers and inside-pages.
+      const audioBins: Uint8Array | undefined = V.audioReactive
+        ? ((window as any).rdAudioBins as Uint8Array | undefined)
+        : undefined;
+      let bassEnergy = 0;
+      if (audioBins && audioBins.length >= 4) {
+        bassEnergy =
+          (audioBins[1] + audioBins[2] + audioBins[3] + audioBins[4]) / (4 * 255);
+      }
+      // Pulse the cursor-light intensity to the bass on audio-reactive variants.
+      cursorLight.intensity = V.audioReactive
+        ? CURSOR_INTENSITY * (1 + bassEnergy * AUDIO_BASS_BOOST)
+        : CURSOR_INTENSITY;
+
+      // Beat detection — rising edge through BEAT_THRESHOLD_HI fires a flash;
+      // beat is re-armed only after bass drops below the LO threshold.
+      if (V.beatFlash) {
+        if (beatArmed && bassEnergy > BEAT_THRESHOLD_HI && prevBass <= BEAT_THRESHOLD_HI) {
+          beatArmed = false;
+          for (let n = 0; n < BEAT_SPLASH_COUNT; n++) {
+            const i = (Math.random() * total) | 0;
+            beatGlow[i] = 1;
+          }
+        } else if (!beatArmed && bassEnergy < BEAT_THRESHOLD_LO) {
+          beatArmed = true;
+        }
+        prevBass = bassEnergy;
+      }
+      if (updateCubes) for (let k = 0; k < total; k++) {
         const dxk = xPositions[k] - cursorWorld.x;
         const dzk = zPositions[k] - cursorWorld.z;
         const d2 = dxk * dxk + dzk * dzk;
@@ -367,22 +695,54 @@ const config = JSON.stringify({ interactive, paintColor, cursorColor, cursorInte
         }
         // Ease glow toward its current target — sharp attack, soft decay.
         rippleGlow[k] += (glowTarget - rippleGlow[k]) * (glowTarget > rippleGlow[k] ? 0.4 : 0.08);
-        const sy = baseHeight[k] + lift + wave + paintedLift[k] + rippleLift;
+        // Audio-reactive lift — column → FFT bin, row weight makes a ridge.
+        let audioLift = 0;
+        if (audioBins) {
+          const colIdx = k % COLS;
+          const rowIdx = (k / COLS) | 0;
+          const binIdx = ((colIdx / COLS) * AUDIO_BIN_RANGE) | 0;
+          audioLift = (audioBins[binIdx] / 255) * AUDIO_LIFT_AMP * rowWeight[rowIdx];
+        }
+        const sy = baseHeight[k] + lift + wave + paintedLift[k] + rippleLift + audioLift;
 
-        // Per-instance colour each frame: painted cubes stay white, the rest
-        // stay black; both blend toward cyan in proportion to the ripple glow.
-        const base = painted[k] ? baseWhite : baseBlack;
+        // Per-instance colour each frame: painted cubes use the contrast
+        // tone (white in dark mode, ink in light); idle cubes use the dim
+        // tone (black in dark mode, near-cream in light). Both blend toward
+        // the ripple glow, then toward the theme accent in proportion to
+        // beatGlow (which decays each frame).
+        const base = painted[k] ? basePaint : baseDim;
         colorScratch.copy(base).lerp(glowColor, Math.min(1, rippleGlow[k] * 0.9));
+        if (beatGlow[k] > 0.001) {
+          colorScratch.lerp(accentColor, Math.min(1, beatGlow[k]));
+          beatGlow[k] *= BEAT_DECAY;
+        } else if (beatGlow[k] !== 0) {
+          beatGlow[k] = 0;
+        }
         mesh.setColorAt(k, colorScratch);
 
+        // Column-wipe entrance: each column has a delay so the field rises
+        // left-to-right. Within a column, Y-scale eases from 0 → 1 with
+        // ease-out cubic over ENTRANCE_RISE_MS. X/Z positions don't move,
+        // so click raycasting works correctly during the tween.
+        let entranceT = 1;
+        if (entranceActive) {
+          const colIdx = k % COLS;
+          const u = (entranceElapsed - colIdx * ENTRANCE_COL_STAGGER_MS) /
+                    ENTRANCE_RISE_MS;
+          if (u <= 0) entranceT = 0;
+          else if (u >= 1) entranceT = 1;
+          else entranceT = 1 - Math.pow(1 - u, 3);
+        }
         tmp.position.set(xPositions[k], 0, zPositions[k]);
-        tmp.scale.set(1, sy, 1);
+        tmp.scale.set(1, sy * entranceT, 1);
         tmp.rotation.set(0, 0, 0);
         tmp.updateMatrix();
         mesh.setMatrixAt(k, tmp.matrix);
       }
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      if (updateCubes) {
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      }
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);

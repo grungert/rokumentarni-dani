@@ -1,0 +1,124 @@
+---
+// Dev panel — picks the morph strategy used by SectionSymbols when the
+// BrickGrid swaps between section symbols. Three modes:
+//   wipe     → column sweep
+//   disperse → random exit + random enter
+//   glitch   → VHS-style scramble that resolves to the target
+//
+// Persists the choice in localStorage and notifies SectionSymbols via a
+// `rd:transition-mode` custom event. Remove once a final pick is locked.
+---
+
+<div class="rd-tx-panel" data-rd-tx-panel>
+  <p class="rd-tx-title">Transition</p>
+  <div class="rd-tx-row">
+    <button type="button" data-mode="wipe">Wipe</button>
+    <button type="button" data-mode="disperse">Disperse</button>
+    <button type="button" data-mode="glitch">Glitch</button>
+  </div>
+</div>
+
+<style>
+  .rd-tx-panel {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 70;
+    padding: 10px 12px;
+    border: 1px solid rgba(245, 241, 232, 0.14);
+    background: rgba(10, 10, 10, 0.78);
+    backdrop-filter: blur(8px);
+    color: var(--color-bone, #f5f1e8);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  :global(html.theme-light) .rd-tx-panel {
+    background: rgba(245, 241, 232, 0.88);
+    border-color: rgba(26, 26, 26, 0.12);
+  }
+  .rd-tx-title {
+    margin: 0 0 6px;
+    color: rgba(245, 241, 232, 0.5);
+  }
+  :global(html.theme-light) .rd-tx-title {
+    color: rgba(26, 26, 26, 0.55);
+  }
+  .rd-tx-row {
+    display: flex;
+    gap: 4px;
+  }
+  .rd-tx-row button {
+    padding: 4px 8px;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    background: transparent;
+    color: rgba(245, 241, 232, 0.6);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  :global(html.theme-light) .rd-tx-row button {
+    border-color: rgba(26, 26, 26, 0.18);
+    color: rgba(26, 26, 26, 0.6);
+  }
+  .rd-tx-row button:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+  .rd-tx-row button.is-active {
+    color: var(--color-ink);
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+</style>
+
+<script>
+  const STORAGE_KEY = "rd-transition-mode";
+  type Mode = "wipe" | "disperse" | "glitch";
+
+  function applyMode(mode: Mode, opts: { persist?: boolean } = {}) {
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-rd-tx-panel] [data-mode]")
+      .forEach((b) => b.classList.toggle("is-active", b.dataset.mode === mode));
+    if (opts.persist !== false) {
+      try { localStorage.setItem(STORAGE_KEY, mode); } catch (_) {}
+    }
+    document.dispatchEvent(
+      new CustomEvent("rd:transition-mode", { detail: { mode } }),
+    );
+  }
+
+  function readMode(): Mode {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY);
+      if (v === "wipe" || v === "disperse" || v === "glitch") return v;
+    } catch (_) {}
+    return "wipe";
+  }
+
+  function wire() {
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-rd-tx-panel] [data-mode]")
+      .forEach((b) => {
+        if (b.dataset.rdInit) return;
+        b.dataset.rdInit = "1";
+        b.addEventListener("click", () => {
+          applyMode(b.dataset.mode as Mode);
+        });
+      });
+  }
+
+  function boot() {
+    applyMode(readMode(), { persist: false });
+    wire();
+  }
+
+  document.addEventListener("astro:page-load", boot);
+  if (document.readyState !== "loading") boot();
+  else document.addEventListener("DOMContentLoaded", boot);
+</script>

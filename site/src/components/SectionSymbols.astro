@@ -1,0 +1,443 @@
+---
+// Section-aware cube painter. As the visitor scrolls into each homepage
+// section, the BrickGrid backdrop paints a glyph into the cube field
+// that signals what the section is about:
+//
+//   O festivalu → festival mark        (data-rd-cube-pattern="logo")
+//   Šta radimo  → "RD" wordmark         (                       "rd")
+//   Gdje smo    → date "12–15"          (                       "date")
+//   Snimci      → music note            (                       "music")
+//
+// Logo geometry is parsed at build time from the brand SVG. The other
+// glyphs are defined as 5×7 pixel-font bitmaps inline. A scroll-driven
+// observer picks whichever tagged section is closest to the viewport
+// centre and calls `window.rdBrickGrid.paintCells()` on the home grid.
+import logoMark from "../brand/logo-mark-only.svg?raw";
+
+const cellRegex =
+  /<path[^>]*fill="var\(--logo-fill[^"]*"[^>]*transform="translate\(([\d.\-]+)[\s,]+([\d.\-]+)\)"/g;
+const rawLogo: { x: number; y: number }[] = [];
+let m: RegExpExecArray | null;
+while ((m = cellRegex.exec(logoMark)) !== null) {
+  rawLogo.push({ x: parseFloat(m[1]), y: parseFloat(m[2]) });
+}
+const lminX = Math.min(...rawLogo.map((c) => c.x));
+const lminY = Math.min(...rawLogo.map((c) => c.y));
+const LOGO_PITCH = 41;
+const logoCells = rawLogo.map((c) => ({
+  cx: Math.round((c.x - lminX) / LOGO_PITCH),
+  cy: Math.round((c.y - lminY) / LOGO_PITCH),
+}));
+
+const symbolsJson = JSON.stringify({ logo: logoCells });
+---
+
+<script
+  type="application/json"
+  data-rd-section-symbols
+  set:html={symbolsJson}
+></script>
+
+<script>
+  type Cell = { cx: number; cy: number };
+
+  // 5×7 pixel font — rows top-to-bottom, "1" = lit cube.
+  const FONT5x7: Record<string, string[]> = {
+    "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
+    "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
+    "5": ["11111", "10000", "10000", "11110", "00001", "00001", "11110"],
+    "-": ["00000", "00000", "00000", "01110", "00000", "00000", "00000"],
+    R: ["11110", "10001", "10001", "11110", "11000", "10100", "10010"],
+    D: ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+  };
+
+  function textToCells(text: string, gap = 1): Cell[] {
+    const cells: Cell[] = [];
+    let xOffset = 0;
+    for (const ch of text) {
+      const glyph = FONT5x7[ch];
+      if (!glyph) {
+        xOffset += 5 + gap;
+        continue;
+      }
+      for (let r = 0; r < glyph.length; r++) {
+        const row = glyph[r];
+        for (let c = 0; c < row.length; c++) {
+          if (row[c] === "1") cells.push({ cx: xOffset + c, cy: r });
+        }
+      }
+      xOffset += 5 + gap;
+    }
+    return cells;
+  }
+
+  // Music note ♪ — custom bitmap, stem on the right, flag pixel, beam at base.
+  const NOTE: string[] = [
+    "0010000",
+    "0011100",
+    "0010110",
+    "0010010",
+    "0010000",
+    "0010000",
+    "0010000",
+    "1110000",
+    "1110000",
+    "1100000",
+  ];
+  function noteToCells(): Cell[] {
+    const cells: Cell[] = [];
+    for (let r = 0; r < NOTE.length; r++) {
+      const row = NOTE[r];
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] === "1") cells.push({ cx: c, cy: r });
+      }
+    }
+    return cells;
+  }
+
+  function bbox(cells: Cell[]) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const c of cells) {
+      if (c.cx < minX) minX = c.cx;
+      if (c.cy < minY) minY = c.cy;
+      if (c.cx > maxX) maxX = c.cx;
+      if (c.cy > maxY) maxY = c.cy;
+    }
+    return { minX, minY, maxX, maxY };
+  }
+
+  function centred(
+    cells: Cell[],
+    cols: number,
+    rows: number,
+  ): [number, number][] {
+    if (!cells.length) return [];
+    const b = bbox(cells);
+    const w = b.maxX - b.minX + 1;
+    const h = b.maxY - b.minY + 1;
+    const offsetX = Math.round((cols - w) / 2) - b.minX;
+    const offsetY = Math.round((rows - h) / 2) - b.minY;
+    return cells.map((c) => [c.cx + offsetX, c.cy + offsetY]);
+  }
+
+  // Brick grid dimensions — must match BrickGrid's `home` variant.
+  const GRID_COLS = 220;
+  const GRID_ROWS = 140;
+
+  // Scale pattern bitmaps so each source cell becomes a SCALE × SCALE
+  // block of cubes on the dense grid. The logo already has rich internal
+  // detail (~13×17 source cells) so we leave it at native scale — text
+  // and the music note use 2× so their 5×7 pixel-font glyphs read big.
+  function scaleCells(cells: Cell[], factor: number): Cell[] {
+    if (factor <= 1) return cells;
+    const out: Cell[] = [];
+    for (const c of cells) {
+      for (let dy = 0; dy < factor; dy++) {
+        for (let dx = 0; dx < factor; dx++) {
+          out.push({ cx: c.cx * factor + dx, cy: c.cy * factor + dy });
+        }
+      }
+    }
+    return out;
+  }
+
+  function buildPatterns(): Record<string, [number, number][]> {
+    const raw = document.querySelector(
+      "[data-rd-section-symbols]",
+    ) as HTMLElement | null;
+    let logoCells: Cell[] = [];
+    if (raw && raw.textContent) {
+      try {
+        const parsed = JSON.parse(raw.textContent);
+        logoCells = parsed.logo || [];
+      } catch (_) {}
+    }
+    return {
+      logo: centred(logoCells, GRID_COLS, GRID_ROWS),
+      rd: centred(scaleCells(textToCells("RD"), 2), GRID_COLS, GRID_ROWS),
+      date: centred(scaleCells(textToCells("12-15"), 2), GRID_COLS, GRID_ROWS),
+      music: centred(scaleCells(noteToCells(), 2), GRID_COLS, GRID_ROWS),
+    };
+  }
+
+  function wireSymbolObserver() {
+    const targets = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-rd-cube-pattern]"),
+    );
+    if (!targets.length) return;
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const PATTERNS = buildPatterns();
+    let currentKey: string | null = null;
+
+    // Index each pattern's cells by column so a wipe-morph can splice
+    // target-after-wipe + source-before-wipe in O(visible cols) per frame
+    // instead of scanning every cell every tick.
+    type ColIndex = Map<number, [number, number][]>;
+    function indexByCol(cells: [number, number][]): ColIndex {
+      const map: ColIndex = new Map();
+      for (const cell of cells) {
+        const col = cell[0];
+        let list = map.get(col);
+        if (!list) {
+          list = [];
+          map.set(col, list);
+        }
+        list.push(cell);
+      }
+      return map;
+    }
+    const COL_INDEX: Record<string, ColIndex> = {};
+    for (const k in PATTERNS) COL_INDEX[k] = indexByCol(PATTERNS[k]);
+    const EMPTY_INDEX: ColIndex = new Map();
+
+    // Three morph strategies, picker chooses one:
+    //   - wipe:     L→R column wipe across the symbol's bbox
+    //   - disperse: old cells fall out at random times, new cells fade in
+    //   - glitch:   noisy scramble that resolves into the target
+    // The active strategy is read from localStorage and updated via the
+    // `rd:transition-mode` custom event from TransitionTweak.astro.
+    type MorphMode = "wipe" | "disperse" | "glitch";
+    function readMode(): MorphMode {
+      try {
+        const v = localStorage.getItem("rd-transition-mode");
+        if (v === "wipe" || v === "disperse" || v === "glitch") return v;
+      } catch (_) {}
+      return "wipe";
+    }
+    let currentMode: MorphMode = readMode();
+    document.addEventListener("rd:transition-mode", ((ev: CustomEvent) => {
+      const m = ev.detail?.mode;
+      if (m === "wipe" || m === "disperse" || m === "glitch") currentMode = m;
+    }) as EventListener);
+
+    let frameId: number | null = null;
+    let currentIndex: ColIndex = EMPTY_INDEX;
+    let lastMerged: [number, number][] = [];
+
+    function bboxCols(idx: ColIndex): [number, number] {
+      let min = Infinity;
+      let max = -Infinity;
+      idx.forEach((_, col) => {
+        if (col < min) min = col;
+        if (col > max) max = col;
+      });
+      return [min, max];
+    }
+
+    function flattenIndex(idx: ColIndex): [number, number][] {
+      const out: [number, number][] = [];
+      idx.forEach((cells) => {
+        for (const c of cells) out.push(c);
+      });
+      return out;
+    }
+
+    function paint(cells: [number, number][]) {
+      lastMerged = cells;
+      const api = (window as any).rdBrickGrid;
+      if (api?.paintCells) api.paintCells(cells);
+    }
+
+    // ----- WIPE: column sweep L→R across the symbol bbox -----
+    function morphWipe(start: ColIndex, next: ColIndex) {
+      const [aMin, aMax] = bboxCols(start);
+      const [bMin, bMax] = bboxCols(next);
+      const PAD = 2;
+      let wipeStart = Math.min(aMin, bMin) - PAD;
+      let wipeEnd = Math.max(aMax, bMax) + PAD;
+      if (!isFinite(wipeStart) || !isFinite(wipeEnd)) {
+        wipeStart = 0;
+        wipeEnd = GRID_COLS - 1;
+      }
+      wipeStart = Math.max(0, wipeStart);
+      wipeEnd = Math.min(GRID_COLS - 1, wipeEnd);
+      const DURATION = 850;
+      const t0 = performance.now();
+      function tick() {
+        const p = Math.min(1, Math.max(0, (performance.now() - t0) / DURATION));
+        const wipeCol = wipeStart + Math.floor(p * (wipeEnd - wipeStart));
+        const merged: [number, number][] = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+          const src = c <= wipeCol || c < wipeStart ? next : start;
+          const list = src.get(c);
+          if (list) for (const cell of list) merged.push(cell);
+        }
+        paint(merged);
+        if (p < 1) {
+          frameId = requestAnimationFrame(tick);
+        } else {
+          frameId = null;
+          currentIndex = next;
+        }
+      }
+      frameId = requestAnimationFrame(tick);
+    }
+
+    // ----- DISPERSE: random staggered exit then random staggered enter -----
+    function morphDisperse(start: ColIndex, next: ColIndex) {
+      const startList = flattenIndex(start);
+      const nextList = flattenIndex(next);
+      // Each old cell gets an exit time, each new cell an enter time.
+      // Exit window overlaps the start of enter window slightly so the
+      // field never goes completely empty between phases.
+      const EXIT_END = 420;
+      const ENTER_START = 280;
+      const ENTER_END = 820;
+      const DURATION = ENTER_END;
+      const startTimes: number[] = startList.map(() => Math.random() * EXIT_END);
+      const enterTimes: number[] = nextList.map(
+        () => ENTER_START + Math.random() * (ENTER_END - ENTER_START),
+      );
+      const t0 = performance.now();
+      function tick() {
+        const elapsed = performance.now() - t0;
+        const p = Math.min(1, elapsed / DURATION);
+        const merged: [number, number][] = [];
+        for (let i = 0; i < startList.length; i++) {
+          if (elapsed < startTimes[i]) merged.push(startList[i]);
+        }
+        for (let i = 0; i < nextList.length; i++) {
+          if (elapsed >= enterTimes[i]) merged.push(nextList[i]);
+        }
+        paint(merged);
+        if (p < 1) {
+          frameId = requestAnimationFrame(tick);
+        } else {
+          frameId = null;
+          currentIndex = next;
+          // Final settle — ensure we land exactly on the target.
+          paint(nextList);
+        }
+      }
+      frameId = requestAnimationFrame(tick);
+    }
+
+    // ----- GLITCH: VHS-style scramble that resolves to the target -----
+    function morphGlitch(start: ColIndex, next: ColIndex) {
+      const targetList = flattenIndex(next);
+      // Build a noise pool of candidate cells around the central visible
+      // window so the scramble lives where the eye is already looking.
+      const POOL = 80;
+      const SPAN_COL = 36;
+      const SPAN_ROW = 24;
+      const cx = Math.floor(GRID_COLS / 2);
+      const cy = Math.floor(GRID_ROWS / 2);
+      const noisePool: [number, number][] = [];
+      for (let i = 0; i < POOL; i++) {
+        const c = cx + Math.floor((Math.random() - 0.5) * SPAN_COL * 2);
+        const r = cy + Math.floor((Math.random() - 0.5) * SPAN_ROW * 2);
+        noisePool.push([
+          Math.max(0, Math.min(GRID_COLS - 1, c)),
+          Math.max(0, Math.min(GRID_ROWS - 1, r)),
+        ]);
+      }
+      const DURATION = 720;
+      const STEP_MS = 55; // glitch frame cadence — chunky tape-stutter feel
+      let lastStep = -1;
+      const t0 = performance.now();
+      function tick() {
+        const elapsed = performance.now() - t0;
+        const p = Math.min(1, elapsed / DURATION);
+        const step = Math.floor(elapsed / STEP_MS);
+        if (step !== lastStep) {
+          lastStep = step;
+          // Glitch amount decays 1 → 0 over the duration.
+          const g = 1 - p;
+          const merged: [number, number][] = [];
+          for (const c of targetList) {
+            // Target cells drop out occasionally early, then stabilise.
+            if (Math.random() > g * 0.55) merged.push(c);
+          }
+          for (const c of noisePool) {
+            if (Math.random() < g * 0.35) merged.push(c);
+          }
+          paint(merged);
+        }
+        if (p < 1) {
+          frameId = requestAnimationFrame(tick);
+        } else {
+          frameId = null;
+          currentIndex = next;
+          paint(targetList);
+        }
+      }
+      frameId = requestAnimationFrame(tick);
+    }
+
+    function morphTo(nextIndex: ColIndex) {
+      // Interrupted: freeze the current visible state as the new start so
+      // fast scrolling stays continuous instead of snapping back.
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+        currentIndex = indexByCol(lastMerged);
+      }
+      const startIndex = currentIndex;
+      switch (currentMode) {
+        case "disperse":
+          morphDisperse(startIndex, nextIndex);
+          break;
+        case "glitch":
+          morphGlitch(startIndex, nextIndex);
+          break;
+        case "wipe":
+        default:
+          morphWipe(startIndex, nextIndex);
+          break;
+      }
+    }
+
+    function apply(key: string | null) {
+      if (key === currentKey) return;
+      currentKey = key;
+      const nextIndex = key && COL_INDEX[key] ? COL_INDEX[key] : EMPTY_INDEX;
+      morphTo(nextIndex);
+    }
+
+    function pickClosest(): string | null {
+      let bestKey: string | null = null;
+      let bestScore = 0;
+      const vh = window.innerHeight;
+      for (const el of targets) {
+        const r = el.getBoundingClientRect();
+        const visible = r.top < vh && r.bottom > 0;
+        if (!visible) continue;
+        // Score is high when the section's centre is near the viewport centre.
+        const centre = r.top + r.height / 2;
+        const dist = Math.abs(centre - vh / 2);
+        const score = 1 - Math.min(1, dist / vh);
+        if (score > bestScore) {
+          bestScore = score;
+          bestKey = el.dataset.rdCubePattern || null;
+        }
+      }
+      return bestScore > 0.3 ? bestKey : null;
+    }
+
+    // IO fires when any target crosses a threshold — the actual pick is
+    // re-evaluated each frame via rAF-throttled scroll/resize.
+    const io = new IntersectionObserver(() => schedule(), {
+      threshold: [0, 0.15, 0.4, 0.7, 1],
+    });
+    targets.forEach((t) => io.observe(t));
+
+    let pending = false;
+    function schedule() {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        apply(pickClosest());
+      });
+    }
+
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    // Initial pick on mount in case a section is already in view.
+    schedule();
+  }
+
+  document.addEventListener("astro:page-load", wireSymbolObserver);
+  if (document.readyState !== "loading") wireSymbolObserver();
+  else document.addEventListener("DOMContentLoaded", wireSymbolObserver);
+</script>

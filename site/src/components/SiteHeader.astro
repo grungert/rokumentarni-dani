@@ -62,7 +62,98 @@ const currentPath = Astro.url.pathname;
             );
           })
         }
+        <li>
+          <button
+            type="button"
+            class="rd-mode-toggle"
+            data-rd-mode-toggle
+            aria-label="Toggle light and dark mode"
+            aria-pressed="false"
+          >
+            <svg class="rd-mode-icon rd-mode-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+            <svg class="rd-mode-icon rd-mode-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+          </button>
+        </li>
       </ul>
     </nav>
   </div>
 </header>
+
+<style>
+  .rd-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    background: transparent;
+    color: rgba(245, 241, 232, 0.7);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, transform 0.2s;
+  }
+  .rd-mode-toggle:hover {
+    border-color: var(--color-accent, #4ac5e4);
+    color: var(--color-accent, #4ac5e4);
+    transform: translateY(-1px);
+  }
+  :global(html.theme-light) .rd-mode-toggle {
+    border-color: rgba(26, 26, 26, 0.2);
+    color: rgba(26, 26, 26, 0.7);
+  }
+  .rd-mode-sun { display: none; }
+  :global(html.theme-light) .rd-mode-moon { display: none; }
+  :global(html.theme-light) .rd-mode-sun { display: inline-block; }
+</style>
+
+<script>
+  const MODE_KEY = "rd-theme-mode";
+  type Mode = "light" | "dark";
+
+  function applyMode(mode: Mode, opts: { persist?: boolean } = {}) {
+    const root = document.documentElement;
+    root.classList.toggle("theme-light", mode === "light");
+    document.querySelectorAll<HTMLButtonElement>("[data-rd-mode-toggle]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(mode === "light"));
+    });
+    if (opts.persist !== false) {
+      try { localStorage.setItem(MODE_KEY, mode); } catch {}
+    }
+    document.dispatchEvent(new CustomEvent("rd:mode-change", { detail: { mode } }));
+  }
+
+  function readStoredMode(): Mode {
+    try {
+      const v = localStorage.getItem(MODE_KEY);
+      if (v === "light" || v === "dark") return v;
+    } catch {}
+    return "dark";
+  }
+
+  function wireModeToggle() {
+    document.querySelectorAll<HTMLButtonElement>("[data-rd-mode-toggle]").forEach((btn) => {
+      if (btn.dataset.rdInit) return;
+      btn.dataset.rdInit = "1";
+      btn.addEventListener("click", () => {
+        const next: Mode = document.documentElement.classList.contains("theme-light")
+          ? "dark"
+          : "light";
+        applyMode(next);
+      });
+    });
+  }
+
+  function boot() {
+    applyMode(readStoredMode(), { persist: false });
+    wireModeToggle();
+  }
+
+  document.addEventListener("astro:page-load", boot);
+  if (document.readyState !== "loading") boot();
+  else document.addEventListener("DOMContentLoaded", boot);
+</script>

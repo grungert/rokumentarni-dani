@@ -1,173 +1,74 @@
 ---
-// Konami code easter egg → toggles a site-wide "VHS mode".
-//
-// Type:   ↑ ↑ ↓ ↓ ← → ← → B A
-//
-// Adds `is-vhs` to <html>. CSS layers in:
-//   • horizontal scanlines (repeating linear-gradient)
-//   • CRT vignette
-//   • a slow vertical "tracking line" sliding down the screen
-//   • RGB chromatic-aberration text-shadow on display type
-// Same code again (or Escape) turns it back off.
-//
-// We deliberately avoid `filter` / `transform` on <body> so the BrickGrid
-// backdrop's `fixed` positioning stays anchored to the viewport.
+// Always-on VHS aesthetic for the hero slideshow (was a toggle before).
+// CSS lives here, applied scoped to elements inside the hero section
+// ([data-hero-images]):
+//   • horizontal scanlines + CRT vignette layered on a fixed overlay
+//   • slow vertical tracking-error band sliding top → bottom
+//   • REC ● flag in the top-left
+//   • chromatic-aberration text-shadow on hero display type
+// The overlay markup itself lives inside the hero element in index.astro.
 ---
 
-<div class="rd-vhs-overlay" aria-hidden="true">
-  <div class="rd-vhs-track"></div>
-  <div class="rd-vhs-flag"></div>
-</div>
-
 <style is:global>
-  .rd-vhs-overlay {
-    position: fixed;
+  [data-hero-images] .rd-vhs-overlay {
+    position: absolute;
     inset: 0;
-    z-index: 9999;
+    /* z-index must beat the hero's .vignette::after pseudo-element (z-auto
+       but painted late) and the gradient div. Site header is z:50. */
+    z-index: 30;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-  }
-  html.is-vhs .rd-vhs-overlay {
-    opacity: 1;
-  }
-  /* Scanlines + vignette baked into the overlay's own background. */
-  html.is-vhs .rd-vhs-overlay {
-    background:
-      repeating-linear-gradient(
+    /* Scanlines isolated to their own background layer with an explicit
+       background-size, so every tile is exactly the same pixel height and
+       doesn't drift / alias at non-integer scroll positions. 4px period:
+       1px dark line + 3px transparent → uniform "scan" texture. */
+    background-color: transparent;
+    background-image:
+      linear-gradient(
         to bottom,
-        transparent 0,
-        transparent 2px,
-        rgba(0, 0, 0, 0.28) 2px,
-        rgba(0, 0, 0, 0.28) 3px
+        rgba(0, 0, 0, 0.32) 0,
+        rgba(0, 0, 0, 0.32) 1px,
+        transparent 1px,
+        transparent 4px
       ),
       radial-gradient(
         ellipse at center,
         transparent 38%,
         rgba(0, 0, 0, 0.7) 100%
       );
+    background-size: 100% 4px, 100% 100%;
+    background-repeat: repeat-y, no-repeat;
   }
-  /* Slow horizontal "tracking-error" band sliding top → bottom. */
-  .rd-vhs-track {
+  [data-hero-images] .rd-vhs-track {
     position: absolute;
     inset: 0;
     background: linear-gradient(
       to bottom,
       transparent 0%,
       transparent 45%,
-      rgba(255, 255, 255, 0.05) 47%,
-      rgba(255, 255, 255, 0.22) 50%,
-      rgba(255, 255, 255, 0.05) 53%,
+      rgba(255, 255, 255, 0.04) 47%,
+      rgba(255, 255, 255, 0.14) 50%,
+      rgba(255, 255, 255, 0.04) 53%,
       transparent 55%,
       transparent 100%
     );
     mix-blend-mode: screen;
     transform: translateY(-100%);
-  }
-  html.is-vhs .rd-vhs-track {
     animation: rd-vhs-track 6.5s linear infinite;
   }
   @keyframes rd-vhs-track {
     from { transform: translateY(-100%); }
     to   { transform: translateY(100%); }
   }
-  /* A small "REC ●" flag in the top-right while VHS is active. */
-  .rd-vhs-flag {
-    position: absolute;
-    top: 18px;
-    left: 18px;
-    padding: 6px 10px;
-    background: rgba(10, 10, 10, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 10px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: #f5f1e8;
-    opacity: 0;
-  }
-  html.is-vhs .rd-vhs-flag {
-    opacity: 1;
-  }
-  .rd-vhs-flag::before {
-    content: "● REC · VHS";
-    color: #ff2e3c;
-    animation: rd-vhs-rec 1.4s steps(2) infinite;
-  }
-  @keyframes rd-vhs-rec {
-    50% { opacity: 0.3; }
-  }
-  /* RGB chromatic-aberration on display type. text-shadow doesn't create
-     a containing block, so the brick-grid layout is untouched. */
-  html.is-vhs h1,
-  html.is-vhs h2,
-  html.is-vhs h3,
-  html.is-vhs em,
-  html.is-vhs strong,
-  html.is-vhs .font-display {
+  /* Chromatic aberration only on hero display type. */
+  [data-hero-images] h1,
+  [data-hero-images] h2,
+  [data-hero-images] em,
+  [data-hero-images] .font-display {
     text-shadow:
       1.4px 0 0 rgba(255, 0, 60, 0.6),
       -1.4px 0 0 rgba(0, 220, 255, 0.6);
   }
   @media (prefers-reduced-motion: reduce) {
-    html.is-vhs .rd-vhs-track { animation: none; opacity: 0; }
-    html.is-vhs .rd-vhs-flag::before { animation: none; }
+    [data-hero-images] .rd-vhs-track { animation: none; opacity: 0; }
   }
 </style>
-
-<script is:inline>
-  (function () {
-    if (window.__rdVhsInit) return;
-    window.__rdVhsInit = true;
-
-    const STORAGE_KEY = "rd-vhs-mode";
-
-    function isOn() {
-      return document.documentElement.classList.contains("is-vhs");
-    }
-    function applyVhs(on) {
-      document.documentElement.classList.toggle("is-vhs", !!on);
-      try { localStorage.setItem(STORAGE_KEY, on ? "1" : "0"); } catch (_) {}
-      document.dispatchEvent(
-        new CustomEvent("rd:vhs-change", { detail: { on: !!on } })
-      );
-    }
-    // Expose so the ThemePanel toggle button can call into this.
-    window.rdToggleVhs = function () { applyVhs(!isOn()); };
-    window.rdSetVhs = function (on) { applyVhs(!!on); };
-
-    // Boot: restore last state across reloads + view transitions.
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "1") applyVhs(true);
-    } catch (_) {}
-
-    // Konami: ↑ ↑ ↓ ↓ ← → ← → B A
-    const SEQUENCE = [
-      "ArrowUp", "ArrowUp",
-      "ArrowDown", "ArrowDown",
-      "ArrowLeft", "ArrowRight",
-      "ArrowLeft", "ArrowRight",
-      "KeyB", "KeyA",
-    ];
-    let pos = 0;
-
-    document.addEventListener("keydown", (e) => {
-      // Esc always exits VHS so users aren't trapped.
-      if (e.key === "Escape" && isOn()) {
-        applyVhs(false);
-        pos = 0;
-        return;
-      }
-      // Match by e.code so the sequence works on any keyboard layout.
-      if (e.code === SEQUENCE[pos]) {
-        pos++;
-        if (pos === SEQUENCE.length) {
-          pos = 0;
-          applyVhs(!isOn());
-        }
-      } else {
-        pos = e.code === SEQUENCE[0] ? 1 : 0;
-      }
-    });
-  })();
-</script>

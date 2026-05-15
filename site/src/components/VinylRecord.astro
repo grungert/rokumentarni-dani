@@ -10,7 +10,8 @@ const { class: className = "" } = Astro.props;
 <canvas
   class:list={["rd-vinyl-canvas", className]}
   data-rd-vinyl
-  aria-hidden="true"></canvas>
+  role="button"
+  aria-label="Pusti / pauziraj festivalski groove"></canvas>
 
 <style>
   .rd-vinyl-canvas {
@@ -46,8 +47,11 @@ const { class: className = "" } = Astro.props;
     labelTextureLoading = (async () => {
       try {
         const svgText = await fetch("/brand/logo.svg").then((r) => r.text());
+        // Logo silhouette painted WHITE, background fill set transparent so we
+        // can paint a solid black canvas underneath. Result: white logo on a
+        // black label — high contrast against the accent-coloured disc.
         const customised = svgText
-          .replace(/fill="var\(--logo-fill[^"]*"/g, 'fill="#0a0a0a"')
+          .replace(/fill="var\(--logo-fill[^"]*"/g, 'fill="#ffffff"')
           .replace(/fill="var\(--logo-bg[^"]*"/g, 'fill="rgba(0,0,0,0)"');
         const blob = new Blob([customised], { type: "image/svg+xml" });
         const url = URL.createObjectURL(blob);
@@ -62,9 +66,8 @@ const { class: className = "" } = Astro.props;
         const c = document.createElement("canvas");
         c.width = c.height = SIZE;
         const ctx = c.getContext("2d")!;
-        // White outside the logo so the accent (material.color) shows
-        // through everywhere except where the logo silhouette is.
-        ctx.fillStyle = "#ffffff";
+        // Black bg fills the label; the white logo is drawn on top below.
+        ctx.fillStyle = "#0a0a0a";
         ctx.fillRect(0, 0, SIZE, SIZE);
         // Centre the logo with breathing room — ~14% padding so it sits
         // nicely inside the round label.
@@ -84,38 +87,225 @@ const { class: className = "" } = Astro.props;
     return labelTextureLoading;
   }
 
-  /** Draw concentric grooves onto a canvas → CanvasTexture for the disc faces. */
-  function createGrooveTexture(): THREE.CanvasTexture {
+  /** Draw concentric grooves onto a canvas → CanvasTexture for the disc faces.
+   *  Base colour matches the disc body so the faces tint along with the accent
+   *  when the theme changes. Now denser + more contrasted: tight 3px groove
+   *  pitch with every 9th groove painted as a darker "track boundary", plus
+   *  a couple of light reflection wedges and an edge vignette for depth. */
+  function createGrooveTexture(baseColor: string): THREE.CanvasTexture {
+    const SIZE = 1024;
     const c = document.createElement("canvas");
-    c.width = c.height = 1024;
+    c.width = c.height = SIZE;
     const ctx = c.getContext("2d")!;
-    // Base disc black
-    ctx.fillStyle = "#070707";
-    ctx.fillRect(0, 0, 1024, 1024);
-    const cx = 512, cy = 512;
-    // Grooves
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-    ctx.lineWidth = 1;
-    for (let r = 150; r < 500; r += 5) {
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const cx = SIZE / 2, cy = SIZE / 2;
+    const rMin = 175;
+    const rMax = 498;
+
+    // Dense grooves (~110 of them) — most thin, every 9th one bolder so the
+    // disc reads as concentric tracks rather than a single uniform texture.
+    let i = 0;
+    for (let r = rMin; r < rMax; r += 3) {
+      const isTrack = i % 9 === 0;
+      ctx.strokeStyle = isTrack
+        ? "rgba(0, 0, 0, 0.45)"
+        : "rgba(0, 0, 0, 0.18)";
+      ctx.lineWidth = isTrack ? 1.4 : 1;
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.stroke();
+      i++;
     }
-    // A brighter inner ring near the label
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+
+    // Two reflection wedges — soft light-coloured sweeps suggesting the disc
+    // catches light as it spins. Drawn with a low-opacity radial gradient
+    // masked to two opposite angular bands using composite operations.
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const wedge = (startAngle: number, sweep: number) => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, rMax, startAngle, startAngle + sweep);
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(cx, cy, rMin, cx, cy, rMax);
+      grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+      grad.addColorStop(0.5, "rgba(255, 255, 255, 0.06)");
+      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = grad;
+      ctx.fill();
+    };
+    wedge(-0.35, 0.7);
+    wedge(Math.PI - 0.35, 0.7);
+    ctx.restore();
+
+    // Inner highlight ring near the label — the metal lip catching light.
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(cx, cy, 175, 0, Math.PI * 2);
+    ctx.arc(cx, cy, rMin, 0, Math.PI * 2);
     ctx.stroke();
-    // Subtle outer rim highlight
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    // Thin shadow groove just outside the inner highlight for definition.
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rMin + 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // Outer rim highlight + a thin inner shadow line.
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(cx, cy, 498, 0, Math.PI * 2);
+    ctx.arc(cx, cy, rMax, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rMax - 3, 0, Math.PI * 2);
+    ctx.stroke();
+
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
+  }
+
+  /** Tiny built-in synth loop — a 96-BPM kick + hi-hat + bassline pattern,
+   *  routed through an AnalyserNode so the BrickGrid can read the FFT bins.
+   *  Lives at module scope so the AudioContext survives even if multiple
+   *  vinyl canvases mount (e.g. astro view-transitions). */
+  type AudioEngine = {
+    play(): void;
+    stop(): void;
+    isPlaying(): boolean;
+  };
+  let audioEngine: AudioEngine | null = null;
+  function getAudioEngine(): AudioEngine {
+    if (audioEngine) return audioEngine;
+    let ctx: AudioContext | null = null;
+    let master: GainNode | null = null;
+    let analyser: AnalyserNode | null = null;
+    let bins: Uint8Array | null = null;
+    let playing = false;
+    let timer: number | null = null;
+    let step = 0;
+    const BPM = 96;
+    const STEP_S = 60 / BPM / 4; // 16th-note grid
+
+    // 1 bar = 16 steps. Three voices, two-bar repeating pattern.
+    const KICK =
+      [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0,
+       1,0,0,0, 0,0,1,0, 1,0,0,0, 0,1,0,0];
+    const HAT  =
+      [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1,
+       0,0,1,0, 0,0,1,0, 0,0,1,0, 1,0,1,1];
+    // Midi notes (0 = rest).
+    const BASS =
+      [36,0,0,36, 0,0,38,0, 36,0,0,0, 41,0,0,0,
+       36,0,0,36, 0,0,38,0, 41,0,0,0, 43,0,41,0];
+
+    function ensureCtx() {
+      if (ctx) return;
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+      master = ctx!.createGain();
+      master.gain.value = 0.32;
+      analyser = ctx!.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.62;
+      bins = new Uint8Array(analyser.frequencyBinCount);
+      master.connect(analyser);
+      analyser.connect(ctx!.destination);
+      (window as any).rdAudioBins = bins;
+    }
+
+    function kick(when: number) {
+      if (!ctx || !master) return;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(140, when);
+      o.frequency.exponentialRampToValueAtTime(38, when + 0.16);
+      g.gain.setValueAtTime(0.9, when);
+      g.gain.exponentialRampToValueAtTime(0.001, when + 0.4);
+      o.connect(g); g.connect(master);
+      o.start(when); o.stop(when + 0.45);
+    }
+
+    function hihat(when: number) {
+      if (!ctx || !master) return;
+      const dur = 0.05;
+      const len = Math.ceil(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const hp = ctx.createBiquadFilter();
+      hp.type = "highpass"; hp.frequency.value = 7000;
+      const g = ctx.createGain();
+      g.gain.value = 0.16;
+      src.connect(hp); hp.connect(g); g.connect(master);
+      src.start(when);
+    }
+
+    function bass(when: number, midi: number) {
+      if (!ctx || !master || !midi) return;
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+      const o = ctx.createOscillator();
+      const f = ctx.createBiquadFilter();
+      const g = ctx.createGain();
+      o.type = "sawtooth";
+      o.frequency.value = freq;
+      f.type = "lowpass";
+      f.frequency.setValueAtTime(500, when);
+      f.frequency.exponentialRampToValueAtTime(180, when + 0.28);
+      f.Q.value = 6;
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(0.22, when + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, when + 0.3);
+      o.connect(f); f.connect(g); g.connect(master);
+      o.start(when); o.stop(when + 0.32);
+    }
+
+    function tick() {
+      if (!playing || !ctx) return;
+      const when = ctx.currentTime + 0.04;
+      const i = step % KICK.length;
+      if (KICK[i]) kick(when);
+      if (HAT[i]) hihat(when);
+      if (BASS[i]) bass(when, BASS[i]);
+      step++;
+      timer = window.setTimeout(tick, STEP_S * 1000);
+    }
+
+    function updateBins() {
+      if (!playing || !analyser || !bins) return;
+      analyser.getByteFrequencyData(bins);
+      requestAnimationFrame(updateBins);
+    }
+
+    audioEngine = {
+      play() {
+        ensureCtx();
+        if (!ctx) return;
+        if (ctx.state === "suspended") ctx.resume();
+        if (playing) return;
+        playing = true;
+        step = 0;
+        tick();
+        updateBins();
+      },
+      stop() {
+        playing = false;
+        if (timer != null) clearTimeout(timer);
+        timer = null;
+        if (bins) bins.fill(0);
+      },
+      isPlaying() {
+        return playing;
+      },
+    };
+    return audioEngine;
   }
 
   function initVinyl(canvas: HTMLCanvasElement) {
@@ -180,11 +370,13 @@ const { class: className = "" } = Astro.props;
     pitch.rotation.x = BASE_PITCH;
     pitch.rotation.z = 0.05;  // subtle permanent lean — character
 
-    const grooveTex = createGrooveTexture();
+    let grooveTex = createGrooveTexture(readAccent());
 
-    // Disc body — thin cylinder so the side is visible when tilted.
+    // Disc body — thin cylinder so the side is visible when tilted. Coloured
+    // with the accent so the disc is the most prominent shape against the
+    // dark page (was near-black before, which made it invisible).
     const discMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0a0a,
+      color: new THREE.Color(readAccent()),
       roughness: 0.42,
       metalness: 0.55,
     });
@@ -210,11 +402,11 @@ const { class: className = "" } = Astro.props;
     bottomFace.position.y = -0.021;
     spin.add(bottomFace);
 
-    // Centre label — colour follows --color-accent live. The brand logo
-    // is rasterised onto a CanvasTexture and used as `map`, so the
-    // silhouette renders dark on top of the accent-coloured label.
+    // Centre label — black background with a WHITE logo silhouette painted
+    // into the map (see loadLabelTexture). High contrast against the
+    // accent-coloured disc surrounding it.
     const labelMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(readAccent()),
+      color: 0xffffff,
       roughness: 0.65,
       metalness: 0.0,
     });
@@ -263,11 +455,17 @@ const { class: className = "" } = Astro.props;
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
 
-    // Theme change → recolour label + cursor light.
+    // Theme change → recolour disc + regenerate groove texture + cursor light.
+    // Label stays white-on-black (independent of theme) for legibility.
     function onThemeChange() {
       const c = readAccent();
-      labelMat.color.set(c);
+      discMat.color.set(c);
       cursorLight.color.set(c);
+      const oldTex = grooveTex;
+      grooveTex = createGrooveTexture(c);
+      faceMat.map = grooveTex;
+      faceMat.needsUpdate = true;
+      oldTex.dispose();
     }
     document.addEventListener("rd:theme-change", onThemeChange);
 
@@ -293,12 +491,22 @@ const { class: className = "" } = Astro.props;
     window.addEventListener("pointermove", onGlobalPointer);
 
     // Drag-to-spin (adds extra angular velocity on top of the idle spin).
+    // We also detect tap-vs-drag here: a pointerdown→pointerup with <6px of
+    // travel and <300ms duration counts as a click → toggle the audio loop.
     let dragging = false;
     let lastX = 0;
     let extraVel = 0;
+    let downX = 0;
+    let downY = 0;
+    let downT = 0;
+    let movedDuringPress = 0;
     canvas.addEventListener("pointerdown", (e) => {
       dragging = true;
       lastX = e.clientX;
+      downX = e.clientX;
+      downY = e.clientY;
+      downT = performance.now();
+      movedDuringPress = 0;
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
@@ -306,8 +514,24 @@ const { class: className = "" } = Astro.props;
       const dx = e.clientX - lastX;
       extraVel += dx * 0.0012;
       lastX = e.clientX;
+      const ddx = e.clientX - downX;
+      const ddy = e.clientY - downY;
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (dist > movedDuringPress) movedDuringPress = dist;
     });
-    function endDrag() { dragging = false; }
+    function endDrag(e?: PointerEvent) {
+      const wasDragging = dragging;
+      dragging = false;
+      if (!wasDragging || !e) return;
+      const dt = performance.now() - downT;
+      if (movedDuringPress < 6 && dt < 320) {
+        // Tap → toggle the synth loop.
+        const eng = getAudioEngine();
+        if (eng.isPlaying()) eng.stop();
+        else eng.play();
+        canvas.classList.toggle("is-playing", eng.isPlaying());
+      }
+    }
     canvas.addEventListener("pointerup", endDrag);
     canvas.addEventListener("pointercancel", endDrag);
     canvas.addEventListener("pointerleave", endDrag);
@@ -319,6 +543,9 @@ const { class: className = "" } = Astro.props;
 
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const baseSpeed = reduced ? 0 : 0.005;
+    // When the synth loop is playing the disc spins ~4× faster (matches the
+    // ~96 BPM groove) so the vinyl visibly "plays" along with the audio.
+    const PLAY_SPEED_MULT = 4;
 
     function animate() {
       if (!canvas.isConnected) {
@@ -331,9 +558,11 @@ const { class: className = "" } = Astro.props;
       // Smooth lerp yaw + pitch toward the cursor-driven targets.
       yaw.rotation.y += (targetYaw - yaw.rotation.y) * 0.08;
       pitch.rotation.x += (targetPitch - pitch.rotation.x) * 0.08;
-      // Idle spin + hover boost + drag inertia.
+      // Idle spin + hover boost + drag inertia + play boost.
+      const playing = audioEngine?.isPlaying() === true;
+      const playMult = playing ? PLAY_SPEED_MULT : 1;
       const targetBoost = hoverBoost * 0.006;
-      spin.rotation.y += baseSpeed + targetBoost + extraVel;
+      spin.rotation.y += (baseSpeed + targetBoost) * playMult + extraVel;
       extraVel *= 0.94; // ease back
       renderer.render(scene, camera);
       requestAnimationFrame(animate);

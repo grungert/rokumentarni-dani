@@ -6,6 +6,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import EqBar from "../components/EqBar.astro";
 import BrickGrid from "../components/BrickGrid.astro";
 import VinylRecord from "../components/VinylRecord.astro";
+import SectionSymbols from "../components/SectionSymbols.astro";
+import TransitionTweak from "../components/TransitionTweak.astro";
 
 const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
@@ -220,12 +222,15 @@ const locations = [
        the header/footer, hiding them. Body's bg-ink still paints below z=-10
        so the canvas reads on a black backdrop.
        Hero photo + .bg-ash sections cover it via their own background;
-       black sections reveal it (cyan halo follows the cursor).
-       interactive=true → clicking on a visible cube paints it white. The
-       canvas itself stays pointer-events:none so it doesn't block links /
-       buttons; the painter listens at window level and skips clicks whose
-       target is an interactive element. -->
-  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+       black sections reveal it (cyan halo follows the cursor). Click-to-
+       paint is intentionally off: the grid is a backdrop, not a toy. -->
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" />
+
+  <!-- As the visitor scrolls past each themed section, paint a glyph into
+       the BrickGrid backdrop (logo, RD, date, music note). -->
+  <SectionSymbols />
+  <!-- Dev: pick which morph style runs between sections. Remove once final. -->
+  <TransitionTweak />
 
   <div class="relative z-10">
     <!-- HERO -->
@@ -248,6 +253,11 @@ const locations = [
     <div
       class="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent"
     >
+    </div>
+
+    <!-- Always-on VHS overlay — scoped to this hero section via VhsMode.astro. -->
+    <div class="rd-vhs-overlay" aria-hidden="true">
+      <div class="rd-vhs-track"></div>
     </div>
 
     <div class="relative z-10 mx-auto max-w-7xl px-6 lg:px-10 pb-24 pt-40 w-full">
@@ -346,7 +356,7 @@ const locations = [
 
 
   <!-- ABOUT — animated logo lives here -->
-  <section class="">
+  <section class="" data-rd-cube-pattern="logo">
     <div
       class="reveal mx-auto max-w-7xl px-6 lg:px-10 py-32 grid md:grid-cols-12 gap-12 items-start"
     >
@@ -411,7 +421,7 @@ const locations = [
 
 
   <!-- PROGRAMS — what the festival actually does -->
-  <section class="">
+  <section class="" data-rd-cube-pattern="rd">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
       <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
         <div>
@@ -479,7 +489,7 @@ const locations = [
 
 
   <!-- LOCATIONS — three cities -->
-  <section class="">
+  <section class="" data-rd-cube-pattern="date">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
       <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
         <div>
@@ -521,7 +531,7 @@ const locations = [
 
 
   <!-- LIVE SESSIONS — interactive 3-card video switcher -->
-  <section class="group">
+  <section class="group" data-rd-cube-pattern="music">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-32">
       <div class="reveal grid md:grid-cols-12 gap-10 items-center mb-12">
         <div class="md:col-span-8">
@@ -598,9 +608,9 @@ const locations = [
         </div>
       </div>
 
-      <!-- Grid is populated by JS (random shuffle on every page load). -->
+      <!-- Horizontal scroller — drag, swipe, wheel, or use prev/next. -->
       <ul
-        class="live-grid reveal-stagger grid md:grid-cols-3 gap-4"
+        class="live-grid reveal-stagger"
         data-video-grid
       ></ul>
 
@@ -628,9 +638,9 @@ const locations = [
   >
     <div class="modal-backdrop absolute inset-0 bg-ink/95 backdrop-blur-md grain"></div>
 
-    <div class="relative h-full w-full flex flex-col px-6 md:px-10 pt-24 md:pt-28 pb-6 md:pb-10">
+    <div class="modal-shell relative h-full w-full flex flex-col px-6 md:px-10 pt-24 md:pt-28 pb-6 md:pb-10">
       <!-- Top bar -->
-      <div class="flex items-center justify-between">
+      <div class="modal-topbar flex items-center justify-between">
         <div class="flex items-center gap-4">
           <p class="modal-counter font-mono text-xs uppercase tracking-[0.3em] text-accent"></p>
           <span class="hidden md:block w-12 h-px bg-accent/40"></span>
@@ -638,33 +648,35 @@ const locations = [
             Rokumentarni dani · Live Sessions
           </p>
         </div>
-        <button
-          class="modal-close inline-flex items-center justify-center w-10 h-10 border border-bone/20 hover:border-accent hover:text-accent transition"
-          aria-label="Close"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
+        <div class="flex items-center gap-2">
+          <button
+            class="modal-min inline-flex items-center justify-center w-10 h-10 border border-bone/20 hover:border-accent hover:text-accent transition"
+            aria-label="Minimize"
           >
-            <line x1="2" y1="2" x2="12" y2="12" />
-            <line x1="12" y1="2" x2="2" y2="12" />
-          </svg>
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+              <line x1="2" y1="11" x2="12" y2="11" />
+            </svg>
+          </button>
+          <button
+            class="modal-close inline-flex items-center justify-center w-10 h-10 border border-bone/20 hover:border-accent hover:text-accent transition"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+              <line x1="2" y1="2" x2="12" y2="12" />
+              <line x1="12" y1="2" x2="2" y2="12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Center: video -->
-      <div class="flex-1 flex items-center justify-center min-h-0 py-6">
+      <div class="modal-stage flex-1 flex items-center justify-center min-h-0 py-6">
         <div class="modal-video relative mx-auto">
           <!-- Pixel-cube corner accents -->
-          <span class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-accent"></span>
-          <span class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-accent"></span>
-          <span class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-accent"></span>
-          <span class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-accent"></span>
+          <span class="modal-corner absolute -top-1.5 -left-1.5 w-3 h-3 bg-accent"></span>
+          <span class="modal-corner absolute -top-1.5 -right-1.5 w-3 h-3 bg-accent"></span>
+          <span class="modal-corner absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-accent"></span>
+          <span class="modal-corner absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-accent"></span>
 
           <div
             class="absolute inset-0 ring-1 ring-accent/40 pointer-events-none"
@@ -672,11 +684,29 @@ const locations = [
           ></div>
 
           <div class="modal-mount absolute inset-0 bg-ash"></div>
+
+          <!-- Controls shown only while the modal is minimized to the corner. -->
+          <div class="modal-mini-controls">
+            <button class="modal-expand" aria-label="Expand">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6">
+                <polyline points="2 6 2 2 6 2" />
+                <polyline points="10 6 10 2 6 2" />
+                <polyline points="2 6 2 10 6 10" />
+                <polyline points="10 6 10 10 6 10" />
+              </svg>
+            </button>
+            <button class="modal-mini-close" aria-label="Close">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6">
+                <line x1="2" y1="2" x2="10" y2="10" />
+                <line x1="10" y1="2" x2="2" y2="10" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Bottom: title + nav -->
-      <div class="flex items-end justify-between gap-6 flex-wrap">
+      <div class="modal-bottombar flex items-end justify-between gap-6 flex-wrap">
         <div class="min-w-0">
           <p class="modal-artist font-display text-3xl md:text-5xl leading-none tracking-tight"></p>
           <p class="modal-title font-mono text-[10px] md:text-xs uppercase tracking-[0.25em] text-bone/55 mt-2"></p>
@@ -738,7 +768,7 @@ const locations = [
           <span class="filmstrip-hint-bar" aria-hidden="true"></span>
           Povuci ili scrollaj
         </span>
-        <span class="hidden md:inline">35mm · Rokumentarni dani Arhiva</span>
+        <span class="hidden md:inline">Rokumentarni dani Arhiva</span>
       </div>
     </div>
   </section>
@@ -928,18 +958,56 @@ const locations = [
       background: transparent !important;
     }
 
+    /* Horizontal scroller for video cards — drag to pan, native scroll
+       handles wheel/touch, snap centres the nearest card. JS wires the
+       prev/next buttons to scrollBy() so the controls and natural scroll
+       feel the same. */
+    .live-grid {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      list-style: none;
+      padding: 28px 8px 48px;
+      margin: 0;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .live-grid::-webkit-scrollbar { display: none; }
+    .live-grid.is-dragging { cursor: grabbing; }
+    .live-grid.is-dragging .live-card { pointer-events: none; }
     /* Hover lift on cards. Dynamically rendered, so no is-active state —
-       just a clean hover transform + accent border. */
+       just a clean hover transform + accent border. Positioned so the
+       hover z-index lifts the shadow above adjacent cards. */
     .live-card {
+      flex: 0 0 auto;
+      width: calc((100% - 32px) / 3); /* 3 visible with 16px gap × 2 */
+      scroll-snap-align: start;
+      position: relative;
+      z-index: 0;
       transition:
         transform 0.4s cubic-bezier(0.2, 0, 0.1, 1),
         box-shadow 0.4s ease,
         border-color 0.3s ease;
     }
+    @media (max-width: 900px) {
+      .live-card { width: calc((100% - 16px) / 2); }
+    }
+    @media (max-width: 640px) {
+      .live-card { width: 80%; }
+    }
     .live-card:hover {
       transform: translateY(-6px);
       border-color: var(--color-accent);
-      box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.55);
+      box-shadow:
+        0 26px 50px -12px color-mix(in srgb, var(--color-accent) 55%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--color-accent) 25%, transparent);
+      z-index: 2;
     }
     .live-card .img-bw {
       filter: grayscale(0.85) contrast(1.05) brightness(0.55);
@@ -967,9 +1035,9 @@ const locations = [
       color: var(--color-accent);
     }
     .video-tab.is-active {
-      background: var(--color-bone);
+      background: var(--color-accent);
       color: var(--color-ink);
-      border-color: var(--color-bone);
+      border-color: var(--color-accent);
     }
     .video-nav {
       display: inline-flex;
@@ -1016,6 +1084,86 @@ const locations = [
     }
     body.modal-open {
       overflow: hidden;
+    }
+
+    /* Mini-player controls are hidden in fullscreen mode; only render when the
+       modal is in the minimized corner state. */
+    .modal-mini-controls {
+      display: none;
+    }
+
+    /* MINIMIZED state — the modal sticks to bottom-right of the viewport
+       at ~320px wide, playback keeps going, and the page becomes scrollable
+       again. The flex shell stops blocking pointer events so the user can
+       interact with the rest of the page while watching. */
+    #live-modal.is-mini {
+      pointer-events: none;
+    }
+    #live-modal.is-mini .modal-backdrop {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #live-modal.is-mini .modal-topbar,
+    #live-modal.is-mini .modal-bottombar {
+      display: none;
+    }
+    #live-modal.is-mini .modal-shell {
+      padding: 0;
+    }
+    #live-modal.is-mini .modal-stage {
+      flex: none;
+      display: block;
+      padding: 0;
+    }
+    #live-modal.is-mini .modal-video {
+      position: fixed;
+      bottom: 16px;
+      right: 70px; /* leave room for the theme-panel vinyl button */
+      width: clamp(220px, 26vw, 360px);
+      height: auto;
+      max-width: none;
+      margin: 0;
+      z-index: 75;
+      pointer-events: auto;
+      box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+      animation: none !important;
+    }
+    /* Hide the big decorative corner blocks at mini size — they look noisy. */
+    #live-modal.is-mini .modal-corner {
+      display: none;
+    }
+    /* Show the inline controls overlaid on the mini-player. */
+    #live-modal.is-mini .modal-mini-controls {
+      display: flex;
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      gap: 4px;
+      z-index: 3;
+    }
+    .modal-mini-controls button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid rgba(245, 241, 232, 0.25);
+      background: rgba(10, 10, 10, 0.75);
+      color: var(--color-bone, #f5f1e8);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .modal-mini-controls button:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      background: rgba(10, 10, 10, 0.9);
+    }
+    @media (max-width: 640px) {
+      #live-modal.is-mini .modal-video {
+        right: 12px;
+        bottom: 12px;
+        width: min(80vw, 280px);
+      }
     }
     .live-card.is-playing .play-icon,
     .live-card.is-playing .thumb {
@@ -1311,8 +1459,6 @@ const locations = [
         };
 
         let activeTab = "live";
-        let offset = 0;
-        const PAGE_SIZE = 3;
 
         const counterEl = document.querySelector("[data-video-counter]");
         const prevBtn = document.querySelector("[data-video-prev]");
@@ -1335,15 +1481,14 @@ const locations = [
           const list = currentList();
           if (!list.length) {
             videoGrid.innerHTML =
-              '<li class="col-span-full text-center text-bone/40 text-sm py-12">Nema sadržaja.</li>';
+              '<li class="text-center text-bone/40 text-sm py-12 w-full">Nema sadržaja.</li>';
             if (counterEl) counterEl.textContent = "—";
             return;
           }
-          const items = [];
-          for (let i = 0; i < PAGE_SIZE; i++) {
-            const abs = (offset + i) % list.length;
-            items.push({ ...list[abs], _abs: abs });
-          }
+          // All cards rendered into the horizontal scroller; user drags or
+          // uses prev/next to navigate. _abs is the live index in the
+          // currently-active (shuffled) list, used by the modal.
+          const items = list.map((s, i) => ({ ...s, _abs: i }));
           videoGrid.innerHTML = items
             .map(
               (s) => `
@@ -1357,7 +1502,6 @@ const locations = [
                        alt="${esc(s.artist)}"
                        loading="lazy"
                        class="thumb absolute inset-0 w-full h-full object-cover img-bw transition group-hover:filter-none" />
-                  <div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent pointer-events-none"></div>
                   <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <button type="button"
                             class="play-button pointer-events-auto inline-flex items-center justify-center w-16 h-16 rounded-full bg-ink/70 border border-accent/40 transition cursor-pointer hover:bg-accent hover:text-ink hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -1379,19 +1523,15 @@ const locations = [
             .join("");
 
           if (counterEl) {
-            const start = (offset % list.length) + 1;
-            const end = Math.min(
-              (offset % list.length) + PAGE_SIZE,
-              list.length,
-            );
-            counterEl.textContent = `${pad(start)}–${pad(end)} / ${pad(list.length)}`;
+            counterEl.textContent = `${pad(list.length)} videa`;
           }
+          // Reset scroll position so a tab change always starts at the left.
+          videoGrid.scrollLeft = 0;
         }
 
         function setTab(name) {
           if (!(name in lists)) return;
           activeTab = name;
-          offset = 0;
           document
             .querySelectorAll("[data-video-tab]")
             .forEach((b) =>
@@ -1403,24 +1543,58 @@ const locations = [
           render();
         }
 
+        // ----- Horizontal scroll controls + drag-to-pan -----
+        function cardStep() {
+          const first = videoGrid.querySelector(".live-card");
+          if (!first) return 320;
+          const r = first.getBoundingClientRect();
+          // Card width + the flex gap between cards.
+          return r.width + 16;
+        }
+
         document
           .querySelectorAll("[data-video-tab]")
           .forEach((b) =>
             b.addEventListener("click", () => setTab(b.dataset.videoTab)),
           );
         prevBtn?.addEventListener("click", () => {
-          const len = currentList().length;
-          if (!len) return;
-          offset = (offset - PAGE_SIZE + len) % len;
-          if (offset < 0) offset = (offset + len) % len;
-          render();
+          videoGrid.scrollBy({ left: -cardStep(), behavior: "smooth" });
         });
         nextBtn?.addEventListener("click", () => {
-          const len = currentList().length;
-          if (!len) return;
-          offset = (offset + PAGE_SIZE) % len;
-          render();
+          videoGrid.scrollBy({ left: cardStep(), behavior: "smooth" });
         });
+
+        // Drag-to-pan — same idiom as the filmstrip. Native scroll handles
+        // wheel + touch, this adds mouse drag for desktop.
+        let isDown = false;
+        let startX = 0;
+        let startScroll = 0;
+        videoGrid.addEventListener("pointerdown", (e) => {
+          if (e.target.closest("a, button")) return;
+          isDown = true;
+          startX = e.clientX;
+          startScroll = videoGrid.scrollLeft;
+          videoGrid.classList.add("is-dragging");
+          videoGrid.style.scrollSnapType = "none";
+          videoGrid.style.scrollBehavior = "auto";
+          try { videoGrid.setPointerCapture(e.pointerId); } catch {}
+        });
+        videoGrid.addEventListener("pointermove", (e) => {
+          if (!isDown) return;
+          videoGrid.scrollLeft = startScroll - (e.clientX - startX);
+        });
+        function endVideoDrag(e) {
+          if (!isDown) return;
+          isDown = false;
+          videoGrid.classList.remove("is-dragging");
+          videoGrid.style.scrollSnapType = "";
+          videoGrid.style.scrollBehavior = "";
+          try { videoGrid.releasePointerCapture(e.pointerId); } catch {}
+        }
+        videoGrid.addEventListener("pointerup", endVideoDrag);
+        videoGrid.addEventListener("pointercancel", endVideoDrag);
+        videoGrid.addEventListener("pointerleave", endVideoDrag);
+        videoGrid.addEventListener("dragstart", (e) => e.preventDefault());
 
         // ----- Modal player -----
         const mount = modal.querySelector(".modal-mount");
@@ -1431,6 +1605,9 @@ const locations = [
         const modalPrev = modal.querySelector(".modal-prev");
         const modalNext = modal.querySelector(".modal-next");
         const backdrop = modal.querySelector(".modal-backdrop");
+        const minBtn = modal.querySelector(".modal-min");
+        const expandBtn = modal.querySelector(".modal-expand");
+        const miniCloseBtn = modal.querySelector(".modal-mini-close");
 
         let modalList = [];
         let modalIdx = -1;
@@ -1460,9 +1637,20 @@ const locations = [
         }
         function closeModal() {
           modal.classList.remove("is-open");
+          modal.classList.remove("is-mini");
           modal.setAttribute("aria-hidden", "true");
           document.body.classList.remove("modal-open");
           mount.innerHTML = "";
+        }
+        function minimizeModal() {
+          // Just toggle classes — iframe stays mounted, playback continues.
+          // Body scroll is re-enabled so the user can browse while watching.
+          modal.classList.add("is-mini");
+          document.body.classList.remove("modal-open");
+        }
+        function expandModal() {
+          modal.classList.remove("is-mini");
+          document.body.classList.add("modal-open");
         }
         function navigateModal(delta) {
           if (modalIdx < 0 || !modalList.length) return;
@@ -1482,10 +1670,19 @@ const locations = [
         backdrop.addEventListener("click", closeModal);
         modalPrev.addEventListener("click", () => navigateModal(-1));
         modalNext.addEventListener("click", () => navigateModal(1));
+        minBtn?.addEventListener("click", minimizeModal);
+        expandBtn?.addEventListener("click", expandModal);
+        miniCloseBtn?.addEventListener("click", closeModal);
         document.addEventListener("keydown", (e) => {
           if (!modal.classList.contains("is-open")) return;
-          if (e.key === "Escape") { e.preventDefault(); closeModal(); }
-          else if (e.key === "ArrowLeft") { e.preventDefault(); navigateModal(-1); }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            // Esc in mini just expands back; Esc in fullscreen closes.
+            if (modal.classList.contains("is-mini")) expandModal();
+            else closeModal();
+          } else if (modal.classList.contains("is-mini")) {
+            // Don't intercept arrows while minimized — let the page handle them.
+          } else if (e.key === "ArrowLeft") { e.preventDefault(); navigateModal(-1); }
           else if (e.key === "ArrowRight") { e.preventDefault(); navigateModal(1); }
         });
 
@@ -1601,9 +1798,17 @@ const locations = [
             if (!resize()) return;
             bakeBWOffscreen();
 
-            // Plain mosaic dissolve — opacity-only, no colour flashes.
-            const COLS = 36;
-            const ROWS = 45;
+            // Mosaic dissolve as faux cubes: cells are sized in CSS pixels
+            // (~28px target) and each gets a 1px highlight top/left + 1px
+            // shadow bottom/right so it reads as a beveled tile rather than
+            // a pixel. As cells fade they also shrink toward their centre,
+            // so they read as cubes flying away.
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const TARGET_CELL_CSS = 28; // CSS px per cube edge
+            const cssCw = cw / dpr;
+            const cssCh = ch / dpr;
+            const COLS = Math.max(6, Math.round(cssCw / TARGET_CELL_CSS));
+            const ROWS = Math.max(4, Math.round(cssCh / TARGET_CELL_CSS));
             const cells = [];
             for (let r = 0; r < ROWS; r++) {
               for (let c = 0; c < COLS; c++) {
@@ -1617,8 +1822,8 @@ const locations = [
               cells[j] = tmp;
             }
 
-            const totalDuration = 450;
-            const fadeDuration = 120;
+            const totalDuration = 520;
+            const fadeDuration = 160;
             const staggerWindow = totalDuration - fadeDuration;
             const start = performance.now();
 
@@ -1629,13 +1834,17 @@ const locations = [
                 const cellStart = (i / cells.length) * staggerWindow;
                 const cellAge = elapsed - cellStart;
                 let alpha;
+                let scale;
                 if (direction === "out") {
                   if (cellAge >= fadeDuration) continue;
-                  alpha = cellAge <= 0 ? 1 : 1 - cellAge / fadeDuration;
+                  const t = cellAge <= 0 ? 0 : cellAge / fadeDuration;
+                  alpha = 1 - t;
+                  scale = 1 - t * 0.28; // shrink to ~72% as it disappears
                 } else {
                   if (cellAge < 0) continue;
-                  alpha =
-                    cellAge >= fadeDuration ? 1 : cellAge / fadeDuration;
+                  const t = cellAge >= fadeDuration ? 1 : cellAge / fadeDuration;
+                  alpha = t;
+                  scale = 0.72 + t * 0.28; // grow back to 1
                 }
 
                 const [c, r] = cells[i];
@@ -1645,9 +1854,14 @@ const locations = [
                 const y2 = Math.round(((r + 1) * ch) / ROWS);
                 const w = x2 - x;
                 const h = y2 - y;
+                // Shrink each cell symmetrically around its centre.
+                const sw = w * scale;
+                const sh = h * scale;
+                const sx = x + (w - sw) / 2;
+                const sy = y + (h - sh) / 2;
 
                 ctx.globalAlpha = alpha;
-                ctx.drawImage(off, x, y, w, h, x, y, w, h);
+                ctx.drawImage(off, x, y, w, h, sx, sy, sw, sh);
               }
               ctx.globalAlpha = 1;
 
@@ -1838,12 +2052,12 @@ const locations = [
               return (
                 <li class="group">
                   <a href={`/blog/${post.data.slug ?? post.id}/`} class="block">
-                    <div class="aspect-[16/10] mb-5 overflow-hidden bg-fog">
+                    <div class="aspect-[16/10] mb-5 overflow-hidden bg-fog photo-mosaic relative" data-mosaic>
                       <img
                         src={headerImg}
                         alt={post.data.title}
                         loading="lazy"
-                        class="w-full h-full object-cover img-bw transition duration-700 group-hover:scale-105 group-hover:filter-none"
+                        class="w-full h-full object-cover photo-img"
                       />
                     </div>
                     <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-accent mb-3 transition-colors duration-500">

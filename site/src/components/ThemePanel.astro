@@ -38,31 +38,19 @@
   <div class="rd-theme-pop" role="dialog" aria-label="Theme picker">
     <p class="rd-theme-title">Accent color</p>
     <ul class="rd-theme-swatches">
+      <li><button type="button" data-color="#ff7a5e" data-name="Coral"    style="--swatch:#ff7a5e" aria-label="Coral"></button></li>
       <li><button type="button" data-color="#4ac5e4" data-name="Cyan"     style="--swatch:#4ac5e4" aria-label="Cyan"></button></li>
+      <li><button type="button" data-color="#ffffff" data-name="White"    style="--swatch:#ffffff" aria-label="White"></button></li>
       <li><button type="button" data-color="#d4a574" data-name="Amber"    style="--swatch:#d4a574" aria-label="Amber"></button></li>
       <li><button type="button" data-color="#ff3d6e" data-name="Magenta"  style="--swatch:#ff3d6e" aria-label="Magenta"></button></li>
       <li><button type="button" data-color="#b8e63a" data-name="Lime"     style="--swatch:#b8e63a" aria-label="Lime"></button></li>
-      <li><button type="button" data-color="#ff7a5e" data-name="Coral"    style="--swatch:#ff7a5e" aria-label="Coral"></button></li>
       <li><button type="button" data-color="#a86bff" data-name="Violet"   style="--swatch:#a86bff" aria-label="Violet"></button></li>
-      <li><button type="button" data-color="#f5f1e8" data-name="Bone"     style="--swatch:#f5f1e8" aria-label="Bone"></button></li>
     </ul>
 
     <label class="rd-theme-custom">
       <span>Custom</span>
-      <input type="color" data-rd-theme-custom value="#4ac5e4" />
+      <input type="color" data-rd-theme-custom value="#ff7a5e" />
     </label>
-
-    <p class="rd-theme-title rd-theme-title-divider">Effects</p>
-    <button
-      type="button"
-      class="rd-theme-vhs"
-      data-rd-vhs-toggle
-      aria-pressed="false"
-    >
-      <span class="rd-vhs-dot" aria-hidden="true"></span>
-      <span>VHS mode</span>
-      <span class="rd-vhs-hint" aria-hidden="true">↑↑↓↓←→←→BA</span>
-    </button>
 
     <button type="button" class="rd-theme-reset" data-rd-theme-reset>Reset</button>
   </div>
@@ -88,7 +76,11 @@
     backdrop-filter: blur(8px);
     color: var(--color-accent, #4ac5e4);
     cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    transition: border-color 0.2s, color 0.2s, transform 0.2s, background 0.2s;
+  }
+  :global(html.theme-light) .rd-theme-toggle {
+    border-color: rgba(26, 26, 26, 0.18);
+    background: rgba(245, 241, 232, 0.85);
   }
   .rd-theme-toggle:hover {
     border-color: var(--color-accent, #4ac5e4);
@@ -124,6 +116,11 @@
     pointer-events: none;
     transition: opacity 0.18s ease, transform 0.18s ease;
   }
+  :global(html.theme-light) .rd-theme-pop {
+    border-color: rgba(26, 26, 26, 0.12);
+    background: rgba(255, 252, 245, 0.95);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.25);
+  }
   .rd-theme-panel.is-open .rd-theme-pop {
     opacity: 1;
     transform: translateY(0);
@@ -135,6 +132,9 @@
     text-transform: uppercase;
     color: rgba(245, 241, 232, 0.55);
     margin: 0 0 10px 0;
+  }
+  :global(html.theme-light) .rd-theme-title {
+    color: rgba(26, 26, 26, 0.55);
   }
   .rd-theme-swatches {
     list-style: none;
@@ -171,6 +171,9 @@
     text-transform: uppercase;
     color: rgba(245, 241, 232, 0.55);
   }
+  :global(html.theme-light) .rd-theme-custom {
+    color: rgba(26, 26, 26, 0.55);
+  }
   .rd-theme-custom input[type="color"] {
     width: 32px;
     height: 22px;
@@ -179,57 +182,10 @@
     background: transparent;
     cursor: pointer;
   }
-  .rd-theme-title-divider {
+  .rd-theme-reset {
     margin-top: 14px;
     padding-top: 12px;
     border-top: 1px solid rgba(245, 241, 232, 0.08);
-  }
-  .rd-theme-vhs {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 8px;
-    border: 1px solid rgba(245, 241, 232, 0.12);
-    background: transparent;
-    color: rgba(245, 241, 232, 0.65);
-    font-family: inherit;
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: border-color 0.18s, color 0.18s, background 0.18s;
-  }
-  .rd-theme-vhs:hover {
-    border-color: var(--color-accent, #4ac5e4);
-    color: var(--color-accent, #4ac5e4);
-  }
-  .rd-theme-vhs.is-on {
-    border-color: var(--color-accent, #4ac5e4);
-    color: var(--color-accent, #4ac5e4);
-    background: rgba(255, 255, 255, 0.04);
-  }
-  .rd-vhs-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(245, 241, 232, 0.18);
-    transition: background 0.18s, box-shadow 0.18s;
-  }
-  .rd-theme-vhs.is-on .rd-vhs-dot {
-    background: var(--color-accent, #4ac5e4);
-    box-shadow: 0 0 8px var(--color-accent, #4ac5e4);
-  }
-  .rd-vhs-hint {
-    margin-left: auto;
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    color: rgba(245, 241, 232, 0.35);
-  }
-
-  .rd-theme-reset {
-    margin-top: 4px;
     width: 100%;
     padding: 6px 10px;
     border: 1px solid rgba(245, 241, 232, 0.12);
@@ -242,6 +198,10 @@
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
   }
+  :global(html.theme-light) .rd-theme-reset {
+    border-color: rgba(26, 26, 26, 0.18);
+    color: rgba(26, 26, 26, 0.6);
+  }
   .rd-theme-reset:hover {
     border-color: var(--color-accent, #4ac5e4);
     color: var(--color-accent, #4ac5e4);
@@ -251,7 +211,7 @@
 <script>
   // Persists the chosen accent across navigations + tabs.
   const STORAGE_KEY = "rd-theme-accent";
-  const DEFAULT_ACCENT = "#4ac5e4";
+  const DEFAULT_ACCENT = "#ff7a5e";
 
   function dimDeep(hex: string, factor = 0.55): string {
     // Crude darker variant: lerp toward black.
@@ -324,23 +284,6 @@
         try { localStorage.removeItem(STORAGE_KEY); } catch {}
         applyAccent(DEFAULT_ACCENT, { persist: false });
       });
-
-      // VHS toggle — delegates to the global in VhsMode.astro so both
-      // routes (this button + the Konami code) share one persisted state.
-      const vhsBtn = panel.querySelector<HTMLButtonElement>("[data-rd-vhs-toggle]");
-      function syncVhsBtn() {
-        const on = document.documentElement.classList.contains("is-vhs");
-        vhsBtn?.classList.toggle("is-on", on);
-        vhsBtn?.setAttribute("aria-pressed", String(on));
-      }
-      vhsBtn?.addEventListener("click", () => {
-        // @ts-ignore — installed by VhsMode.astro
-        if (typeof window.rdToggleVhs === "function") window.rdToggleVhs();
-        else document.documentElement.classList.toggle("is-vhs");
-        syncVhsBtn();
-      });
-      document.addEventListener("rd:vhs-change", syncVhsBtn);
-      syncVhsBtn();
     });
   }
 

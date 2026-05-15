@@ -34,6 +34,15 @@ const fullTitle =
     <ClientRouter />
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
+
+    <script is:inline>
+      // Apply persisted light/dark mode before first paint to avoid FOUC.
+      try {
+        if (localStorage.getItem("rd-theme-mode") === "light") {
+          document.documentElement.classList.add("theme-light");
+        }
+      } catch (_) {}
+    </script>
   </head>
   <body class="min-h-screen bg-ink text-bone grain">
     <SiteHeader />
