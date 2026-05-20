@@ -5,6 +5,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import ThemePanel from "../components/ThemePanel.astro";
 import VhsMode from "../components/VhsMode.astro";
+import DustField from "../components/DustField.astro";
 
 interface Props {
   title: string;
@@ -45,6 +46,9 @@ const fullTitle =
     </script>
   </head>
   <body class="min-h-screen bg-ink text-bone grain">
+    <!-- Floating dust/grain field — slow 3D drift behind content. -->
+    <DustField />
+
     <SiteHeader />
     <main>
       <slot />

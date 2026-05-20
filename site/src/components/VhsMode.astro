@@ -71,4 +71,126 @@
   @media (prefers-reduced-motion: reduce) {
     [data-hero-images] .rd-vhs-track { animation: none; opacity: 0; }
   }
+
+  /* Animated TV static. A small fractal-noise tile drifts in stepped
+     frames so it reads as live broadcast snow rather than a still
+     overlay. Sits beneath the scanline overlay (z:30) so the scanlines
+     stack visibly on top of the grain. Overlay blend pushes mids and
+     leaves blacks/whites mostly alone — that's how real CRT snow
+     stacks on the image. */
+  [data-hero-images] .rd-vhs-noise {
+    position: absolute;
+    inset: 0;
+    z-index: 29;
+    pointer-events: none;
+    opacity: 0.22;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 240px 240px;
+    animation: rd-vhs-noise-drift 0.7s steps(8) infinite;
+  }
+  @keyframes rd-vhs-noise-drift {
+    0%   { background-position:    0px    0px; }
+    12%  { background-position: -120px   60px; }
+    25%  { background-position:   80px  -40px; }
+    37%  { background-position:  200px   80px; }
+    50%  { background-position:  -60px  160px; }
+    62%  { background-position:  140px -120px; }
+    75%  { background-position:  -40px    0px; }
+    87%  { background-position:   60px  140px; }
+    100% { background-position:    0px    0px; }
+  }
+
+  /* Phosphor flicker — overlay blends pulse white/black at low alpha so
+     the hero reads as a CRT screen whose brightness is breathing. Done
+     as a sibling overlay (not a filter on .hero-bg) so it stacks on top
+     of the existing Ken-Burns animation and .img-bw grayscale filter
+     instead of overwriting them. Sits beneath the noise + scanlines so
+     those textures don't get washed out by the pulse. */
+  [data-hero-images] .rd-vhs-flicker {
+    position: absolute;
+    inset: 0;
+    z-index: 28;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    background-color: rgba(255, 255, 255, 0);
+    animation: rd-phosphor-flicker 4.2s infinite;
+  }
+  @keyframes rd-phosphor-flicker {
+    0%, 100% { background-color: rgba(255, 255, 255, 0);    }
+    7%       { background-color: rgba(255, 255, 255, 0.05); }
+    14%      { background-color: rgba(0, 0, 0, 0.04);       }
+    23%      { background-color: rgba(255, 255, 255, 0.03); }
+    36%      { background-color: rgba(0, 0, 0, 0.06);       }
+    49%      { background-color: rgba(255, 255, 255, 0.06); }
+    61%      { background-color: rgba(0, 0, 0, 0.02);       }
+    74%      { background-color: rgba(255, 255, 255, 0.03); }
+    86%      { background-color: rgba(0, 0, 0, 0.03);       }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-hero-images] .rd-vhs-noise   { animation: none; opacity: 0; }
+    [data-hero-images] .rd-vhs-flicker { animation: none; opacity: 0; }
+  }
+
+  /* CRT power-on sequence. The overlay starts as a black blanket. Its
+     ::before pseudo is the bright horizontal "deflection line" that
+     appears at the vertical centre, holds briefly as a hairline, then
+     scales vertically to fill the hero while the blanket fades —
+     mimicking a CRT tube's degauss sweep when the set switches on.
+     Total runtime ~950ms; sits above the VHS overlay (z:30) so it can
+     fully blank the hero, then becomes hidden so it can't intercept
+     pointer events. */
+  [data-hero-images] .rd-crt-poweron {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    background: #000;
+    overflow: hidden;
+    animation: rd-crt-bg 950ms cubic-bezier(0.25, 0.4, 0.25, 1) forwards;
+  }
+  [data-hero-images] .rd-crt-poweron::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 100%;
+    transform: translateY(-50%) scaleY(0);
+    transform-origin: center;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.85) 47%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0.85) 53%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    mix-blend-mode: screen;
+    animation: rd-crt-line 950ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  }
+  @keyframes rd-crt-bg {
+    0%, 12%  { background-color: rgba(0, 0, 0, 1); }
+    40%      { background-color: rgba(0, 0, 0, 0.85); }
+    65%      { background-color: rgba(0, 0, 0, 0.35); }
+    88%      { background-color: rgba(0, 0, 0, 0.05); }
+    100%     { background-color: rgba(0, 0, 0, 0); visibility: hidden; }
+  }
+  @keyframes rd-crt-line {
+    0%   { transform: translateY(-50%) scaleY(0); opacity: 0; }
+    8%   { transform: translateY(-50%) scaleY(0); opacity: 0; }
+    18%  { transform: translateY(-50%) scaleY(0.006); opacity: 1; }
+    38%  { transform: translateY(-50%) scaleY(0.01); opacity: 1; }
+    70%  { transform: translateY(-50%) scaleY(1); opacity: 0.8; }
+    85%  { transform: translateY(-50%) scaleY(1); opacity: 0.5; }
+    100% { transform: translateY(-50%) scaleY(1); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-hero-images] .rd-crt-poweron,
+    [data-hero-images] .rd-crt-poweron::before {
+      animation: none;
+      display: none;
+    }
+  }
 </style>

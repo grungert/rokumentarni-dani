@@ -1,0 +1,383 @@
+---
+// Three.js dust/grain particle field — slow 3D drift behind the page
+// content, gentle cursor parallax, theme-aware tinting. Soft circular
+// points lit additively give a "projector beam catches the dust" feel
+// without the volumetric-shader cost.
+//
+// Sits between BrickGrid (z:-10) and page content; pointer-events:none
+// throughout so it never interferes with clicks. Reduced-motion users
+// get fewer particles and a frozen field.
+---
+
+<canvas class="rd-dust-canvas" data-rd-dust-canvas aria-hidden="true"></canvas>
+
+<style>
+  .rd-dust-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: -5;
+    pointer-events: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+
+<script>
+  import * as THREE from "three";
+
+  function initDust(canvas: HTMLCanvasElement) {
+    const reduced =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // ---- Renderer ----
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: false,
+      alpha: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearAlpha(0);
+
+    const scene = new THREE.Scene();
+
+    // ---- Camera (perspective so distant motes feel further away) ----
+    const fov = 55;
+    const camera = new THREE.PerspectiveCamera(
+      fov,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      400,
+    );
+    camera.position.set(0, 0, 50);
+    camera.lookAt(0, 0, 0);
+
+    // ---- Particle system ----
+    // World volume the motes drift inside. Y range is taller than X so
+    // the field still reads as full when the user scrolls a long page.
+    const COUNT = reduced ? 120 : 480;
+    const HALF_X = 60;
+    const HALF_Y = 38;
+    const HALF_Z = 35;
+
+    const positions = new Float32Array(COUNT * 3);
+    const velocities = new Float32Array(COUNT * 3);
+    const sizes = new Float32Array(COUNT);
+    const opacities = new Float32Array(COUNT);
+
+    for (let i = 0; i < COUNT; i++) {
+      positions[i * 3 + 0] = (Math.random() - 0.5) * HALF_X * 2;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * HALF_Y * 2;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * HALF_Z * 2;
+      // Real airborne dust drifts almost in suspension — tiny, balanced
+      // velocity in every direction (no preferred axis) so motes hang
+      // and swirl instead of streaming upward like a steam jet.
+      velocities[i * 3 + 0] = (Math.random() - 0.5) * 0.004;
+      velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.003;
+      velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.004;
+      // Real airborne dust is *small* — most motes are sub-pixel-ish,
+      // a small fraction are noticeably bigger so the field has depth.
+      const r = Math.random();
+      sizes[i] = r < 0.85 ? 0.25 + Math.random() * 0.55 : 0.9 + Math.random() * 0.9;
+      opacities[i] = 0.35 + Math.random() * 0.55;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute("aOpacity", new THREE.BufferAttribute(opacities, 1));
+
+    // Theme-aware ambient tint and a live accent for the cursor halo —
+    // motes near the cursor blend toward the accent so the spotlight
+    // reads as warm light catching the dust, not just a brighter patch.
+    function readMoteColor(): THREE.Color {
+      const isLight = document.documentElement.classList.contains("theme-light");
+      return new THREE.Color(isLight ? 0x6b5d44 : 0xf5f1e8);
+    }
+    function readAccentColor(): THREE.Color {
+      const v = getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-accent")
+        .trim();
+      return new THREE.Color(v || "#ff7a5e");
+    }
+    const uColor = { value: readMoteColor() };
+    const uAccent = { value: readAccentColor() };
+    // Cursor spotlight — only motes near the mouse in screen space are
+    // visible; the rest fade out. `uCursor` is in NDC (-1..1), `uRadius`
+    // is the spotlight radius (also in NDC y-units), `uAspect` corrects
+    // x-distance so the spotlight reads as a circle on screen instead of
+    // an ellipse on wide viewports.
+    const uCursor = { value: new THREE.Vector2(0, 0) };
+    // Wider spotlight + brighter ambient floor — most of the screen
+    // shows a low-alpha haze of dust; near the cursor the motes pop.
+    const uRadius = { value: 0.95 };
+    const uAspect = { value: window.innerWidth / window.innerHeight };
+    const uBaseMask = { value: 0.25 }; // ambient visibility outside the spotlight
+
+    // Custom shader: per-particle pixel size + per-particle opacity,
+    // soft circular alpha from gl_PointCoord, additive blending so motes
+    // pool up where they cluster. Each particle is multiplied by the
+    // cursor-spotlight mask so the field reveals itself locally.
+    const material = new THREE.ShaderMaterial({
+      uniforms: { uColor, uAccent, uCursor, uRadius, uAspect, uBaseMask },
+      vertexShader: `
+        attribute float aSize;
+        attribute float aOpacity;
+        varying float vOpacity;
+        varying float vMask;
+        varying float vSpot;
+        uniform vec2 uCursor;
+        uniform float uRadius;
+        uniform float uAspect;
+        uniform float uBaseMask;
+        void main() {
+          vOpacity = aOpacity;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vec4 proj = projectionMatrix * mv;
+          // Screen-space distance from cursor (aspect-corrected).
+          vec2 ndc = proj.xy / max(0.0001, proj.w);
+          vec2 d = ndc - uCursor;
+          d.x *= uAspect;
+          float dist = length(d);
+          // Soft spotlight on top of a low ambient mask floor — the whole
+          // field is faintly visible everywhere, the cursor adds glow.
+          float spot = 1.0 - smoothstep(uRadius * 0.3, uRadius, dist);
+          vSpot = spot;
+          vMask = uBaseMask + (1.0 - uBaseMask) * spot;
+          // Motes near the cursor catch a touch of extra size — subtle so
+          // they read as illuminated grains, not snowflakes in the beam.
+          float boost = 1.0 + spot * 0.45;
+          gl_PointSize = aSize * boost * (300.0 / -mv.z);
+          gl_Position = proj;
+        }
+      `,
+      fragmentShader: `
+        varying float vOpacity;
+        varying float vMask;
+        varying float vSpot;
+        uniform vec3 uColor;
+        uniform vec3 uAccent;
+        void main() {
+          vec2 c = gl_PointCoord - vec2(0.5);
+          float d = length(c);
+          // Soft circular falloff.
+          float circle = smoothstep(0.5, 0.05, d);
+          // Inside the spotlight, motes blend toward the accent so the
+          // cursor reads as a warm light catching the dust, not just a
+          // visibility window. Outside, base mote tint stays.
+          vec3 color = mix(uColor, uAccent, vSpot * 0.85);
+          float a = circle * vOpacity * vMask;
+          if (a < 0.01) discard;
+          gl_FragColor = vec4(color, a);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    // ---- Cursor tracking ----
+    // The smoothed (cursorSmX/SY) cursor drives the spotlight uniform and
+    // a tiny camera parallax. Raw (cursorNX/NY) is captured per move.
+    let cursorNX = 0;
+    let cursorNY = 0;
+    let cursorSmX = 0;
+    let cursorSmY = 0;
+    let camOffsetX = 0;
+    let camOffsetY = 0;
+    function onPointer(e: PointerEvent) {
+      cursorNX = (e.clientX / window.innerWidth) * 2 - 1;
+      cursorNY = -((e.clientY / window.innerHeight) * 2 - 1);
+    }
+    window.addEventListener("pointermove", onPointer);
+
+    // Theme + accent picker — repaint the relevant uniform on each.
+    function onModeChange() {
+      uColor.value.copy(readMoteColor());
+      uAccent.value.copy(readAccentColor());
+    }
+    function onThemeChange() {
+      uAccent.value.copy(readAccentColor());
+    }
+    document.addEventListener("rd:mode-change", onModeChange);
+    document.addEventListener("rd:theme-change", onThemeChange);
+
+    // FX toggle (TransitionTweak panel) — if `dust` is false, the canvas
+    // hides itself; the rAF loop also skips the render call to avoid
+    // burning GPU when invisible. Default is on.
+    let dustEnabled = true;
+    try {
+      const stored = localStorage.getItem("rd-mouse-fx");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (typeof parsed.dust === "boolean") dustEnabled = parsed.dust;
+      }
+    } catch (_) {}
+    canvas.style.display = dustEnabled ? "" : "none";
+    function onMouseFx(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      if (typeof d.dust === "boolean") {
+        dustEnabled = d.dust;
+        canvas.style.display = dustEnabled ? "" : "none";
+      }
+    }
+    document.addEventListener("rd:mouse-fx", onMouseFx);
+
+    // ---- Resize ----
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      uAspect.value = w / h;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    // ---- Cursor in world-space ----
+    // The spotlight uniform uses NDC, but the per-mote reaction wants
+    // world coords so the wake's radius is in dust-volume units (not
+    // pixels). Project the smoothed NDC onto the z=0 plane through the
+    // camera; that gives us a moving point we can compute distances from.
+    const cursorWorld = new THREE.Vector3();
+    const cursorRay = new THREE.Vector3();
+    let cursorWX = 0;
+    let cursorWY = 0;
+    let cursorWXPrev = 0;
+    let cursorWYPrev = 0;
+
+    // Reaction tuning — radius in world units, strengths in dt-scaled
+    // impulse magnitudes. PUSH = constant outward force when the cursor
+    // is inside the field; DRAG = wake force proportional to cursor
+    // velocity (fast strokes carry motes, slow drift barely touches them).
+    const INFLUENCE_R = 12;
+    const INFLUENCE_R2 = INFLUENCE_R * INFLUENCE_R;
+    const PUSH = 0.012;
+    const DRAG = 0.35;
+
+    // ---- Animation loop ----
+    const posAttr = geometry.getAttribute("position") as THREE.BufferAttribute;
+    let last = performance.now();
+
+    function animate() {
+      if (!canvas.isConnected) {
+        window.removeEventListener("pointermove", onPointer);
+        window.removeEventListener("resize", resize);
+        document.removeEventListener("rd:mode-change", onModeChange);
+        document.removeEventListener("rd:theme-change", onThemeChange);
+        document.removeEventListener("rd:mouse-fx", onMouseFx);
+        geometry.dispose();
+        material.dispose();
+        renderer.dispose();
+        return;
+      }
+      // Honour the FX toggle — skip the render but keep the rAF alive so
+      // turning dust back on doesn't require any re-init handshake.
+      if (!dustEnabled) {
+        requestAnimationFrame(animate);
+        return;
+      }
+      const now = performance.now();
+      // Frame-rate independent step (cap delta so a stalled tab doesn't
+      // teleport every mote across the field on resume).
+      const dt = Math.min(0.05, (now - last) / 1000) * 60;
+      last = now;
+
+      // Smooth + project the cursor BEFORE the mote-update loop so the
+      // per-mote reaction can read the live world-space cursor + velocity.
+      cursorSmX += (cursorNX - cursorSmX) * 0.12;
+      cursorSmY += (cursorNY - cursorSmY) * 0.12;
+      uCursor.value.set(cursorSmX, cursorSmY);
+      cursorRay.set(cursorSmX, cursorSmY, 0).unproject(camera).sub(camera.position).normalize();
+      const tHit = -camera.position.z / cursorRay.z;
+      cursorWorld.copy(camera.position).addScaledVector(cursorRay, tHit);
+      cursorWX = cursorWorld.x;
+      cursorWY = cursorWorld.y;
+      const cursorVelX = cursorWX - cursorWXPrev;
+      const cursorVelY = cursorWY - cursorWYPrev;
+      cursorWXPrev = cursorWX;
+      cursorWYPrev = cursorWY;
+
+      if (!reduced) {
+        const arr = posAttr.array as Float32Array;
+        // Slow convection currents driven by two phase-offset sines —
+        // gives the field a gentle "air in the room" swirl instead of a
+        // single direction. Time scale is slow on purpose (10–20 sec).
+        const tSec = now / 1000;
+        const wX = Math.sin(tSec * 0.08) * 0.0015;
+        const wY = Math.sin(tSec * 0.06 + 1.3) * 0.0012;
+        const wZ = Math.cos(tSec * 0.09 + 2.1) * 0.0015;
+        for (let i = 0; i < COUNT; i++) {
+          const idx = i * 3;
+          // Tiny per-mote Brownian jitter on top of the drift so motes
+          // shimmer in place instead of tracking perfectly straight.
+          const jx = (Math.random() - 0.5) * 0.003;
+          const jy = (Math.random() - 0.5) * 0.003;
+          const jz = (Math.random() - 0.5) * 0.003;
+          arr[idx + 0] += (velocities[idx + 0] + wX + jx) * dt;
+          arr[idx + 1] += (velocities[idx + 1] + wY + jy) * dt;
+          arr[idx + 2] += (velocities[idx + 2] + wZ + jz) * dt;
+
+          // Cursor reaction — push away from the cursor (constant), plus
+          // a drag impulse along the cursor's velocity vector so sharp
+          // mouse strokes carry a wake. Falloff squared so the effect
+          // tucks tightly around the cursor rather than tugging the
+          // whole field.
+          const dxC = arr[idx + 0] - cursorWX;
+          const dyC = arr[idx + 1] - cursorWY;
+          const d2C = dxC * dxC + dyC * dyC;
+          if (d2C < INFLUENCE_R2) {
+            const dC = Math.sqrt(d2C);
+            const f = 1 - dC / INFLUENCE_R;
+            const f2 = f * f;
+            if (dC > 0.01) {
+              arr[idx + 0] += (dxC / dC) * f2 * PUSH * dt;
+              arr[idx + 1] += (dyC / dC) * f2 * PUSH * dt;
+            }
+            arr[idx + 0] += cursorVelX * f2 * DRAG;
+            arr[idx + 1] += cursorVelY * f2 * DRAG;
+          }
+
+          // Wrap around the volume so the field never runs dry.
+          if (arr[idx + 0] > HALF_X) arr[idx + 0] = -HALF_X;
+          else if (arr[idx + 0] < -HALF_X) arr[idx + 0] = HALF_X;
+          if (arr[idx + 1] > HALF_Y) arr[idx + 1] = -HALF_Y;
+          else if (arr[idx + 1] < -HALF_Y) arr[idx + 1] = HALF_Y;
+          if (arr[idx + 2] > HALF_Z) arr[idx + 2] = -HALF_Z;
+          else if (arr[idx + 2] < -HALF_Z) arr[idx + 2] = HALF_Z;
+        }
+        posAttr.needsUpdate = true;
+      }
+
+      // Camera parallax stays tiny — atmosphere, not vertigo.
+      camOffsetX += (cursorNX * 1.6 - camOffsetX) * 0.04;
+      camOffsetY += (cursorNY * 1.0 - camOffsetY) * 0.04;
+      camera.position.x = camOffsetX;
+      camera.position.y = camOffsetY;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  function autoInit() {
+    document
+      .querySelectorAll<HTMLCanvasElement>("[data-rd-dust-canvas]")
+      .forEach((c) => {
+        if (c.dataset.rdDustInit) return;
+        c.dataset.rdDustInit = "1";
+        initDust(c);
+      });
+  }
+
+  document.addEventListener("astro:page-load", autoInit);
+  if (document.readyState !== "loading") autoInit();
+  else document.addEventListener("DOMContentLoaded", autoInit);
+</script>

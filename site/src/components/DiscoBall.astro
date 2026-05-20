@@ -1,0 +1,441 @@
+---
+// 3D disco ball — styled after docs/example_02. Builds a real mirror-ball
+// look by instancing many tiny square mirror tiles, one per vertex of an
+// icosphere, oriented along the vertex normal. Tiles use MeshMatcapMaterial
+// with a procedurally-generated "crystal" matcap, layered over a dark inner
+// sphere that fills the gaps. Click toggles disco mode (dispatches
+// rd:disco-mode for the BrickGrid).
+interface Props {
+  class?: string;
+}
+const { class: className = "" } = Astro.props;
+---
+
+<canvas
+  class:list={["rd-disco-canvas", className]}
+  data-rd-disco
+  role="button"
+  aria-label="Uključi / isključi disco režim"></canvas>
+
+<style>
+  .rd-disco-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  .rd-disco-canvas:active { cursor: grabbing; }
+</style>
+
+<script>
+  import * as THREE from "three";
+  import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
+
+  function readAccent(): string {
+    return (
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-accent")
+        .trim() || "#4ac5e4"
+    );
+  }
+
+  // Procedural "crystal" matcap. MatCap textures are sampled by view-space
+  // normal, so painting a small sphere image with one bright key-light hot
+  // spot + a few scattered glints gives every facet a silvery sparkle no
+  // matter the angle — exactly what makes a mirror ball read as a mirror
+  // ball. Generated on canvas so we don't pull in any external asset.
+  let cachedMatcap: THREE.CanvasTexture | null = null;
+  function createCrystalMatcap(): THREE.CanvasTexture {
+    if (cachedMatcap) return cachedMatcap;
+    const SIZE = 256;
+    const c = document.createElement("canvas");
+    c.width = c.height = SIZE;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const cx = SIZE / 2;
+    const cy = SIZE / 2;
+    const R = SIZE / 2 - 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Silver body — bright off-centre highlight that stays luminous to the
+    // rim so the matcap × tile-color multiply has bright pixels to amplify
+    // (a near-black rim would just stay black however hard we tint).
+    const baseGrad = ctx.createRadialGradient(
+      cx - R * 0.45, cy - R * 0.5, R * 0.04,
+      cx + R * 0.1, cy + R * 0.1, R
+    );
+    baseGrad.addColorStop(0, "#ffffff");
+    baseGrad.addColorStop(0.25, "#f5f5f6");
+    baseGrad.addColorStop(0.6, "#c8c9cd");
+    baseGrad.addColorStop(0.88, "#7a7c84");
+    baseGrad.addColorStop(1, "#42444c");
+    ctx.fillStyle = baseGrad;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    // Sharp specular hotspot upper-left.
+    ctx.globalCompositeOperation = "lighter";
+    const specGrad = ctx.createRadialGradient(
+      cx - R * 0.4, cy - R * 0.5, 0,
+      cx - R * 0.4, cy - R * 0.5, R * 0.32
+    );
+    specGrad.addColorStop(0, "rgba(255,255,255,0.95)");
+    specGrad.addColorStop(0.5, "rgba(255,255,255,0.35)");
+    specGrad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = specGrad;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    // Small scattered "tile catching ceiling lights" glints. Their positions
+    // are normalised (-1..1 from centre) and translated to canvas pixels.
+    const glints: Array<[number, number, number]> = [
+      [ 0.20, -0.15, 0.04],
+      [-0.05,  0.30, 0.035],
+      [ 0.32,  0.40, 0.040],
+      [-0.35,  0.18, 0.035],
+      [ 0.12, -0.50, 0.040],
+      [-0.20, -0.30, 0.030],
+      [ 0.42,  0.05, 0.030],
+    ];
+    for (const [gx, gy, gs] of glints) {
+      const px = cx + gx * R;
+      const py = cy + gy * R;
+      const g = ctx.createRadialGradient(px, py, 0, px, py, R * gs);
+      g.addColorStop(0, "rgba(255,255,255,0.9)");
+      g.addColorStop(0.5, "rgba(255,255,255,0.4)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, SIZE, SIZE);
+    }
+    ctx.restore();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    cachedMatcap = tex;
+    return tex;
+  }
+
+  function initDiscoBall(canvas: HTMLCanvasElement) {
+    if (canvas.dataset.rdInit) return;
+    canvas.dataset.rdInit = "1";
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas, antialias: true, alpha: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearAlpha(0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    camera.position.set(0, 0.25, 4.4);
+    camera.lookAt(0, 0.15, 0);
+
+    // ---- Disco ball geometry (matching example_02's proportions) ----
+    // 1. Source icosphere — detail 3 (642 verts after mergeVertices) is
+    //    chunky enough that each vertex hosts a clearly-visible mirror tile.
+    //    Higher detail (4 → 2562 verts) packs tiles too densely with the
+    //    same tile size, so they read as "tiny dots" instead of "mirrors".
+    let inner = new THREE.IcosahedronGeometry(1, 3) as THREE.BufferGeometry;
+    inner.deleteAttribute("normal");
+    inner.deleteAttribute("uv");
+    inner = mergeVertices(inner);
+    inner.computeVertexNormals();
+
+    // 2. Mirror tiles via InstancedMesh — one tiny square Plane per vertex,
+    //    oriented so its +Z faces outward along the vertex normal.
+    // Tile size — keep the example_02 ratio (tile / radius ≈ 0.22). With
+    // 642 vertices on a unit sphere this gives ~2.5× surface overlap, which
+    // closes the seams between tiles without making them look like wings.
+    const TILE_SIZE = 0.22;
+    const tileGeo = new THREE.PlaneGeometry(TILE_SIZE, TILE_SIZE);
+    const matcap = createCrystalMatcap();
+    const tileMat = new THREE.MeshMatcapMaterial({
+      matcap,
+      color: 0xffffff,
+    });
+    const positions = inner.attributes.position.array as Float32Array;
+    const normals = inner.attributes.normal.array as Float32Array;
+    const tileCount = inner.attributes.position.count;
+    const tiles = new THREE.InstancedMesh(tileGeo, tileMat, tileCount);
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < positions.length; i += 3) {
+      dummy.position.set(positions[i], positions[i + 1], positions[i + 2]);
+      dummy.lookAt(
+        positions[i] + normals[i],
+        positions[i + 1] + normals[i + 1],
+        positions[i + 2] + normals[i + 2]
+      );
+      dummy.updateMatrix();
+      tiles.setMatrixAt(i / 3, dummy.matrix);
+    }
+    tiles.instanceMatrix.needsUpdate = true;
+
+    // Per-tile colour state — initially all white so the ball reads silver
+    // through the matcap. When the user taps, each tile gets assigned a
+    // random saturated hue + per-tile pulse phase so it breathes on its own
+    // rhythm. instanceColor multiplies into the matcap sample on the GPU, so
+    // bright colour values (>1) blow out the matcap highlights toward white,
+    // which is what makes the tiles look like they're actually emitting
+    // light rather than just being painted.
+    const tileHue = new Float32Array(tileCount);
+    const tilePulsePhase = new Float32Array(tileCount);
+    const tilePulseSpeed = new Float32Array(tileCount);
+    const tileScratch = new THREE.Color();
+    const whiteColor = new THREE.Color(0xffffff);
+    for (let i = 0; i < tileCount; i++) {
+      tilePulsePhase[i] = Math.random() * Math.PI * 2;
+      tilePulseSpeed[i] = 0.8 + Math.random() * 1.6;
+      tiles.setColorAt(i, whiteColor);
+    }
+    tiles.instanceColor!.needsUpdate = true;
+    function randomizeTileColors() {
+      for (let i = 0; i < tileCount; i++) {
+        tileHue[i] = Math.random();
+      }
+    }
+    function resetTileColors() {
+      for (let i = 0; i < tileCount; i++) {
+        tiles.setColorAt(i, whiteColor);
+      }
+      tiles.instanceColor!.needsUpdate = true;
+    }
+
+    // 3. Dark inner sphere — fills the gaps between mirror tiles so the
+    //    silhouette reads as a solid ball, not a cloud of floating squares.
+    const innerMat = new THREE.MeshBasicMaterial({ color: 0x111114 });
+    const innerMesh = new THREE.Mesh(inner, innerMat);
+
+    const ballGroup = new THREE.Group();
+    ballGroup.add(innerMesh);
+    ballGroup.add(tiles);
+    scene.add(ballGroup);
+
+    // Cap + wire — sells the "hanging from above" illusion.
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.09, 0.1, 16),
+      new THREE.MeshBasicMaterial({ color: 0x1a1a1a })
+    );
+    cap.position.set(0, 1.02, 0);
+    scene.add(cap);
+
+    const wire = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 1.6, 8),
+      new THREE.MeshBasicMaterial({ color: 0x888888 })
+    );
+    wire.position.set(0, 1.9, 0);
+    scene.add(wire);
+
+    // ---- Cursor-tracking tint ----
+    // Matcap materials don't read scene lights, so the BrickGrid-style cursor
+    // halo can't shine on this ball through a PointLight. Instead we lerp the
+    // tile material's `.color` toward the theme accent based on viewport
+    // distance between the cursor and the ball's screen position. The result
+    // looks the same: when the cursor is near the ball, the silver tiles
+    // pick up the accent colour just like the cubes do.
+    //
+    // Reach is in viewport pixels (not canvas-relative) so the effect feels
+    // continuous with the cube-field cursor halo rather than only working
+    // when the cursor enters the tiny ball canvas.
+    const accentColor = new THREE.Color(readAccent());
+    const baseTint = new THREE.Color(0xc6c8d0);
+    let cursorScreenX = -10000;
+    let cursorScreenY = -10000;
+    const CURSOR_REACH_PX = 480;
+
+    function onGlobalPointer(e: PointerEvent) {
+      cursorScreenX = e.clientX;
+      cursorScreenY = e.clientY;
+    }
+    window.addEventListener("pointermove", onGlobalPointer);
+
+    function onThemeChange() {
+      accentColor.set(readAccent());
+    }
+    document.addEventListener("rd:theme-change", onThemeChange);
+
+    // ---- Drag-to-orbit + click-to-toggle (same pattern as VinylRecord) ----
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    let downX = 0;
+    let downY = 0;
+    let downT = 0;
+    let movedDuringPress = 0;
+    let userYaw = 0;
+    let userPitch = 0;
+    let userYawVel = 0;
+    let userPitchVel = 0;
+    let accumSpin = 0;
+    const ORBIT_SENSITIVITY = 0.0085;
+    const INERTIA_DECAY = 0.93;
+    const PITCH_CLAMP = 1.1;
+
+    canvas.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      downT = performance.now();
+      movedDuringPress = 0;
+      userYawVel = 0;
+      userPitchVel = 0;
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      userYaw += dx * ORBIT_SENSITIVITY;
+      userPitch += dy * ORBIT_SENSITIVITY;
+      userPitch = Math.max(-PITCH_CLAMP, Math.min(PITCH_CLAMP, userPitch));
+      userYawVel = dx * ORBIT_SENSITIVITY;
+      userPitchVel = dy * ORBIT_SENSITIVITY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const ddx = e.clientX - downX;
+      const ddy = e.clientY - downY;
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (dist > movedDuringPress) movedDuringPress = dist;
+    });
+
+    let active = false;
+    function setActive(v: boolean) {
+      if (active === v) return;
+      active = v;
+      canvas.classList.toggle("is-active", v);
+      if (active) {
+        // Roll a fresh random palette for the tiles. The animate loop drives
+        // per-tile brightness from the pulse phases each frame; here we just
+        // pick the hues.
+        randomizeTileColors();
+      } else {
+        resetTileColors();
+      }
+      document.dispatchEvent(
+        new CustomEvent("rd:disco-mode", { detail: { active: v } })
+      );
+    }
+    function endDrag(e?: PointerEvent) {
+      const wasDragging = dragging;
+      dragging = false;
+      if (!wasDragging || !e) return;
+      const dt = performance.now() - downT;
+      if (movedDuringPress < 6 && dt < 320) {
+        setActive(!active);
+      }
+    }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    canvas.addEventListener("pointerleave", endDrag);
+
+    function resize() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (w === 0 || h === 0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const SPIN_IDLE = reduced ? 0 : 0.0022;
+    const SPIN_ACTIVE_MULT = 2.4;
+
+    function animate() {
+      if (!canvas.isConnected) {
+        if (active) {
+          document.dispatchEvent(
+            new CustomEvent("rd:disco-mode", { detail: { active: false } })
+          );
+        }
+        ro.disconnect();
+        window.removeEventListener("pointermove", onGlobalPointer);
+        document.removeEventListener("rd:theme-change", onThemeChange);
+        inner.dispose();
+        tileGeo.dispose();
+        tileMat.dispose();
+        innerMat.dispose();
+        renderer.dispose();
+        return;
+      }
+
+      const nowSec = performance.now() / 1000;
+
+      // Inertia
+      if (!dragging) {
+        userYaw += userYawVel;
+        userPitch += userPitchVel;
+        userYawVel *= INERTIA_DECAY;
+        userPitchVel *= INERTIA_DECAY;
+        if (Math.abs(userYawVel) < 1e-4) userYawVel = 0;
+        if (Math.abs(userPitchVel) < 1e-4) userPitchVel = 0;
+        userPitch = Math.max(-PITCH_CLAMP, Math.min(PITCH_CLAMP, userPitch));
+      }
+
+      // Idle spin accumulates; user offset layers on top.
+      const spin = active ? SPIN_IDLE * SPIN_ACTIVE_MULT : SPIN_IDLE;
+      accumSpin += spin;
+      ballGroup.rotation.y = accumSpin + userYaw;
+      ballGroup.rotation.x = userPitch;
+
+      // Cursor-tinted matcap colour. Cursor distance is measured in viewport
+      // pixels to the ball's on-screen centre, so the effect blends with the
+      // BrickGrid cursor halo rather than only working when the cursor is on
+      // the tiny ball canvas. While disco mode is on we soften the cursor
+      // tint so the per-tile disco colours dominate.
+      const rect = canvas.getBoundingClientRect();
+      const ballScreenX = rect.left + rect.width * 0.5;
+      const ballScreenY = rect.top + rect.height * 0.55;
+      const cdx = cursorScreenX - ballScreenX;
+      const cdy = cursorScreenY - ballScreenY;
+      const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+      const proximity = Math.max(0, 1 - cdist / CURSOR_REACH_PX);
+      if (active) {
+        // Keep the material tint near white so the per-tile colours come
+        // through cleanly. A faint accent kiss still rides the cursor.
+        tileMat.color.copy(whiteColor).lerp(accentColor, proximity * 0.18);
+        // Pulse each tile's brightness on its own sine. Bright values
+        // (>1) blow out matcap highlights → reads as emission/glow.
+        const t = nowSec;
+        for (let i = 0; i < tileCount; i++) {
+          const pulse = 1 + 0.35 * Math.sin(t * tilePulseSpeed[i] + tilePulsePhase[i]);
+          tileScratch
+            .setHSL(tileHue[i], 0.95, 0.58)
+            .multiplyScalar(1.55 * pulse);
+          tiles.setColorAt(i, tileScratch);
+        }
+        tiles.instanceColor!.needsUpdate = true;
+      } else {
+        // Silver mode: lerp from a slightly cool grey baseline toward
+        // accent and brighten with proximity so a near cursor reads as
+        // "lit", not just shifted in hue.
+        const strength = Math.min(1, proximity);
+        tileMat.color.copy(baseTint).lerp(accentColor, strength);
+        tileMat.color.multiplyScalar(1 + strength * 0.9);
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  function autoInit() {
+    document
+      .querySelectorAll<HTMLCanvasElement>("[data-rd-disco]")
+      .forEach(initDiscoBall);
+  }
+
+  document.addEventListener("astro:page-load", autoInit);
+  if (document.readyState !== "loading") autoInit();
+  else document.addEventListener("DOMContentLoaded", autoInit);
+</script>

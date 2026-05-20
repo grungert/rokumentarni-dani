@@ -176,6 +176,9 @@ const { class: className = "" } = Astro.props;
     play(): void;
     stop(): void;
     isPlaying(): boolean;
+    /** One-shot cymbal hit — plays regardless of loop state. Used when the
+     *  user "slaps" the 3D disc with the cursor. */
+    slap(intensity?: number): void;
   };
   let audioEngine: AudioEngine | null = null;
   function getAudioEngine(): AudioEngine {
@@ -248,6 +251,50 @@ const { class: className = "" } = Astro.props;
       src.start(when);
     }
 
+    // Bright noise burst + a few metallic sine partials → cymbal-ish hit.
+    // Used both as a one-shot from the slap() method and as a louder splash
+    // on bass kicks. The partials de-tune slightly each call so repeated
+    // hits never sound mechanically identical.
+    function cymbalHit(when: number, intensity: number) {
+      if (!ctx || !master) return;
+      const dur = 0.55 * intensity;
+      const len = Math.ceil(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const env = Math.pow(1 - i / len, 1.8);
+        d[i] = (Math.random() * 2 - 1) * env;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 8200;
+      bp.Q.value = 0.55;
+      const hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 5200;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.34 * intensity, when);
+      g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+      src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(master);
+      src.start(when); src.stop(when + dur);
+
+      const partials = [4400, 6700, 9100, 11800];
+      for (let i = 0; i < partials.length; i++) {
+        const f = partials[i] * (0.96 + Math.random() * 0.08);
+        const o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.value = f;
+        const og = ctx.createGain();
+        const peak = 0.05 * intensity / (i * 0.5 + 1);
+        og.gain.setValueAtTime(peak, when);
+        og.gain.exponentialRampToValueAtTime(0.0005, when + dur * 0.7);
+        o.connect(og); og.connect(master);
+        o.start(when); o.stop(when + dur * 0.8);
+      }
+    }
+
     function bass(when: number, midi: number) {
       if (!ctx || !master || !midi) return;
       const freq = 440 * Math.pow(2, (midi - 69) / 12);
@@ -303,6 +350,12 @@ const { class: className = "" } = Astro.props;
       },
       isPlaying() {
         return playing;
+      },
+      slap(intensity = 1) {
+        ensureCtx();
+        if (!ctx) return;
+        if (ctx.state === "suspended") ctx.resume();
+        cymbalHit(ctx.currentTime + 0.005, intensity);
       },
     };
     return audioEngine;
@@ -469,17 +522,22 @@ const { class: className = "" } = Astro.props;
     }
     document.addEventListener("rd:theme-change", onThemeChange);
 
-    // Global cursor tracking — drives BOTH the yaw/pitch tilt AND the
-    // position of the accent point light.
-    let targetYaw = 0;
-    let targetPitch = BASE_PITCH;
+    // Rotation has two contributors that sum each frame:
+    //   cursorYaw / cursorPitch — passive cursor tracking (always-on, gentle)
+    //   userYaw   / userPitch   — drag-to-orbit accumulator (user-controlled,
+    //                              persists between drags, springs nothing)
+    // The user channel also carries velocity for post-release inertia.
+    let cursorYaw = 0;
+    let cursorPitch = 0;
+    let userYaw = 0;
+    let userPitch = 0;
+    let userYawVel = 0;
+    let userPitchVel = 0;
+    let smoothYaw = 0;
+    let smoothPitch = BASE_PITCH;
+    const USER_PITCH_CLAMP = 1.25;   // ~72° — keeps the disc from flipping inside-out
+    const USER_INERTIA_DECAY = 0.92; // post-release velocity falloff
     function onGlobalPointer(e: PointerEvent) {
-      // Viewport-normalised cursor (-1 .. 1) → drives the rotation.
-      const vx = (e.clientX / window.innerWidth) * 2 - 1;
-      const vy = (e.clientY / window.innerHeight) * 2 - 1;
-      targetYaw = vx * RANGE_YAW;
-      targetPitch = BASE_PITCH + vy * RANGE_PITCH;
-
       // Canvas-relative cursor → drives the light position in scene units.
       const rect = canvas.getBoundingClientRect();
       const cx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -487,33 +545,69 @@ const { class: className = "" } = Astro.props;
       // Map into approximate scene-space (vinyl is ~1 unit radius).
       cursorLight.position.x = cx * 2.4;
       cursorLight.position.y = cy * 1.8;
+
+      // Passive cursor tracking — skipped while the user is dragging so the
+      // two rotation sources don't fight each other.
+      if (dragging) return;
+      const vx = (e.clientX / window.innerWidth) * 2 - 1;
+      const vy = (e.clientY / window.innerHeight) * 2 - 1;
+      cursorYaw = vx * RANGE_YAW;
+      cursorPitch = vy * RANGE_PITCH;
     }
     window.addEventListener("pointermove", onGlobalPointer);
 
-    // Drag-to-spin (adds extra angular velocity on top of the idle spin).
-    // We also detect tap-vs-drag here: a pointerdown→pointerup with <6px of
-    // travel and <300ms duration counts as a click → toggle the audio loop.
+    // Cymbal-slap wobble — every tap kicks small random pitch/yaw velocities
+    // that spring back to zero, layered on top of the cursor-driven targets.
+    // Feels like the disc recoils when struck.
+    let wobblePitch = 0;
+    let wobbleYaw = 0;
+    let wobblePitchVel = 0;
+    let wobbleYawVel = 0;
+    const WOBBLE_STIFF = 0.14;   // spring constant — higher = snappier return
+    const WOBBLE_DAMP = 0.86;    // velocity damping — lower = quicker settle
+
+    // Drag-to-orbit: horizontal mouse delta → yaw, vertical → pitch. The disc
+    // rotates freely in 3D under the cursor. Released velocity carries the
+    // rotation as inertia for a few frames, then settles.
+    //
+    // Tap detection still lives here: a pointerdown→pointerup with <6px of
+    // travel and <320ms duration counts as a click → cymbal slap + toggle
+    // the audio loop.
     let dragging = false;
     let lastX = 0;
+    let lastY = 0;
     let extraVel = 0;
     let downX = 0;
     let downY = 0;
     let downT = 0;
     let movedDuringPress = 0;
+    const ORBIT_SENSITIVITY = 0.0085; // radians per pixel of drag
     canvas.addEventListener("pointerdown", (e) => {
       dragging = true;
       lastX = e.clientX;
+      lastY = e.clientY;
       downX = e.clientX;
       downY = e.clientY;
       downT = performance.now();
       movedDuringPress = 0;
+      // Kill any in-flight inertia so the disc reacts immediately to the new
+      // drag rather than continuing to coast in the prior direction.
+      userYawVel = 0;
+      userPitchVel = 0;
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
       if (!dragging) return;
       const dx = e.clientX - lastX;
-      extraVel += dx * 0.0012;
+      const dy = e.clientY - lastY;
+      userYaw += dx * ORBIT_SENSITIVITY;
+      userPitch += dy * ORBIT_SENSITIVITY;
+      userPitch = Math.max(-USER_PITCH_CLAMP, Math.min(USER_PITCH_CLAMP, userPitch));
+      // Track the most recent per-frame delta as the velocity for inertia.
+      userYawVel = dx * ORBIT_SENSITIVITY;
+      userPitchVel = dy * ORBIT_SENSITIVITY;
       lastX = e.clientX;
+      lastY = e.clientY;
       const ddx = e.clientX - downX;
       const ddy = e.clientY - downY;
       const dist = Math.sqrt(ddx * ddx + ddy * ddy);
@@ -525,8 +619,18 @@ const { class: className = "" } = Astro.props;
       if (!wasDragging || !e) return;
       const dt = performance.now() - downT;
       if (movedDuringPress < 6 && dt < 320) {
-        // Tap → toggle the synth loop.
+        // Cymbal slap — sound + visual recoil + disco splash on the cubes,
+        // regardless of whether the music loop ends up toggling on or off.
         const eng = getAudioEngine();
+        eng.slap(1);
+        extraVel += 0.24 + Math.random() * 0.08;
+        wobblePitchVel += (Math.random() - 0.5) * 0.36;
+        wobbleYawVel += (Math.random() - 0.5) * 0.44;
+        document.dispatchEvent(
+          new CustomEvent("rd:vinyl-slap", { detail: { intensity: 1 } })
+        );
+        // Existing UX: tap toggles the synth loop. Rapid tapping turns the
+        // music on/off but the cymbal hit fires every time either way.
         if (eng.isPlaying()) eng.stop();
         else eng.play();
         canvas.classList.toggle("is-playing", eng.isPlaying());
@@ -555,9 +659,36 @@ const { class: className = "" } = Astro.props;
         renderer.dispose();
         return;
       }
-      // Smooth lerp yaw + pitch toward the cursor-driven targets.
-      yaw.rotation.y += (targetYaw - yaw.rotation.y) * 0.08;
-      pitch.rotation.x += (targetPitch - pitch.rotation.x) * 0.08;
+
+      // Inertia: once the user lets go, the orbit keeps coasting briefly so
+      // a flick spins the disc rather than stopping dead. Skipped during the
+      // active drag — the pointer delta drives userYaw/Pitch directly there.
+      if (!dragging) {
+        userYaw += userYawVel;
+        userPitch += userPitchVel;
+        userYawVel *= USER_INERTIA_DECAY;
+        userPitchVel *= USER_INERTIA_DECAY;
+        if (Math.abs(userYawVel) < 1e-4) userYawVel = 0;
+        if (Math.abs(userPitchVel) < 1e-4) userPitchVel = 0;
+        userPitch = Math.max(-USER_PITCH_CLAMP, Math.min(USER_PITCH_CLAMP, userPitch));
+      }
+      // Compose user-driven orbit + passive cursor offset + BASE_PITCH recline.
+      const targetYaw = userYaw + cursorYaw;
+      const targetPitch = userPitch + cursorPitch + BASE_PITCH;
+      // Smooth lerp toward the composed targets. The smoothed base is kept
+      // separate from the final rotation so the wobble offset can be added
+      // on top without being eaten by the lerp.
+      smoothYaw += (targetYaw - smoothYaw) * 0.08;
+      smoothPitch += (targetPitch - smoothPitch) * 0.08;
+      // Wobble: spring restoring force toward 0 + velocity damping.
+      wobblePitchVel += -wobblePitch * WOBBLE_STIFF;
+      wobblePitchVel *= WOBBLE_DAMP;
+      wobblePitch += wobblePitchVel;
+      wobbleYawVel += -wobbleYaw * WOBBLE_STIFF;
+      wobbleYawVel *= WOBBLE_DAMP;
+      wobbleYaw += wobbleYawVel;
+      yaw.rotation.y = smoothYaw + wobbleYaw;
+      pitch.rotation.x = smoothPitch + wobblePitch;
       // Idle spin + hover boost + drag inertia + play boost.
       const playing = audioEngine?.isPlaying() === true;
       const playMult = playing ? PLAY_SPEED_MULT : 1;

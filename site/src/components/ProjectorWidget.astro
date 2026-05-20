@@ -1,0 +1,1296 @@
+---
+// 3D vintage film projector — self-contained beam, lens halo, projection
+// screen with vignette + RD mark, dust motes, film-wear overlay, gate-weave
+// jitter, and staged warm-up. Ported from the projector-lab workshop file.
+//
+// Interactions:
+//   - Tap canvas: toggles power on/off. Lamp staging: vents warm → beam
+//     ignites → projected frame fades in. Visible breath + hum + occasional
+//     brownouts so it reads as a real lamp.
+//   - Drag: orbits the projector with inertia on release.
+//   - Cursor (no drag): subtle parallax tilt toward the cursor.
+//   - Theme accent (rd:theme-change): applied to the lamp-related parts —
+//     beam tint, lens emissive, LED, brand-plate glyphs, accent trim,
+//     projection screen, cursor point light.
+interface Props {
+  class?: string;
+}
+const { class: className = "" } = Astro.props;
+---
+
+<canvas
+  class:list={["rd-projector-canvas", className]}
+  data-rd-projector
+  role="button"
+  aria-label="Uključi / isključi projektor"></canvas>
+
+<style>
+  .rd-projector-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  .rd-projector-canvas:active { cursor: grabbing; }
+</style>
+
+<script>
+  import * as THREE from "three";
+
+  function readAccent(): string {
+    return (
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-accent")
+        .trim() || "#4ac5e4"
+    );
+  }
+
+  function initProjector(canvas: HTMLCanvasElement) {
+    if (canvas.dataset.rdInit) return;
+    canvas.dataset.rdInit = "1";
+
+    // -----------------------------------------------------------------
+    // Reel constructor — flange discs + polished torus rim + wound film
+    // coil + mid-grey hub + dark spoke holes. Built before the rest of
+    // the chassis so two of these can be parked on the upper deck.
+    // -----------------------------------------------------------------
+    const modelColor = new THREE.Color(readAccent());
+
+    const reelFlangeMat = new THREE.MeshStandardMaterial({
+      color: 0xc8cad0, metalness: 0.65, roughness: 0.32,
+    });
+    const reelRimMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0b0e, metalness: 0.12, roughness: 0.88,
+    });
+    const reelHubMat = new THREE.MeshStandardMaterial({
+      color: 0x8e9098, metalness: 0.5, roughness: 0.5,
+    });
+    const reelHoleMat = new THREE.MeshBasicMaterial({ color: 0x08090c });
+    const reelWoundMat = new THREE.MeshStandardMaterial({
+      color: 0x05060a, metalness: 0.08, roughness: 0.92,
+    });
+
+    function createReel(): THREE.Group {
+      const reel = new THREE.Group();
+      const flangeGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.012, 48);
+      for (const z of [0.038, -0.038]) {
+        const flange = new THREE.Mesh(flangeGeo, reelFlangeMat);
+        flange.rotation.x = Math.PI / 2;
+        flange.position.z = z;
+        reel.add(flange);
+      }
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.22, 0.014, 12, 60),
+        reelRimMat
+      );
+      reel.add(rim);
+      const wound = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.205, 0.205, 0.064, 48, 1, true),
+        reelWoundMat
+      );
+      wound.rotation.x = Math.PI / 2;
+      reel.add(wound);
+      const hub = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 0.082, 20),
+        reelHubMat
+      );
+      hub.rotation.x = Math.PI / 2;
+      reel.add(hub);
+      const holeGeo = new THREE.CircleGeometry(0.035, 16);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const r = 0.13;
+        for (const side of [1, -1]) {
+          const hole = new THREE.Mesh(holeGeo, reelHoleMat);
+          hole.position.set(
+            Math.cos(a) * r,
+            Math.sin(a) * r,
+            side * 0.0445
+          );
+          reel.add(hole);
+        }
+      }
+      return reel;
+    }
+
+    // -----------------------------------------------------------------
+    // Renderer + camera
+    // -----------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({
+      canvas, antialias: true, alpha: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearAlpha(0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+    // 3/4 view — the body, deck, reels, lens and handle all read.
+    const VIEW_EYE = new THREE.Vector3(4.06, 2.03, 5.22);
+    const VIEW_LOOK = new THREE.Vector3(0, 0.2, 0.35);
+    function applyCameraView() {
+      camera.position.copy(VIEW_EYE);
+      camera.lookAt(VIEW_LOOK);
+    }
+    applyCameraView();
+
+    // -----------------------------------------------------------------
+    // Lights — soft ambient + warm key + cool fill + cursor accent point.
+    // -----------------------------------------------------------------
+    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+    scene.add(ambient);
+    const key = new THREE.DirectionalLight(0xffe8c0, 1.0);
+    key.position.set(3, 5, 3);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x88aacc, 0.55);
+    fill.position.set(-3, 2, -1.5);
+    scene.add(fill);
+    const cursorLight = new THREE.PointLight(modelColor.clone(), 2.4, 6, 1.4);
+    cursorLight.position.set(0, 0.5, 2.4);
+    scene.add(cursorLight);
+
+    // -----------------------------------------------------------------
+    // Materials
+    // -----------------------------------------------------------------
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x1d1e22, metalness: 0.32, roughness: 0.55,
+    });
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2c32, metalness: 0.45, roughness: 0.42,
+    });
+    const chromeMat = new THREE.MeshStandardMaterial({
+      color: 0xc8cad0, metalness: 0.9, roughness: 0.25,
+    });
+    const accentTrimMat = new THREE.MeshStandardMaterial({
+      color: modelColor.clone(), metalness: 0.6, roughness: 0.38,
+    });
+    const lensGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x05060a,
+      metalness: 0.95,
+      roughness: 0.12,
+      emissive: 0xffffff,
+      emissiveIntensity: 0,
+    });
+    const ledMat = new THREE.MeshStandardMaterial({
+      color: 0x222226,
+      emissive: modelColor.clone(),
+      emissiveIntensity: 0.35,
+    });
+    const handleMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1b1f, metalness: 0.7, roughness: 0.35,
+    });
+    const knobMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0b0d, metalness: 0.65, roughness: 0.32,
+    });
+    const knobCapMat = new THREE.MeshStandardMaterial({
+      color: 0x3e4046, metalness: 0.85, roughness: 0.28,
+    });
+
+    // -----------------------------------------------------------------
+    // Rounded-corner extrusion — body silhouette catches light instead
+    // of reading as a CAD primitive.
+    // -----------------------------------------------------------------
+    function createRoundedBoxGeo(
+      w: number, h: number, d: number, r: number, smoothness = 4
+    ): THREE.ExtrudeGeometry {
+      const shape = new THREE.Shape();
+      const w2 = w / 2, h2 = h / 2;
+      shape.moveTo(-w2 + r, -h2);
+      shape.lineTo(w2 - r, -h2);
+      shape.quadraticCurveTo(w2, -h2, w2, -h2 + r);
+      shape.lineTo(w2, h2 - r);
+      shape.quadraticCurveTo(w2, h2, w2 - r, h2);
+      shape.lineTo(-w2 + r, h2);
+      shape.quadraticCurveTo(-w2, h2, -w2, h2 - r);
+      shape.lineTo(-w2, -h2 + r);
+      shape.quadraticCurveTo(-w2, -h2, -w2 + r, -h2);
+      const bev = Math.min(r * 0.45, 0.018);
+      const extrudeDepth = Math.max(0.001, d - bev * 2);
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: extrudeDepth,
+        bevelEnabled: true,
+        bevelThickness: bev,
+        bevelSize: bev,
+        bevelOffset: 0,
+        bevelSegments: smoothness,
+        curveSegments: 14,
+      });
+      geo.translate(0, 0, -extrudeDepth / 2);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    const body = new THREE.Mesh(createRoundedBoxGeo(1.5, 0.65, 0.85, 0.045), bodyMat);
+    body.position.y = 0;
+    root.add(body);
+
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.9), trimMat);
+    deck.position.y = 0.65 / 2 + 0.025;
+    root.add(deck);
+
+    function addReelPost(x: number) {
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.03, 0.18, 12),
+        chromeMat
+      );
+      post.position.set(x, deck.position.y + 0.09, 0);
+      root.add(post);
+    }
+    addReelPost(0.42);
+    addReelPost(-0.42);
+
+    // -----------------------------------------------------------------
+    // Side cooling vents — recessed housing + 9 horizontal slats.
+    // -----------------------------------------------------------------
+    const ventHousingMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0b0e, metalness: 0.35, roughness: 0.7,
+    });
+    const ventSlatMat = new THREE.MeshStandardMaterial({
+      color: 0x18191d, metalness: 0.55, roughness: 0.55,
+    });
+    function addCoolingVents(side: "left" | "right") {
+      const sign = side === "left" ? -1 : 1;
+      const housing = new THREE.Mesh(
+        new THREE.BoxGeometry(0.018, 0.36, 0.46),
+        ventHousingMat
+      );
+      housing.position.set(sign * 0.756, 0.02, -0.04);
+      root.add(housing);
+      const slatCount = 9;
+      for (let i = 0; i < slatCount; i++) {
+        const y = (i - (slatCount - 1) / 2) * 0.038 + 0.02;
+        const slat = new THREE.Mesh(
+          new THREE.BoxGeometry(0.024, 0.012, 0.42),
+          ventSlatMat
+        );
+        slat.position.set(sign * 0.762, y, -0.04);
+        root.add(slat);
+      }
+    }
+    addCoolingVents("left");
+    addCoolingVents("right");
+
+    // -----------------------------------------------------------------
+    // Carry handle — curved tube across the top of the deck.
+    // -----------------------------------------------------------------
+    const handleGroup = new THREE.Group();
+    {
+      const handleW = 0.7;
+      const handleHRise = 0.18;
+      const handleR = 0.018;
+      const baseY = 0.325 + 0.025;
+      const path = new THREE.CatmullRomCurve3(
+        [
+          new THREE.Vector3(-handleW / 2, baseY, -0.18),
+          new THREE.Vector3(-handleW / 2, baseY + handleHRise * 0.55, -0.18),
+          new THREE.Vector3(-handleW / 2 + handleW * 0.22, baseY + handleHRise, -0.18),
+          new THREE.Vector3(handleW / 2 - handleW * 0.22, baseY + handleHRise, -0.18),
+          new THREE.Vector3(handleW / 2, baseY + handleHRise * 0.55, -0.18),
+          new THREE.Vector3(handleW / 2, baseY, -0.18),
+        ],
+        false,
+        "catmullrom",
+        0.4
+      );
+      const handleGeo = new THREE.TubeGeometry(path, 48, handleR, 12, false);
+      const handle = new THREE.Mesh(handleGeo, handleMat);
+      handleGroup.add(handle);
+      for (const sgn of [-1, 1]) {
+        const foot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.024, 0.028, 0.024, 14),
+          chromeMat
+        );
+        foot.position.set(sgn * (handleW / 2), baseY - 0.012, -0.18);
+        handleGroup.add(foot);
+      }
+    }
+    root.add(handleGroup);
+
+    const reelLeft = createReel();
+    reelLeft.position.set(-0.42, deck.position.y + 0.22, 0);
+    root.add(reelLeft);
+    const reelRight = createReel();
+    reelRight.position.set(0.42, deck.position.y + 0.22, 0);
+    root.add(reelRight);
+
+    // -----------------------------------------------------------------
+    // Lens path — barrel + accent collar + dark reflective glass.
+    // -----------------------------------------------------------------
+    const lensBarrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.14, 0.42, 24),
+      trimMat
+    );
+    lensBarrel.rotation.x = Math.PI / 2;
+    lensBarrel.position.set(0.35, -0.08, 0.85 / 2 + 0.21);
+    root.add(lensBarrel);
+
+    const lensCollar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.18, 0.06, 24),
+      accentTrimMat
+    );
+    lensCollar.rotation.x = Math.PI / 2;
+    lensCollar.position.set(0.35, -0.08, 0.85 / 2 + 0.03);
+    root.add(lensCollar);
+
+    const lensGlass = new THREE.Mesh(
+      new THREE.CircleGeometry(0.135, 24),
+      lensGlassMat
+    );
+    lensGlass.position.set(0.35, -0.08, 0.85 / 2 + 0.42);
+    root.add(lensGlass);
+
+    // Zoom + focus rings — ribbed cylinders with thin grooves.
+    const zoomRingMat = new THREE.MeshStandardMaterial({
+      color: 0x16181c, metalness: 0.55, roughness: 0.45,
+    });
+    const focusRingMat = new THREE.MeshStandardMaterial({
+      color: 0x22242a, metalness: 0.5, roughness: 0.5,
+    });
+    const grooveMat = new THREE.MeshStandardMaterial({
+      color: 0x05060a, metalness: 0.2, roughness: 0.9,
+    });
+    function addLensRing(
+      z: number,
+      radius: number,
+      width: number,
+      mat: THREE.Material,
+      grooveCount: number
+    ) {
+      const ring = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, width, 28),
+        mat
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0.35, -0.08, z);
+      root.add(ring);
+      for (let i = 0; i < grooveCount; i++) {
+        const t = grooveCount === 1 ? 0 : i / (grooveCount - 1) - 0.5;
+        const groove = new THREE.Mesh(
+          new THREE.TorusGeometry(radius + 0.0008, 0.0016, 6, 36),
+          grooveMat
+        );
+        groove.position.set(0.35, -0.08, z + t * (width * 0.65));
+        root.add(groove);
+      }
+    }
+    addLensRing(0.55, 0.172, 0.062, zoomRingMat, 4);
+    addLensRing(0.74, 0.168, 0.052, focusRingMat, 3);
+
+    // -----------------------------------------------------------------
+    // 16mm film threading — feed reel → free loop → gate → take-up reel.
+    // The visible "this projector is running" cue.
+    // -----------------------------------------------------------------
+    const filmMat = new THREE.MeshStandardMaterial({
+      color: 0x05060a,
+      metalness: 0.05,
+      roughness: 0.85,
+      side: THREE.DoubleSide,
+    });
+    const reelY = deck.position.y + 0.22;
+    const reelR = 0.22;
+    const leftFeedX = -0.42 + reelR * 0.78;
+    const rightFeedX = 0.42 - reelR * 0.78;
+    const reelFrontZ = 0.05;
+    const gateY = -0.08;
+    const gateZ = 0.85 / 2 + 0.04;
+    const gateLeftX = 0.18;
+    const gateRightX = 0.52;
+
+    const filmPath = new THREE.CatmullRomCurve3(
+      [
+        new THREE.Vector3(leftFeedX, reelY - 0.06, reelFrontZ),
+        new THREE.Vector3(leftFeedX - 0.04, reelY - 0.24, reelFrontZ + 0.04),
+        new THREE.Vector3(-0.18, 0.2, reelFrontZ + 0.07),
+        new THREE.Vector3(-0.05, -0.04, reelFrontZ + 0.09),
+        new THREE.Vector3(gateLeftX, gateY + 0.02, gateZ),
+        new THREE.Vector3(gateLeftX + 0.07, gateY - 0.02, gateZ + 0.005),
+        new THREE.Vector3(gateRightX - 0.07, gateY - 0.02, gateZ + 0.005),
+        new THREE.Vector3(gateRightX, gateY + 0.02, gateZ),
+        new THREE.Vector3(0.55, 0.08, reelFrontZ + 0.08),
+        new THREE.Vector3(0.42, 0.3, reelFrontZ + 0.05),
+        new THREE.Vector3(rightFeedX + 0.04, reelY - 0.24, reelFrontZ + 0.04),
+        new THREE.Vector3(rightFeedX, reelY - 0.06, reelFrontZ),
+      ],
+      false,
+      "catmullrom",
+      0.4
+    );
+    const filmCore = new THREE.Mesh(
+      new THREE.TubeGeometry(filmPath, 200, 0.028, 8, false),
+      filmMat
+    );
+    filmCore.scale.y = 0.18; // squash into a flat celluloid ribbon
+    root.add(filmCore);
+
+    // Visible lens gate — the slot the film passes through.
+    const gateBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(0.46, 0.1, 0.05),
+      trimMat
+    );
+    gateBlock.position.set(0.35, gateY + 0.005, gateZ - 0.008);
+    root.add(gateBlock);
+    const gateSlot = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.038, 0.02),
+      new THREE.MeshBasicMaterial({ color: 0x05060a })
+    );
+    gateSlot.position.set(0.35, gateY + 0.005, gateZ + 0.018);
+    root.add(gateSlot);
+
+    // -----------------------------------------------------------------
+    // Power LED.
+    // -----------------------------------------------------------------
+    const led = new THREE.Mesh(new THREE.CircleGeometry(0.022, 16), ledMat);
+    led.position.set(-0.62, -0.2, 0.85 / 2 + 0.001);
+    root.add(led);
+
+    // -----------------------------------------------------------------
+    // Brand plate — CanvasTexture with "RD" italic serif + sub-label.
+    // Tints with the picked model color (via HSL shades).
+    // -----------------------------------------------------------------
+    function shade(baseColor: THREE.Color, lightness: number, satMult = 1) {
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      const c = new THREE.Color();
+      c.setHSL(hsl.h, Math.min(1, hsl.s * satMult), lightness);
+      return "#" + c.getHexString();
+    }
+    function makeBrandTexture(baseColor: THREE.Color): THREE.CanvasTexture {
+      const c = document.createElement("canvas");
+      c.width = 512;
+      c.height = 256;
+      const g = c.getContext("2d")!;
+      g.fillStyle = shade(baseColor, 0.07, 0.6);
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = shade(baseColor, 0.82, 0.55);
+      g.font = 'italic 700 168px "Cormorant Garamond", Georgia, serif';
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("RD", c.width / 2, c.height / 2 - 18);
+      g.fillStyle = shade(baseColor, 0.55, 0.9);
+      g.font = '600 28px "JetBrains Mono", ui-monospace, monospace';
+      g.fillText("ROKUMENTARNI DANI", c.width / 2, c.height / 2 + 78);
+      g.strokeStyle = shade(baseColor, 0.28, 0.5);
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(c.width * 0.18, c.height * 0.86);
+      g.lineTo(c.width * 0.82, c.height * 0.86);
+      g.stroke();
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 8;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const brandPlate = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.42, 0.21),
+      new THREE.MeshStandardMaterial({
+        map: makeBrandTexture(modelColor),
+        metalness: 0.65,
+        roughness: 0.35,
+        emissive: modelColor.clone(),
+        emissiveIntensity: 0,
+        emissiveMap: makeBrandTexture(modelColor),
+      })
+    );
+    brandPlate.position.set(-0.35, 0.1, 0.85 / 2 + 0.002);
+    root.add(brandPlate);
+
+    const brandBezel = new THREE.Mesh(
+      new THREE.RingGeometry(0.001, 0.001, 4),
+      trimMat
+    );
+    {
+      const bezelShape = new THREE.Shape();
+      const bw = 0.44, bh = 0.23;
+      bezelShape.moveTo(-bw / 2, -bh / 2);
+      bezelShape.lineTo(bw / 2, -bh / 2);
+      bezelShape.lineTo(bw / 2, bh / 2);
+      bezelShape.lineTo(-bw / 2, bh / 2);
+      bezelShape.lineTo(-bw / 2, -bh / 2);
+      const hole = new THREE.Path();
+      const hw = 0.4, hh = 0.19;
+      hole.moveTo(-hw / 2, -hh / 2);
+      hole.lineTo(hw / 2, -hh / 2);
+      hole.lineTo(hw / 2, hh / 2);
+      hole.lineTo(-hw / 2, hh / 2);
+      hole.lineTo(-hw / 2, -hh / 2);
+      bezelShape.holes.push(hole);
+      brandBezel.geometry = new THREE.ExtrudeGeometry(bezelShape, {
+        depth: 0.008,
+        bevelEnabled: true,
+        bevelThickness: 0.003,
+        bevelSize: 0.003,
+        bevelSegments: 2,
+        curveSegments: 4,
+      });
+    }
+    brandBezel.position.set(-0.35, 0.1, 0.85 / 2);
+    root.add(brandBezel);
+
+    // -----------------------------------------------------------------
+    // Focus + framing knobs and toggle switch + base stand.
+    // -----------------------------------------------------------------
+    function addKnob(x: number, y: number) {
+      const knobZ = 0.85 / 2 + 0.004;
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.034, 0.038, 0.018, 24),
+        knobMat
+      );
+      base.rotation.x = Math.PI / 2;
+      base.position.set(x, y, knobZ);
+      root.add(base);
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.028, 0.03, 0.014, 24),
+        knobCapMat
+      );
+      cap.rotation.x = Math.PI / 2;
+      cap.position.set(x, y, knobZ + 0.011);
+      root.add(cap);
+      const notch = new THREE.Mesh(
+        new THREE.BoxGeometry(0.005, 0.018, 0.016),
+        accentTrimMat
+      );
+      notch.position.set(x, y + 0.015, knobZ + 0.014);
+      root.add(notch);
+      const dot = new THREE.Mesh(
+        new THREE.CircleGeometry(0.004, 12),
+        new THREE.MeshBasicMaterial({ color: 0x8a8c93 })
+      );
+      dot.position.set(x, y - 0.052, 0.85 / 2 + 0.001);
+      root.add(dot);
+    }
+    addKnob(0.4, 0.12);
+    addKnob(0.55, 0.12);
+
+    const switchBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.025, 0.014),
+      trimMat
+    );
+    switchBase.position.set(-0.5, -0.2, 0.85 / 2 + 0.005);
+    root.add(switchBase);
+    const switchLever = new THREE.Mesh(
+      new THREE.BoxGeometry(0.014, 0.016, 0.022),
+      chromeMat
+    );
+    switchLever.position.set(-0.498, -0.2, 0.85 / 2 + 0.018);
+    root.add(switchLever);
+
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.08, 0.6), bodyMat);
+    stand.position.y = -0.65 / 2 - 0.04;
+    root.add(stand);
+
+    // -----------------------------------------------------------------
+    // Beam — rectangular 4-faced frustum (real projectors throw a
+    // rectangular image, not a cone).
+    // -----------------------------------------------------------------
+    const beamLength = 0.67;
+    const beamStartZ = 0.85 / 2 + 0.42;
+    const beamY = -0.08;
+    const beamX = 0.35;
+    const beamLensHalfW = 0.04;
+    const beamLensHalfH = 0.03;
+    const beamWallHalfW = 0.34;
+    const beamWallHalfH = 0.22;
+
+    function makeShaftTexture(color: THREE.Color): THREE.CanvasTexture {
+      const width = 1024, height = 256;
+      const lengthFalloff = 1.4;
+      const tipSoftPx = 14;
+      const noiseAmount = 0.05;
+      const baseBrightness = 1.0;
+      const innerLengthMin = 0.32;
+      const rgbNear = [255, 246, 230];
+      const rgbFar = [
+        Math.round(color.r * 255),
+        Math.round(color.g * 255),
+        Math.round(color.b * 255),
+      ];
+      const colorMix = 1.15;
+      const c = document.createElement("canvas");
+      c.width = width;
+      c.height = height;
+      const g = c.getContext("2d")!;
+      const img = g.createImageData(width, height);
+      const data = img.data;
+      for (let x = 0; x < width; x++) {
+        const t = x / width;
+        const lengthMul = innerLengthMin + (1 - innerLengthMin) * Math.exp(-lengthFalloff * t);
+        const tipSoft = Math.min(1, t * tipSoftPx);
+        const brightness = baseBrightness * lengthMul * tipSoft;
+        const k = Math.pow(t, colorMix);
+        const r = rgbNear[0] + (rgbFar[0] - rgbNear[0]) * k;
+        const gC = rgbNear[1] + (rgbFar[1] - rgbNear[1]) * k;
+        const b = rgbNear[2] + (rgbFar[2] - rgbNear[2]) * k;
+        for (let y = 0; y < height; y++) {
+          const n = 1 - noiseAmount + noiseAmount * Math.random();
+          const a = brightness * n;
+          const idx = (y * width + x) * 4;
+          data[idx + 0] = r;
+          data[idx + 1] = gC;
+          data[idx + 2] = b;
+          data[idx + 3] = Math.max(0, Math.min(255, Math.floor(a * 255)));
+        }
+      }
+      g.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function buildPyramidFaces(
+      lensHalfW: number, lensHalfH: number,
+      wallHalfW: number, wallHalfH: number,
+      length: number, material: THREE.Material
+    ): THREE.Group {
+      const group = new THREE.Group();
+      const idx = [0, 1, 2, 0, 2, 3];
+      const uv = [0, 0, 0, 1, 1, 1, 1, 0];
+      function quad(verts: number[]): THREE.Mesh {
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+        geom.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+        geom.setIndex(idx);
+        geom.computeVertexNormals();
+        return new THREE.Mesh(geom, material);
+      }
+      group.add(quad([
+        -lensHalfW, +lensHalfH, 0,
+        +lensHalfW, +lensHalfH, 0,
+        +wallHalfW, +wallHalfH, length,
+        -wallHalfW, +wallHalfH, length,
+      ]));
+      group.add(quad([
+        +lensHalfW, -lensHalfH, 0,
+        -lensHalfW, -lensHalfH, 0,
+        -wallHalfW, -wallHalfH, length,
+        +wallHalfW, -wallHalfH, length,
+      ]));
+      group.add(quad([
+        -lensHalfW, -lensHalfH, 0,
+        -lensHalfW, +lensHalfH, 0,
+        -wallHalfW, +wallHalfH, length,
+        -wallHalfW, -wallHalfH, length,
+      ]));
+      group.add(quad([
+        +lensHalfW, +lensHalfH, 0,
+        +lensHalfW, -lensHalfH, 0,
+        +wallHalfW, -wallHalfH, length,
+        +wallHalfW, +wallHalfH, length,
+      ]));
+      return group;
+    }
+
+    const shaftMat = new THREE.MeshBasicMaterial({
+      map: makeShaftTexture(modelColor),
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const beamOuter = buildPyramidFaces(
+      beamLensHalfW, beamLensHalfH,
+      beamWallHalfW, beamWallHalfH,
+      beamLength, shaftMat
+    );
+    beamOuter.position.set(beamX, beamY, beamStartZ);
+    root.add(beamOuter);
+
+    // -----------------------------------------------------------------
+    // Lens halo + screen glow sprites.
+    // -----------------------------------------------------------------
+    function makeHaloTexture(): THREE.CanvasTexture {
+      const c = document.createElement("canvas");
+      c.width = 128;
+      c.height = 128;
+      const g = c.getContext("2d")!;
+      const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grd.addColorStop(0, "rgba(255,255,255,1)");
+      grd.addColorStop(0.18, "rgba(255,255,255,0.85)");
+      grd.addColorStop(0.45, "rgba(255,255,255,0.30)");
+      grd.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 128, 128);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    }
+    const haloTex = makeHaloTexture();
+    const lensHaloMat = new THREE.SpriteMaterial({
+      map: haloTex,
+      color: 0xfff2d9,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const lensHalo = new THREE.Sprite(lensHaloMat);
+    lensHalo.scale.set(0.5, 0.5, 1);
+    lensHalo.position.set(beamX, beamY, beamStartZ - 0.005);
+    root.add(lensHalo);
+
+    const screenGlowMat = new THREE.SpriteMaterial({
+      map: haloTex,
+      color: modelColor.clone(),
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const screenGlow = new THREE.Sprite(screenGlowMat);
+    screenGlow.scale.set(1.5, 1.05, 1);
+    screenGlow.position.set(beamX, beamY, beamStartZ + beamLength - 0.01);
+    root.add(screenGlow);
+
+    // -----------------------------------------------------------------
+    // Dust motes — Points cloud drifting through the beam volume.
+    // -----------------------------------------------------------------
+    const DUST_COUNT = 220;
+    const dustPositions = new Float32Array(DUST_COUNT * 3);
+    const dustSeeds = new Float32Array(DUST_COUNT * 2);
+    function spawnDust(i: number) {
+      const t = Math.random();
+      const halfW = beamLensHalfW + (beamWallHalfW - beamLensHalfW) * t;
+      const halfH = beamLensHalfH + (beamWallHalfH - beamLensHalfH) * t;
+      const u = (Math.random() * 2 - 1) * 0.95;
+      const v = (Math.random() * 2 - 1) * 0.95;
+      dustPositions[i * 3 + 0] = beamX + u * halfW;
+      dustPositions[i * 3 + 1] = beamY + v * halfH;
+      dustPositions[i * 3 + 2] = beamStartZ + t * beamLength;
+      dustSeeds[i * 2 + 0] = Math.random() * Math.PI * 2;
+      dustSeeds[i * 2 + 1] = 0.3 + Math.random() * 0.7;
+    }
+    for (let i = 0; i < DUST_COUNT; i++) spawnDust(i);
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+    function makeDustTexture(): THREE.CanvasTexture {
+      const c = document.createElement("canvas");
+      c.width = 64;
+      c.height = 64;
+      const g = c.getContext("2d")!;
+      const grd = g.createRadialGradient(32, 32, 0, 32, 32, 30);
+      grd.addColorStop(0, "rgba(255,255,255,1)");
+      grd.addColorStop(0.4, "rgba(255,240,210,0.65)");
+      grd.addColorStop(1, "rgba(255,240,210,0)");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const dustMat = new THREE.PointsMaterial({
+      size: 0.016,
+      map: makeDustTexture(),
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+      color: modelColor.clone(),
+    });
+    const dust = new THREE.Points(dustGeo, dustMat);
+    root.add(dust);
+
+    // -----------------------------------------------------------------
+    // Projection screen — colored wash + brand-mark logo + vignette.
+    // The logo SVG is loaded async; until it lands the screen renders
+    // without the mark, then the canvas is repainted in place.
+    // -----------------------------------------------------------------
+    const projCanvas = document.createElement("canvas");
+    projCanvas.width = 512;
+    projCanvas.height = 384;
+    const projCtx = projCanvas.getContext("2d")!;
+    let logoImg: HTMLImageElement | null = null;
+
+    const MARQUEE_TEXT = "ROKUMENTARNI DANI · ";
+
+    function drawProjection(baseColor: THREE.Color, scrollX = 0) {
+      const hsl = { h: 0, s: 0, l: 0 };
+      baseColor.getHSL(hsl);
+      const tinted = (l: number, s: number, a: number) => {
+        const k = new THREE.Color();
+        k.setHSL(hsl.h, Math.min(1, hsl.s * s), l);
+        const r = Math.round(k.r * 255);
+        const gg = Math.round(k.g * 255);
+        const b = Math.round(k.b * 255);
+        return `rgba(${r},${gg},${b},${a})`;
+      };
+      const g = projCtx;
+      const c = projCanvas;
+      g.fillStyle = "#000000";
+      g.fillRect(0, 0, c.width, c.height);
+      const wash = g.createRadialGradient(
+        c.width / 2, c.height / 2, 20,
+        c.width / 2, c.height / 2, c.width * 0.52
+      );
+      wash.addColorStop(0, tinted(0.78, 0.55, 0.95));
+      wash.addColorStop(0.55, tinted(0.48, 0.85, 0.3));
+      wash.addColorStop(1, tinted(0.18, 0.95, 0));
+      g.fillStyle = wash;
+      g.fillRect(0, 0, c.width, c.height);
+      const hotSpot = g.createRadialGradient(
+        c.width / 2, c.height / 2, 4,
+        c.width / 2, c.height / 2, c.width * 0.22
+      );
+      hotSpot.addColorStop(0, "rgba(255, 248, 232, 0.55)");
+      hotSpot.addColorStop(0.45, "rgba(255, 240, 210, 0.18)");
+      hotSpot.addColorStop(1, "rgba(255, 240, 210, 0)");
+      g.fillStyle = hotSpot;
+      g.fillRect(0, 0, c.width, c.height);
+      if (logoImg) {
+        // Logo a touch smaller now to leave room for the marquee text band
+        // just under it.
+        const target = Math.min(c.width, c.height) * 0.52;
+        g.drawImage(
+          logoImg,
+          (c.width - target) / 2,
+          (c.height - target) / 2 - 20,
+          target,
+          target
+        );
+      }
+      // Looping marquee — text scrolls right-to-left in a band beneath the
+      // logo. Wider clip rect keeps glyphs from bleeding into the vignette.
+      g.save();
+      const bandY = c.height * 0.82;
+      const bandH = 44;
+      const clipL = c.width * 0.08;
+      const clipW = c.width * 0.84;
+      g.beginPath();
+      g.rect(clipL, bandY - bandH / 2, clipW, bandH);
+      g.clip();
+      g.fillStyle = tinted(0.96, 0.35, 0.92);
+      g.font = '600 24px "JetBrains Mono", ui-monospace, SFMono-Regular, monospace';
+      g.textAlign = "left";
+      g.textBaseline = "middle";
+      const tw = g.measureText(MARQUEE_TEXT).width;
+      let x = clipL - (((scrollX % tw) + tw) % tw);
+      while (x < clipL + clipW) {
+        g.fillText(MARQUEE_TEXT, x, bandY);
+        x += tw;
+      }
+      g.restore();
+      g.globalCompositeOperation = "multiply";
+      const vig = g.createRadialGradient(
+        c.width / 2, c.height / 2, c.width * 0.18,
+        c.width / 2, c.height / 2, c.width * 0.58
+      );
+      vig.addColorStop(0, "rgba(255, 255, 255, 1)");
+      vig.addColorStop(0.55, "rgba(180, 180, 180, 1)");
+      vig.addColorStop(0.85, "rgba(60, 60, 60, 1)");
+      vig.addColorStop(1, "rgba(0, 0, 0, 1)");
+      g.fillStyle = vig;
+      g.fillRect(0, 0, c.width, c.height);
+      g.globalCompositeOperation = "source-over";
+    }
+    drawProjection(modelColor);
+    const projTex = new THREE.CanvasTexture(projCanvas);
+    projTex.anisotropy = 8;
+    projTex.colorSpace = THREE.SRGBColorSpace;
+
+    // Load the brand mark, inject the current accent into its --logo-fill
+    // CSS var, then repaint the projection canvas once the image decodes.
+    function loadLogo(hex: string) {
+      fetch("/brand/logo-mark-only.svg")
+        .then((r) => r.text())
+        .then((svg) => {
+          const tinted = svg.replace(
+            /var\(--logo-fill,\s*#[0-9a-f]+\)/gi,
+            hex
+          );
+          const blob = new Blob([tinted], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            logoImg = img;
+            drawProjection(modelColor);
+            projTex.needsUpdate = true;
+          };
+          img.onerror = () => URL.revokeObjectURL(url);
+          img.src = url;
+        })
+        .catch(() => {});
+    }
+    loadLogo("#" + modelColor.getHexString());
+    const screenW = beamWallHalfW * 2;
+    const screenH = beamWallHalfH * 2;
+    const screenZ = beamStartZ + beamLength - 0.005;
+    const screenMat = new THREE.MeshBasicMaterial({
+      map: projTex,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const projScreen = new THREE.Mesh(
+      new THREE.PlaneGeometry(screenW, screenH),
+      screenMat
+    );
+    projScreen.position.set(beamX, beamY, screenZ);
+    root.add(projScreen);
+
+    // -----------------------------------------------------------------
+    // Film-wear overlay — scratches + specks regenerated every 110–230ms
+    // so different marks "pass" through the gate.
+    // -----------------------------------------------------------------
+    const WEAR_MIN_MS = 110;
+    const WEAR_MAX_MS = 230;
+    const WEAR_PEAK_OPACITY = 0.42;
+    const wearCanvas = document.createElement("canvas");
+    wearCanvas.width = 512;
+    wearCanvas.height = 384;
+    const wearCtx = wearCanvas.getContext("2d")!;
+    const wearTex = new THREE.CanvasTexture(wearCanvas);
+    wearTex.colorSpace = THREE.SRGBColorSpace;
+    wearTex.anisotropy = 8;
+    function drawWear() {
+      wearCtx.clearRect(0, 0, wearCanvas.width, wearCanvas.height);
+      const scratchCount = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < scratchCount; i++) {
+        const x = Math.random() * wearCanvas.width;
+        const w = 0.6 + Math.random() * 1.4;
+        const opacity = 0.18 + Math.random() * 0.34;
+        const drift = (Math.random() - 0.5) * 8;
+        wearCtx.strokeStyle = `rgba(255, 244, 220, ${opacity})`;
+        wearCtx.lineWidth = w;
+        wearCtx.lineCap = "round";
+        wearCtx.beginPath();
+        wearCtx.moveTo(x, -10);
+        const segs = 5;
+        for (let s = 1; s <= segs; s++) {
+          const ty = (s / segs) * (wearCanvas.height + 20) - 10;
+          const tx = x + drift * (s / segs) + (Math.random() - 0.5) * 1.2;
+          wearCtx.lineTo(tx, ty);
+        }
+        wearCtx.stroke();
+      }
+      const dustCount = 5 + Math.floor(Math.random() * 9);
+      for (let i = 0; i < dustCount; i++) {
+        const x = Math.random() * wearCanvas.width;
+        const y = Math.random() * wearCanvas.height;
+        const r = 0.5 + Math.random() * 1.6;
+        const opacity = 0.22 + Math.random() * 0.42;
+        wearCtx.fillStyle = `rgba(240, 230, 210, ${opacity})`;
+        wearCtx.beginPath();
+        wearCtx.ellipse(
+          x, y,
+          r, r * (0.55 + Math.random() * 0.9),
+          Math.random() * Math.PI, 0, Math.PI * 2
+        );
+        wearCtx.fill();
+      }
+      wearTex.needsUpdate = true;
+    }
+    drawWear();
+    const wearMat = new THREE.MeshBasicMaterial({
+      map: wearTex,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const wearMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(screenW, screenH),
+      wearMat
+    );
+    wearMesh.position.set(beamX, beamY, screenZ + 0.001);
+    root.add(wearMesh);
+    let nextWearMs = WEAR_MIN_MS + Math.random() * (WEAR_MAX_MS - WEAR_MIN_MS);
+    let wearAccumMs = 0;
+
+
+    // -----------------------------------------------------------------
+    // Theme accent — re-tint lamp-related materials whenever the user
+    // picks a different accent from the ThemePanel.
+    // -----------------------------------------------------------------
+    function applyModelColor(hex: string) {
+      modelColor.set(hex);
+      accentTrimMat.color.copy(modelColor);
+      lensGlassMat.emissive.copy(modelColor);
+      if (shaftMat.map) shaftMat.map.dispose();
+      shaftMat.map = makeShaftTexture(modelColor);
+      shaftMat.needsUpdate = true;
+      screenGlowMat.color.copy(modelColor);
+      dustMat.color.copy(modelColor);
+      cursorLight.color.copy(modelColor);
+      ledMat.emissive.copy(modelColor);
+      const plateMat = brandPlate.material as THREE.MeshStandardMaterial;
+      if (plateMat.map) plateMat.map.dispose();
+      if (plateMat.emissiveMap) plateMat.emissiveMap.dispose();
+      plateMat.map = makeBrandTexture(modelColor);
+      plateMat.emissiveMap = makeBrandTexture(modelColor);
+      plateMat.emissive.copy(modelColor);
+      plateMat.needsUpdate = true;
+      drawProjection(modelColor);
+      projTex.needsUpdate = true;
+      loadLogo("#" + modelColor.getHexString());
+    }
+    function onThemeChange() {
+      applyModelColor(readAccent());
+    }
+    document.addEventListener("rd:theme-change", onThemeChange);
+
+    // -----------------------------------------------------------------
+    // Cursor parallax + drag-to-orbit + tap-to-power.
+    // -----------------------------------------------------------------
+    let cursorTargetYaw = 0;
+    let cursorTargetPitch = 0;
+    let smoothCursorYaw = 0;
+    let smoothCursorPitch = 0;
+
+    let dragging = false;
+    let lastX = 0, lastY = 0, downX = 0, downY = 0, downT = 0;
+    let movedDuringPress = 0;
+    let userYaw = 0, userPitch = 0, userYawVel = 0, userPitchVel = 0;
+
+    const ORBIT_SENSITIVITY = 0.0085;
+    const INERTIA_DECAY = 0.93;
+    const PITCH_CLAMP = 0.9;
+    // Yaw is clamped so the projection screen — which extends forward from
+    // the lens — can't swing past canvas edges when the user drag-rotates.
+    const YAW_CLAMP = 0.7;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const REEL_IDLE_SPEED = reduced ? 0 : 0.002;
+    const REEL_RUNNING_SPEED = reduced ? 0 : 0.055;
+    const POWER_SMOOTHING = 0.035;
+    const BEAM_PEAK_OPACITY = 0.3;
+    const LENS_HALO_PEAK_OPACITY = 0.85;
+    const SCREEN_GLOW_PEAK_OPACITY = 0.4;
+    const DUST_PEAK_OPACITY = 0.55;
+    const SCREEN_PEAK_OPACITY = 0.85;
+    const IDLE_YAW_AMP = reduced ? 0 : 0.07;
+    const IDLE_YAW_SPEED = 0.55;
+    const WEAVE_AMP_X = 0.0028;
+    const WEAVE_AMP_Y = 0.0022;
+    const projBaseX = beamX;
+    const projBaseY = beamY;
+
+    let powered = false;
+    let powerLevel = 0;
+    function setPowered(v: boolean) {
+      if (powered === v) return;
+      powered = v;
+      canvas.classList.toggle("is-powered", v);
+    }
+
+    function onCanvasPointer(e: PointerEvent) {
+      const rect = canvas!.getBoundingClientRect();
+      const cx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const cy = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      cursorLight.position.x = cx * 2.4;
+      cursorLight.position.y = 0.4 + cy * 1.4;
+      if (!dragging) {
+        cursorTargetYaw = cx * 0.35;
+        cursorTargetPitch = cy * 0.18;
+      }
+    }
+    canvas.addEventListener("pointermove", onCanvasPointer);
+
+    canvas.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      downT = performance.now();
+      movedDuringPress = 0;
+      userYawVel = 0;
+      userPitchVel = 0;
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      userYaw += dx * ORBIT_SENSITIVITY;
+      userPitch += dy * ORBIT_SENSITIVITY;
+      userYaw = Math.max(-YAW_CLAMP, Math.min(YAW_CLAMP, userYaw));
+      userPitch = Math.max(-PITCH_CLAMP, Math.min(PITCH_CLAMP, userPitch));
+      userYawVel = dx * ORBIT_SENSITIVITY;
+      userPitchVel = dy * ORBIT_SENSITIVITY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const ddx = e.clientX - downX;
+      const ddy = e.clientY - downY;
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (dist > movedDuringPress) movedDuringPress = dist;
+    });
+    function endDrag(e?: PointerEvent) {
+      const wasDragging = dragging;
+      dragging = false;
+      if (!wasDragging || !e) return;
+      const dt = performance.now() - downT;
+      if (movedDuringPress < 6 && dt < 320) setPowered(!powered);
+    }
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    canvas.addEventListener("pointerleave", endDrag);
+
+    function resize() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (w === 0 || h === 0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    // -----------------------------------------------------------------
+    // Render loop.
+    // -----------------------------------------------------------------
+    let lastFrame = performance.now();
+
+    function animate() {
+      if (!canvas.isConnected) {
+        window.removeEventListener("resize", resize);
+        document.removeEventListener("rd:theme-change", onThemeChange);
+        renderer.dispose();
+        return;
+      }
+      const now = performance.now();
+      const dt = now - lastFrame;
+      lastFrame = now;
+      const nowSec = now / 1000;
+
+      const powerTarget = powered ? 1 : 0;
+      powerLevel += (powerTarget - powerLevel) * POWER_SMOOTHING;
+
+      // Staged warm-up via smoothstep windows on the power level.
+      const smooth = (a: number, b: number, x: number) => {
+        const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+        return t * t * (3 - 2 * t);
+      };
+      const ventPhase = smooth(0.0, 0.35, powerLevel);
+      const beamPhase = smooth(0.25, 0.75, powerLevel);
+      const screenPhase = smooth(0.55, 1.0, powerLevel);
+      const reelPhase = smooth(0.1, 0.85, powerLevel);
+
+      // Visible flicker — breath + electrical hum + occasional brownout +
+      // rare over-bright spark. Composed so the lamp never reads as a
+      // perfectly steady light.
+      const breath = 1 + Math.sin(nowSec * 5.2) * 0.06 + Math.sin(nowSec * 2.1) * 0.03;
+      const hum = Math.sin(nowSec * 38) * 0.025 + (Math.random() - 0.5) * 0.02;
+      const dipPhase = (nowSec % 2.7) / 2.7;
+      const dipWindow = Math.max(0, 1 - Math.abs(dipPhase - 0.5) * 12);
+      const dip = dipWindow * dipWindow * 0.42;
+      const sparkRoll = (Math.sin(nowSec * 0.83) + Math.sin(nowSec * 1.31)) * 0.5;
+      const spark = sparkRoll > 0.94 ? (sparkRoll - 0.94) * 6 : 0;
+      const flicker = Math.max(0.35, breath + hum - dip + spark);
+      const slowFlicker = 0.86 + 0.14 * Math.sin(nowSec * 4.7) - dip * 0.5;
+      const flickerSoft = 0.55 + 0.45 * flicker;
+
+      shaftMat.opacity = BEAM_PEAK_OPACITY * beamPhase * flicker;
+      lensHaloMat.opacity = LENS_HALO_PEAK_OPACITY * beamPhase * flickerSoft;
+      screenGlowMat.opacity = SCREEN_GLOW_PEAK_OPACITY * screenPhase * flicker;
+      dustMat.opacity = DUST_PEAK_OPACITY * screenPhase;
+      screenMat.opacity = SCREEN_PEAK_OPACITY * screenPhase * slowFlicker;
+      wearMat.opacity = WEAR_PEAK_OPACITY * screenPhase * flickerSoft;
+
+      // Animate the marquee text on the projection screen while it's
+      // visible. Speed in canvas pixels/sec; canvas is 512px wide.
+      if (screenPhase > 0.01) {
+        drawProjection(modelColor, nowSec * 70);
+        projTex.needsUpdate = true;
+      }
+
+      if (screenPhase > 0.001) {
+        wearAccumMs += dt;
+        if (wearAccumMs >= nextWearMs) {
+          drawWear();
+          wearAccumMs = 0;
+          nextWearMs = WEAR_MIN_MS + Math.random() * (WEAR_MAX_MS - WEAR_MIN_MS);
+        }
+      }
+
+      // Gate weave — sub-pixel jitter on the projection while visible, so
+      // it reads as 16mm passing through an imperfect gate.
+      if (screenPhase > 0.001) {
+        const wx =
+          Math.sin(nowSec * 3.7) * 0.6 +
+          Math.sin(nowSec * 1.9 + 1.3) * 0.4 +
+          (Math.random() - 0.5) * 0.15;
+        const wy =
+          Math.sin(nowSec * 4.3 + 0.7) * 0.5 +
+          Math.sin(nowSec * 2.1 + 2.1) * 0.5 +
+          (Math.random() - 0.5) * 0.12;
+        const ox = wx * WEAVE_AMP_X * screenPhase;
+        const oy = wy * WEAVE_AMP_Y * screenPhase;
+        projScreen.position.x = projBaseX + ox;
+        projScreen.position.y = projBaseY + oy;
+        wearMesh.position.x = projBaseX + ox;
+        wearMesh.position.y = projBaseY + oy;
+      } else {
+        projScreen.position.x = projBaseX;
+        projScreen.position.y = projBaseY;
+        wearMesh.position.x = projBaseX;
+        wearMesh.position.y = projBaseY;
+      }
+
+      lensGlassMat.emissiveIntensity = beamPhase * 2.4 * flickerSoft;
+      ledMat.emissive.copy(modelColor);
+      ledMat.emissiveIntensity = 0.35 + ventPhase * 1.4;
+      ledMat.color.copy(modelColor).multiplyScalar(0.4 + ventPhase * 0.6);
+      const plateMat = brandPlate.material as THREE.MeshStandardMaterial;
+      plateMat.emissiveIntensity = 0.12 + screenPhase * 0.45;
+
+      const reelSpeed = REEL_IDLE_SPEED + (REEL_RUNNING_SPEED - REEL_IDLE_SPEED) * reelPhase;
+      reelLeft.rotation.z += reelSpeed;
+      reelRight.rotation.z += reelSpeed * 1.08;
+
+      // Dust drift along the beam axis with recycle when it passes the wall.
+      if (powered || powerLevel > 0.02) {
+        const driftSpeed = 0.00045 + 0.00065 * powerLevel;
+        const arr = dustGeo.attributes.position.array as Float32Array;
+        for (let i = 0; i < DUST_COUNT; i++) {
+          const idx = i * 3;
+          arr[idx + 2] += driftSpeed * dt * dustSeeds[i * 2 + 1];
+          const wob = 0.00006 * Math.sin(nowSec * 1.3 + dustSeeds[i * 2 + 0]);
+          arr[idx + 0] += wob;
+          arr[idx + 1] += wob * 0.6;
+          if (arr[idx + 2] > beamStartZ + beamLength) spawnDust(i);
+        }
+        dustGeo.attributes.position.needsUpdate = true;
+      }
+
+      // Drag inertia (only while not actively dragging).
+      if (!dragging) {
+        userYaw += userYawVel;
+        userPitch += userPitchVel;
+        userYawVel *= INERTIA_DECAY;
+        userPitchVel *= INERTIA_DECAY;
+        if (Math.abs(userYawVel) < 1e-4) userYawVel = 0;
+        if (Math.abs(userPitchVel) < 1e-4) userPitchVel = 0;
+        userYaw = Math.max(-YAW_CLAMP, Math.min(YAW_CLAMP, userYaw));
+        userPitch = Math.max(-PITCH_CLAMP, Math.min(PITCH_CLAMP, userPitch));
+      }
+
+      const idleYaw = Math.sin(nowSec * IDLE_YAW_SPEED) * IDLE_YAW_AMP;
+      smoothCursorYaw += (cursorTargetYaw - smoothCursorYaw) * 0.08;
+      smoothCursorPitch += (cursorTargetPitch - smoothCursorPitch) * 0.08;
+      root.rotation.y = idleYaw + userYaw + smoothCursorYaw;
+      root.rotation.x = userPitch + smoothCursorPitch;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  function autoInit() {
+    document
+      .querySelectorAll<HTMLCanvasElement>("[data-rd-projector]")
+      .forEach(initProjector);
+  }
+
+  document.addEventListener("astro:page-load", autoInit);
+  if (document.readyState !== "loading") autoInit();
+  else document.addEventListener("DOMContentLoaded", autoInit);
+</script>

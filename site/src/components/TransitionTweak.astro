@@ -16,6 +16,42 @@
     <button type="button" data-mode="disperse">Disperse</button>
     <button type="button" data-mode="glitch">Glitch</button>
   </div>
+  <p class="rd-tx-title rd-tx-title-spaced">Mouse FX</p>
+  <div class="rd-tx-row">
+    <button type="button" data-fx="trail">Trail</button>
+    <button type="button" data-fx="ripple">Ripple</button>
+    <button type="button" data-fx="tilt">Tilt</button>
+    <button type="button" data-fx="dust">Dust</button>
+  </div>
+
+  <div class="rd-tx-slider">
+    <label>
+      <span>Tilt amount</span>
+      <output data-tilt-out="amount">0.18</output>
+    </label>
+    <input type="range" data-tilt="amount" min="0" max="0.5" step="0.02" value="0.18" />
+  </div>
+  <div class="rd-tx-slider">
+    <label>
+      <span>Tilt falloff</span>
+      <output data-tilt-out="falloff">1</output>
+    </label>
+    <input type="range" data-tilt="falloff" min="1" max="4" step="0.25" value="1" />
+  </div>
+  <div class="rd-tx-slider">
+    <label>
+      <span>Cube opacity</span>
+      <output data-opacity-out>0.70</output>
+    </label>
+    <input type="range" data-opacity min="0.1" max="1" step="0.05" value="0.7" />
+  </div>
+  <div class="rd-tx-slider">
+    <label>
+      <span>Cursor light</span>
+      <output data-cursor-out>51</output>
+    </label>
+    <input type="range" data-cursor min="0" max="100" step="2" value="51" />
+  </div>
 </div>
 
 <style>
@@ -42,6 +78,9 @@
   .rd-tx-title {
     margin: 0 0 6px;
     color: rgba(245, 241, 232, 0.5);
+  }
+  .rd-tx-title-spaced {
+    margin-top: 10px;
   }
   :global(html.theme-light) .rd-tx-title {
     color: rgba(26, 26, 26, 0.55);
@@ -75,11 +114,65 @@
     background: var(--color-accent);
     border-color: var(--color-accent);
   }
+  .rd-tx-slider {
+    margin-top: 8px;
+  }
+  .rd-tx-slider label {
+    display: flex;
+    justify-content: space-between;
+    color: rgba(245, 241, 232, 0.55);
+    font-size: 9px;
+    margin-bottom: 3px;
+  }
+  :global(html.theme-light) .rd-tx-slider label {
+    color: rgba(26, 26, 26, 0.55);
+  }
+  .rd-tx-slider output {
+    color: var(--color-accent);
+  }
+  .rd-tx-slider input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(245, 241, 232, 0.15);
+    border-radius: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+  :global(html.theme-light) .rd-tx-slider input[type="range"] {
+    background: rgba(26, 26, 26, 0.15);
+  }
+  .rd-tx-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 14px;
+    background: var(--color-accent);
+    border: 0;
+    cursor: pointer;
+  }
+  .rd-tx-slider input[type="range"]::-moz-range-thumb {
+    width: 10px;
+    height: 14px;
+    background: var(--color-accent);
+    border: 0;
+    cursor: pointer;
+    border-radius: 0;
+  }
 </style>
 
 <script>
   const STORAGE_KEY = "rd-transition-mode";
+  const FX_KEY = "rd-mouse-fx";
+  const TILT_KEY = "rd-tilt-config";
+  const OPACITY_KEY = "rd-cube-opacity";
+  const CURSOR_KEY = "rd-cursor-intensity";
   type Mode = "wipe" | "disperse" | "glitch";
+  type Fx = { trail: boolean; ripple: boolean; tilt: boolean; dust: boolean };
+  type TiltCfg = { amount: number; falloff: number };
+  const TILT_DEFAULT: TiltCfg = { amount: 0.18, falloff: 1 };
+  const OPACITY_DEFAULT = 0.7;
 
   function applyMode(mode: Mode, opts: { persist?: boolean } = {}) {
     document
@@ -93,6 +186,21 @@
     );
   }
 
+  function applyFx(fx: Fx, opts: { persist?: boolean } = {}) {
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-rd-tx-panel] [data-fx]")
+      .forEach((b) => {
+        const key = b.dataset.fx as keyof Fx;
+        b.classList.toggle("is-active", !!fx[key]);
+      });
+    if (opts.persist !== false) {
+      try { localStorage.setItem(FX_KEY, JSON.stringify(fx)); } catch (_) {}
+    }
+    document.dispatchEvent(
+      new CustomEvent("rd:mouse-fx", { detail: fx }),
+    );
+  }
+
   function readMode(): Mode {
     try {
       const v = localStorage.getItem(STORAGE_KEY);
@@ -100,6 +208,115 @@
     } catch (_) {}
     return "wipe";
   }
+
+  function readFx(): Fx {
+    const def: Fx = { trail: true, ripple: true, tilt: true, dust: true };
+    try {
+      const v = localStorage.getItem(FX_KEY);
+      if (!v) return def;
+      const parsed = JSON.parse(v);
+      return {
+        trail: typeof parsed.trail === "boolean" ? parsed.trail : def.trail,
+        ripple: typeof parsed.ripple === "boolean" ? parsed.ripple : def.ripple,
+        tilt: typeof parsed.tilt === "boolean" ? parsed.tilt : def.tilt,
+        dust: typeof parsed.dust === "boolean" ? parsed.dust : def.dust,
+      };
+    } catch (_) {
+      return def;
+    }
+  }
+
+  function readTilt(): TiltCfg {
+    try {
+      const v = localStorage.getItem(TILT_KEY);
+      if (!v) return { ...TILT_DEFAULT };
+      const parsed = JSON.parse(v);
+      return {
+        amount: typeof parsed.amount === "number" ? parsed.amount : TILT_DEFAULT.amount,
+        falloff: typeof parsed.falloff === "number" ? parsed.falloff : TILT_DEFAULT.falloff,
+      };
+    } catch (_) {
+      return { ...TILT_DEFAULT };
+    }
+  }
+
+  function applyTilt(cfg: TiltCfg, opts: { persist?: boolean } = {}) {
+    const amountInput = document.querySelector<HTMLInputElement>(
+      '[data-tilt="amount"]',
+    );
+    const falloffInput = document.querySelector<HTMLInputElement>(
+      '[data-tilt="falloff"]',
+    );
+    const amountOut = document.querySelector<HTMLOutputElement>(
+      '[data-tilt-out="amount"]',
+    );
+    const falloffOut = document.querySelector<HTMLOutputElement>(
+      '[data-tilt-out="falloff"]',
+    );
+    if (amountInput) amountInput.value = String(cfg.amount);
+    if (falloffInput) falloffInput.value = String(cfg.falloff);
+    if (amountOut) amountOut.value = cfg.amount.toFixed(2);
+    if (falloffOut) falloffOut.value = cfg.falloff.toFixed(2);
+    if (opts.persist !== false) {
+      try { localStorage.setItem(TILT_KEY, JSON.stringify(cfg)); } catch (_) {}
+    }
+    document.dispatchEvent(
+      new CustomEvent("rd:tilt-config", { detail: cfg }),
+    );
+  }
+
+  function readOpacity(): number {
+    try {
+      const v = localStorage.getItem(OPACITY_KEY);
+      if (v) {
+        const n = parseFloat(v);
+        if (isFinite(n) && n > 0 && n <= 1) return n;
+      }
+    } catch (_) {}
+    return OPACITY_DEFAULT;
+  }
+
+  function applyOpacity(v: number, opts: { persist?: boolean } = {}) {
+    const input = document.querySelector<HTMLInputElement>("[data-opacity]");
+    const out = document.querySelector<HTMLOutputElement>("[data-opacity-out]");
+    if (input) input.value = String(v);
+    if (out) out.value = v.toFixed(2);
+    if (opts.persist !== false) {
+      try { localStorage.setItem(OPACITY_KEY, String(v)); } catch (_) {}
+    }
+    document.dispatchEvent(
+      new CustomEvent("rd:cube-opacity", { detail: { opacity: v } }),
+    );
+  }
+
+  function readCursor(): number {
+    try {
+      const v = localStorage.getItem(CURSOR_KEY);
+      if (v) {
+        const n = parseFloat(v);
+        if (isFinite(n) && n >= 0 && n <= 200) return n;
+      }
+    } catch (_) {}
+    return 51;
+  }
+
+  function applyCursor(v: number, opts: { persist?: boolean } = {}) {
+    const input = document.querySelector<HTMLInputElement>("[data-cursor]");
+    const out = document.querySelector<HTMLOutputElement>("[data-cursor-out]");
+    if (input) input.value = String(v);
+    if (out) out.value = v.toFixed(0);
+    if (opts.persist !== false) {
+      try { localStorage.setItem(CURSOR_KEY, String(v)); } catch (_) {}
+    }
+    document.dispatchEvent(
+      new CustomEvent("rd:cursor-intensity", { detail: { intensity: v } }),
+    );
+  }
+
+  let currentFx: Fx = readFx();
+  let currentTilt: TiltCfg = readTilt();
+  let currentOpacity: number = readOpacity();
+  let currentCursor: number = readCursor();
 
   function wire() {
     document
@@ -111,10 +328,62 @@
           applyMode(b.dataset.mode as Mode);
         });
       });
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-rd-tx-panel] [data-fx]")
+      .forEach((b) => {
+        if (b.dataset.rdInit) return;
+        b.dataset.rdInit = "1";
+        b.addEventListener("click", () => {
+          const key = b.dataset.fx as keyof Fx;
+          currentFx = { ...currentFx, [key]: !currentFx[key] };
+          applyFx(currentFx);
+        });
+      });
+    document
+      .querySelectorAll<HTMLInputElement>("[data-rd-tx-panel] [data-tilt]")
+      .forEach((input) => {
+        if (input.dataset.rdInit) return;
+        input.dataset.rdInit = "1";
+        input.addEventListener("input", () => {
+          const key = input.dataset.tilt as keyof TiltCfg;
+          const v = parseFloat(input.value);
+          if (!isFinite(v)) return;
+          currentTilt = { ...currentTilt, [key]: v };
+          applyTilt(currentTilt);
+        });
+      });
+    const opacityInput = document.querySelector<HTMLInputElement>(
+      "[data-rd-tx-panel] [data-opacity]",
+    );
+    if (opacityInput && !opacityInput.dataset.rdInit) {
+      opacityInput.dataset.rdInit = "1";
+      opacityInput.addEventListener("input", () => {
+        const v = parseFloat(opacityInput.value);
+        if (!isFinite(v)) return;
+        currentOpacity = v;
+        applyOpacity(v);
+      });
+    }
+    const cursorInput = document.querySelector<HTMLInputElement>(
+      "[data-rd-tx-panel] [data-cursor]",
+    );
+    if (cursorInput && !cursorInput.dataset.rdInit) {
+      cursorInput.dataset.rdInit = "1";
+      cursorInput.addEventListener("input", () => {
+        const v = parseFloat(cursorInput.value);
+        if (!isFinite(v)) return;
+        currentCursor = v;
+        applyCursor(v);
+      });
+    }
   }
 
   function boot() {
     applyMode(readMode(), { persist: false });
+    applyFx(currentFx, { persist: false });
+    applyTilt(currentTilt, { persist: false });
+    applyOpacity(currentOpacity, { persist: false });
+    applyCursor(currentCursor, { persist: false });
     wire();
   }
 

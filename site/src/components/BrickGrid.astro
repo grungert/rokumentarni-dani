@@ -142,18 +142,32 @@ const config = JSON.stringify({
     let cfg: any = {};
     try { cfg = JSON.parse(canvas.dataset.rdBrickGrid || "{}"); } catch {}
 
+    // ---- Mobile detection ----
+    // Used to dial back cube count, pixel ratio, hover reach and other
+    // perf-heavy knobs on touch / narrow viewports. Decided once at init —
+    // mid-session resize keeps the original layout (changing cube count
+    // would require a full teardown/rebuild and isn't worth the complexity).
+    const isMobile =
+      typeof window.matchMedia === "function" &&
+      (window.matchMedia("(max-width: 768px)").matches ||
+        window.matchMedia("(pointer: coarse)").matches);
+
     // ---- Per-variant overrides ----
     // Each surface gets a tuned grid: density, camera framing, cursor reach,
     // idle-drift envelope, and audio behaviour. `home` is the canonical full
     // 110×70 field; the others trim it down or change its rhythm. The cube
     // material and ambient-light logic are shared.
-    const VARIANTS: Record<string, {
+    //
+    // Each variant can also declare a `mobile` override patch — those keys
+    // get merged into the active config when `isMobile` is true.
+    type VariantConfig = {
       cols: number; rows: number; frustumHeight: number;
       hoverRadius: number; hoverLift: number;
       idleAmpX: number; idleAmpZ: number;
       audioReactive: boolean; beatFlash: boolean;
       matOpacityMul: number;
-    }> = {
+    };
+    const VARIANTS: Record<string, VariantConfig & { mobile?: Partial<VariantConfig> }> = {
       // Homepage — the canonical "stage" the festival plays on. Denser
       // 220×140 grid so painted glyphs (section symbols) read with
       // finer-grained pixel-art detail.
@@ -163,6 +177,15 @@ const config = JSON.stringify({
         idleAmpX: 18.5, idleAmpZ: 14,
         audioReactive: true, beatFlash: true,
         matOpacityMul: 1,
+        // Mobile: ~50% fewer cubes (15.4k vs 30.8k), tighter halo for
+        // fingertips, no audio reactivity to save battery + CPU. Frustum
+        // height pulled in slightly so each cube reads a bit larger.
+        mobile: {
+          cols: 110, rows: 130, frustumHeight: 14,
+          hoverRadius: 5, hoverLift: 2.4,
+          idleAmpX: 14, idleAmpZ: 16,
+          audioReactive: false, beatFlash: false,
+        },
       },
       // Footer pixel-strip — wide and shallow, drifts mostly horizontally
       // so it reads as a "tape head" track running under the site footer.
@@ -172,6 +195,7 @@ const config = JSON.stringify({
         idleAmpX: 20, idleAmpZ: 0.6,
         audioReactive: false, beatFlash: false,
         matOpacityMul: 0.85,
+        mobile: { cols: 70, hoverRadius: 3 },
       },
       // Film-detail variant — letterboxed 2.39:1 frame, quiet motion, grain
       // applied separately via the wrapper. Acts as the projector window.
@@ -181,6 +205,7 @@ const config = JSON.stringify({
         idleAmpX: 10, idleAmpZ: 3.5,
         audioReactive: false, beatFlash: false,
         matOpacityMul: 1,
+        mobile: { cols: 80, rows: 22, hoverRadius: 4 },
       },
       // Programme — narrower, taller. Columns later anchor to programme days.
       programme: {
@@ -189,6 +214,7 @@ const config = JSON.stringify({
         idleAmpX: 10, idleAmpZ: 14,
         audioReactive: false, beatFlash: false,
         matOpacityMul: 0.95,
+        mobile: { cols: 44, rows: 58, hoverRadius: 4.5, hoverLift: 2.2 },
       },
       // Edicije archive — wide, time-banded. Rows later map to festival years.
       edicije: {
@@ -197,6 +223,7 @@ const config = JSON.stringify({
         idleAmpX: 14, idleAmpZ: 7,
         audioReactive: false, beatFlash: false,
         matOpacityMul: 0.95,
+        mobile: { cols: 80, rows: 32, hoverRadius: 4.5, hoverLift: 2.2 },
       },
       // Dim — a quiet, low-energy variant for inside-pages (blog, 404).
       dim: {
@@ -205,10 +232,17 @@ const config = JSON.stringify({
         idleAmpX: 12, idleAmpZ: 9,
         audioReactive: false, beatFlash: false,
         matOpacityMul: 0.55,
+        mobile: { cols: 80, rows: 60, hoverRadius: 4.5, hoverLift: 1.9 },
       },
     };
     const variantKey: string = (cfg.variant in VARIANTS) ? cfg.variant : "home";
-    const V = VARIANTS[variantKey];
+    // Build the live config by cloning the desktop defaults and merging any
+    // declared mobile patch keys. Doing this once at init means the rest of
+    // the file reads from V the same way regardless of device.
+    const V: VariantConfig = { ...VARIANTS[variantKey] };
+    if (isMobile && VARIANTS[variantKey].mobile) {
+      Object.assign(V, VARIANTS[variantKey].mobile);
+    }
 
     // ---- Preset (locked from the design exploration) ----
     const COLS = V.cols;
@@ -263,7 +297,17 @@ const config = JSON.stringify({
       return v || cfg.cursorColor || "#39c7e2";
     }
     const CURSOR_COLOR = readAccentVar();
-    const CURSOR_INTENSITY = cfg.cursorIntensity ?? 51.5;
+    // Runtime cursor-light intensity. Picks up persisted value from the
+    // TransitionTweak slider, falls back to the prop, then to the locked
+    // default. Live-updated via `rd:cursor-intensity` event.
+    let CURSOR_INTENSITY = cfg.cursorIntensity ?? 51.5;
+    try {
+      const stored = localStorage.getItem("rd-cursor-intensity");
+      if (stored) {
+        const n = parseFloat(stored);
+        if (isFinite(n) && n >= 0) CURSOR_INTENSITY = n;
+      }
+    } catch (_) {}
     const CURSOR_RANGE = 22.5;
     const CURSOR_DECAY = 1.8;
     const CURSOR_Y = 7.5;   // Must stay above the tallest possible cube top
@@ -286,7 +330,10 @@ const config = JSON.stringify({
 
     // ---- Renderer / scene / camera ----
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Mobile: cap pixel ratio at 1.5 (vs 2 on desktop). On a 3× DPR iPhone
+    // this cuts the rendered pixel count by ~44% — the single biggest perf
+    // win for the cube field after cube-count reduction.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
     renderer.setClearAlpha(0); // transparent — let page background show through
 
     const scene = new THREE.Scene();
@@ -313,6 +360,197 @@ const config = JSON.stringify({
     cursorLight.position.set(0, CURSOR_Y, 0);
     scene.add(cursorLight);
 
+    // (Cube halo PointLight removed — projector visuals live entirely on
+    // the textured projection quad now, no per-cube brightening / lift.)
+
+    // ---- Projector video plane ----
+    // A flat plane lying just above the cube tops carries a VideoTexture of
+    // the festival promo. AdditiveBlending so the video adds light onto
+    // whatever's underneath (the dark cubes + the cursor-halo-style lift
+    // from projectorLight). DoubleSide so the orthographic top-down camera
+    // sees it from above regardless of which way the plane was constructed.
+    const projVideo = document.createElement("video");
+    projVideo.src = "/projector-loop.mp4";
+    projVideo.loop = true;
+    projVideo.muted = true;
+    projVideo.playsInline = true;
+    projVideo.preload = "auto";
+    projVideo.crossOrigin = "anonymous";
+
+    const projVideoTex = new THREE.VideoTexture(projVideo);
+    projVideoTex.colorSpace = THREE.SRGBColorSpace;
+    projVideoTex.minFilter = THREE.LinearFilter;
+    projVideoTex.magFilter = THREE.LinearFilter;
+
+    // ---- True frustum→floor projection geometry ----
+    // The video projection isn't a fixed rectangle anymore — it's the quad
+    // formed by intersecting a virtual projector camera's frustum with the
+    // cube plane y=0. To get perspective-correct UV interpolation across
+    // arbitrary keystone shapes (and avoid the "diagonal seam" you'd get
+    // mapping a 16:9 texture across just two big triangles), the geometry
+    // is subdivided into a 24×14 grid (~375 verts). Each frame, every
+    // vertex's NDC corner is unprojected through the projector camera and
+    // ray-intersected with the floor. UVs stay uniform; the per-cell linear
+    // interpolation is essentially correct because each cell is small.
+    const PROJECTOR_HEIGHT = 5;            // y of the virtual projector
+    const PROJECTOR_VFOV_DEG = 35;         // vertical field of view
+    const PROJECTOR_ASPECT = 192 / 108;    // matches the video aspect
+    const SUBDIV_W = 24;
+    const SUBDIV_H = 14;
+    const NUM_VERTS_W = SUBDIV_W + 1;
+    const NUM_VERTS_H = SUBDIV_H + 1;
+    const NUM_VERTS = NUM_VERTS_W * NUM_VERTS_H;
+
+    const projectorCamera = new THREE.PerspectiveCamera(
+      PROJECTOR_VFOV_DEG,
+      PROJECTOR_ASPECT,
+      0.1,
+      50
+    );
+    // The camera's `up` hint defines the projection's "top" on the floor.
+    // World -Z (= viewport up when the BrickGrid camera is top-down) keeps
+    // the video readable when looking straight down.
+    projectorCamera.up.set(0, 0, -1);
+
+    const projPositions = new Float32Array(NUM_VERTS * 3);
+    const projUVs = new Float32Array(NUM_VERTS * 2);
+    const projIndices: number[] = [];
+    // NDC u,v per vertex, used each frame to unproject through the camera.
+    const projNDCU = new Float32Array(NUM_VERTS);
+    const projNDCV = new Float32Array(NUM_VERTS);
+    for (let j = 0; j < NUM_VERTS_H; j++) {
+      for (let i = 0; i < NUM_VERTS_W; i++) {
+        const idx = j * NUM_VERTS_W + i;
+        const u = i / SUBDIV_W;
+        const v = j / SUBDIV_H;
+        projNDCU[idx] = u;
+        projNDCV[idx] = v;
+        projUVs[idx * 2 + 0] = u;
+        projUVs[idx * 2 + 1] = v;
+        // Initial placeholder positions; overwritten each frame.
+        projPositions[idx * 3 + 0] = 0;
+        projPositions[idx * 3 + 1] = 0.05;
+        projPositions[idx * 3 + 2] = 0;
+        if (i < SUBDIV_W && j < SUBDIV_H) {
+          const a = idx;
+          const b = idx + 1;
+          const c = idx + NUM_VERTS_W;
+          const d = idx + NUM_VERTS_W + 1;
+          projIndices.push(a, b, c, b, d, c);
+        }
+      }
+    }
+    const projScreenGeo = new THREE.BufferGeometry();
+    projScreenGeo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(projPositions, 3)
+    );
+    projScreenGeo.setAttribute(
+      "uv",
+      new THREE.BufferAttribute(projUVs, 2)
+    );
+    projScreenGeo.setIndex(projIndices);
+
+    const projScreenMat = new THREE.MeshBasicMaterial({
+      map: projVideoTex,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const projScreen = new THREE.Mesh(projScreenGeo, projScreenMat);
+    projScreen.renderOrder = 3;
+    projScreen.frustumCulled = false; // vertices change every frame
+    scene.add(projScreen);
+
+    // ---- Surface halo plane ----
+    // Same topology as the video plane, but its NDC corners sweep slightly
+    // wider (1.15× the projector's frustum) so the resulting floor quad
+    // extends a small margin beyond the video edges. Warm-cream additive
+    // material at low opacity reads as light scatter on the cube surface +
+    // a soft fringe around the projection.
+    const HALO_EXPAND = 1.15;
+    const haloPositions = new Float32Array(NUM_VERTS * 3);
+    for (let i = 0; i < NUM_VERTS; i++) {
+      haloPositions[i * 3 + 1] = 0.04; // slightly under the video plane
+    }
+    const projHaloGeo = new THREE.BufferGeometry();
+    projHaloGeo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(haloPositions, 3)
+    );
+    projHaloGeo.setIndex(projIndices); // reuse same triangulation
+    const projHaloMat = new THREE.MeshBasicMaterial({
+      color: 0xfff0d8, // warm cream — slight tungsten tint
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const projHalo = new THREE.Mesh(projHaloGeo, projHaloMat);
+    projHalo.renderOrder = 2; // draws beneath the video plane
+    projHalo.frustumCulled = false;
+    scene.add(projHalo);
+
+    // ---- Beam pyramid: projector lens → projection corners ----
+    // 5 vertices (apex + 4 floor corners) forming a 4-sided pyramid. The
+    // apex is parked each frame at a world position that projects (through
+    // the BrickGrid ortho camera) back to the projector lens's viewport
+    // pixel — so the beam visually emerges from the projector model even
+    // though they live in different canvases. Vertex colours fade apex
+    // bright → base dim for soft volumetric scatter.
+    const beamPositions = new Float32Array(5 * 3);
+    const beamColors = new Float32Array(5 * 3);
+    // Uniform full-brightness vertex colors — we want all 4 side panels of
+    // the pyramid evenly visible. Brightness modulation handled by material
+    // opacity + the warm color tint.
+    for (let v = 0; v < 5; v++) {
+      beamColors[v * 3 + 0] = 1;
+      beamColors[v * 3 + 1] = 1;
+      beamColors[v * 3 + 2] = 1;
+    }
+    const beamIndices = new Uint16Array([
+      0, 1, 2, // apex, base BL, base BR
+      0, 2, 3, // apex, base BR, base TR
+      0, 3, 4, // apex, base TR, base TL
+      0, 4, 1, // apex, base TL, base BL
+    ]);
+    const projBeamGeo = new THREE.BufferGeometry();
+    projBeamGeo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(beamPositions, 3)
+    );
+    projBeamGeo.setAttribute(
+      "color",
+      new THREE.BufferAttribute(beamColors, 3)
+    );
+    projBeamGeo.setIndex(new THREE.BufferAttribute(beamIndices, 1));
+    const projBeamMat = new THREE.MeshBasicMaterial({
+      color: 0xfff0d8,
+      vertexColors: true,
+      // wireframe: render only the triangle edges, not the filled faces.
+      // Filled additive triangles flooded the whole projection area with
+      // white; outlining the pyramid gives the "rays of light" silhouette —
+      // 4 lines from the projector apex to each projection corner, plus the
+      // projection's outline. Each apex→corner edge is shared by two
+      // triangles, so the rays read brighter than the base perimeter.
+      wireframe: true,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const projBeam = new THREE.Mesh(projBeamGeo, projBeamMat);
+    projBeam.renderOrder = 1; // beneath halo + video
+    projBeam.frustumCulled = false;
+    scene.add(projBeam);
+
+    // Scratch vectors so the per-vertex frustum-floor math doesn't allocate.
+    const scratchNDC = new THREE.Vector3();
+    const scratchDir = new THREE.Vector3();
 
     // ---- Geometry & material ----
     const maxR = Math.min(CUBE_SIDE, CUBE_HEIGHT) * 0.49;
@@ -330,12 +568,27 @@ const config = JSON.stringify({
     // a soft backdrop instead of a wall of solid blocks. Safe with our
     // orthographic top-down camera because the cubes never overlap in
     // screen space, so depth-sort artifacts can't show up.
+    // Runtime opacity override (TransitionTweak slider) — once set, it
+    // wins over both the per-mode defaults and the mode-change reset.
+    let opacityOverride: number | null = null;
+    try {
+      const stored = localStorage.getItem("rd-cube-opacity");
+      if (stored) {
+        const n = parseFloat(stored);
+        if (isFinite(n) && n > 0 && n <= 1) opacityOverride = n;
+      }
+    } catch (_) {}
+
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: ROUGHNESS,
       metalness: isLightMode() ? METALNESS_LIGHT : METALNESS_DARK,
       transparent: true,
-      opacity: (isLightMode() ? MAT_OPACITY_LIGHT : MAT_OPACITY_DARK) * V.matOpacityMul,
+      opacity:
+        opacityOverride !== null
+          ? opacityOverride
+          : (isLightMode() ? MAT_OPACITY_LIGHT : MAT_OPACITY_DARK) *
+            V.matOpacityMul,
       depthWrite: false,
     });
 
@@ -369,11 +622,191 @@ const config = JSON.stringify({
     // of cubes to 1.0 here; the loop decays it each frame and blends the
     // cube colour toward the live theme accent in proportion.
     const beatGlow = new Float32Array(total);
+    // Disco splash — fired by VinylRecord on every cymbal-slap. A batch of
+    // random cubes is assigned a random saturated hue + glow=1, then the
+    // colour blend in the cube loop lerps each cube toward HSL(hue) by the
+    // glow amount. Decays back to baseline so the disco flash is transient.
+    const discoGlow = new Float32Array(total);
+    const discoHue = new Float32Array(total);
+    const DISCO_DECAY = 0.92;
+    const DISCO_SPLASH_COUNT = 90;
+    const discoColor = new THREE.Color();
+    function onVinylSlap(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      const intensity = typeof d.intensity === "number" ? d.intensity : 1;
+      const count = Math.max(1, Math.round(DISCO_SPLASH_COUNT * intensity));
+      for (let n = 0; n < count; n++) {
+        const i = (Math.random() * total) | 0;
+        discoGlow[i] = 1;
+        discoHue[i] = Math.random();
+      }
+    }
+    document.addEventListener("rd:vinyl-slap", onVinylSlap);
+
+    // Continuous disco mode — toggled by the DiscoBall component. While
+    // active, the animate loop spawns DISCO_MODE_PER_FRAME fresh cubes per
+    // frame, so the field stays steadily disco-flickered even without
+    // music. Independent of beat-flash + vinyl-slap (effects compose).
+    let discoModeActive = false;
+    const DISCO_MODE_PER_FRAME = 4;
+    function onDiscoMode(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      discoModeActive = !!d.active;
+    }
+    document.addEventListener("rd:disco-mode", onDiscoMode);
+
+    // Projector light — the ProjectorWidget tells us where its lens currently
+    // sits on screen. The animate loop maps that to a world point, places the
+    // SpotLight above it, and points the cone leftward-and-down so it lands
+    // as an elliptical pool on the cubes left of the projector.
+    let projLightActive = false;
+    let projLightX = 0;
+    let projLightY = 0;
+    let projYaw = 0;
+    let projPitch = 0;
+    // Facing factor: 1 when the projector's lens points fully toward the
+    // viewer (default), 0 perpendicular, -1 fully turned away. Used to ramp
+    // the projection opacity so a projector pointing away from the cubes
+    // stops projecting.
+    let projFacing = 1;
+    function onProjectorLight(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      projLightActive = !!d.active;
+      if (typeof d.x === "number") projLightX = d.x;
+      if (typeof d.y === "number") projLightY = d.y;
+      if (typeof d.yaw === "number") projYaw = d.yaw;
+      if (typeof d.pitch === "number") projPitch = d.pitch;
+      if (typeof d.facing === "number") projFacing = d.facing;
+    }
+    document.addEventListener("rd:projector-light", onProjectorLight);
+
+    // Disco-ball "thrown light" reflections — a handful of slow-moving
+    // points drifting across the field, each one lighting cubes within a
+    // small radius in its own hue. Looks like a real mirror ball throwing
+    // dots of light across the back wall. Spawned while disco mode is on
+    // and left to live out their lifetime when toggled off.
+    interface DiscoRay {
+      x0: number; z0: number; t0: number;
+      vx: number; vz: number;
+      hue: number;
+    }
+    const discoRays: DiscoRay[] = [];
+    const DISCO_RAY_TARGET = 9;
+    const DISCO_RAY_RADIUS = 1.7;
+    const DISCO_RAY_RADIUS_SQ = DISCO_RAY_RADIUS * DISCO_RAY_RADIUS;
+    const DISCO_RAY_LIFE_S = 7;
+    function spawnDiscoRay(nowSec: number) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.8 + Math.random() * 2.6;
+      const rangeX = COLS * dx * 0.4;
+      const rangeZ = ROWS * dz * 0.4;
+      discoRays.push({
+        x0: (Math.random() - 0.5) * rangeX,
+        z0: (Math.random() - 0.5) * rangeZ,
+        t0: nowSec,
+        vx: Math.cos(angle) * speed,
+        vz: Math.sin(angle) * speed,
+        hue: Math.random(),
+      });
+    }
     const baseDim = new THREE.Color(isLightMode() ? BASE_COLOR_LIGHT : BASE_COLOR_DARK);
     const basePaint = new THREE.Color(isLightMode() ? PAINT_COLOR_LIGHT : PAINT_COLOR_DARK);
     const glowColor = new THREE.Color(RIPPLE_GLOW_COLOR);
     const accentColor = new THREE.Color(readAccentVar());
     const colorScratch = new THREE.Color();
+
+    // Mouse-FX state — three independently toggleable cursor effects:
+    //   - trail:  cubes briefly light accent as the cursor passes
+    //   - ripple: fast strokes spawn ripples proportional to speed
+    //   - tilt:   cubes within hover radius tilt their tops toward cursor
+    // Persisted by TransitionTweak.astro and pushed in via `rd:mouse-fx`.
+    type MouseFx = { trail: boolean; ripple: boolean; tilt: boolean };
+    const mouseFx: MouseFx = { trail: true, ripple: true, tilt: true };
+    try {
+      const stored = localStorage.getItem("rd-mouse-fx");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (typeof parsed.trail === "boolean") mouseFx.trail = parsed.trail;
+        if (typeof parsed.ripple === "boolean") mouseFx.ripple = parsed.ripple;
+        if (typeof parsed.tilt === "boolean") mouseFx.tilt = parsed.tilt;
+      }
+    } catch (_) {}
+    function onMouseFxChange(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      if (typeof d.trail === "boolean") mouseFx.trail = d.trail;
+      if (typeof d.ripple === "boolean") mouseFx.ripple = d.ripple;
+      if (typeof d.tilt === "boolean") mouseFx.tilt = d.tilt;
+    }
+    document.addEventListener("rd:mouse-fx", onMouseFxChange);
+
+    // Trail glow: each frame, cubes within a small radius of the cursor
+    // get pinned to 1; everywhere else the value decays toward 0. The
+    // glow blends each cube's colour toward the accent so the cursor
+    // leaves a fading wake across the field.
+    const trailGlow = new Float32Array(total);
+    const TRAIL_DECAY = 0.88;
+    const TRAIL_RADIUS = 2.2;
+    const TRAIL_RADIUS_SQ = TRAIL_RADIUS * TRAIL_RADIUS;
+
+    // Projector glow — same mechanism as trailGlow but anchored at the
+    // projector's screen position (set in the projector-light block below).
+    // (Cube halo state removed — projector visuals are entirely the
+    // textured projection quad now.) Floor pos still tracked because the
+    // virtual projector camera lives directly above it.
+    let projectorWorldX = 0;
+    let projectorWorldZ = 0;
+
+    // Velocity ripple: track how far the smoothed cursor has travelled
+    // since the last spawned ripple. Once distance crosses a threshold
+    // AND we're past the cooldown, drop a ripple at the cursor —
+    // sharp flicks spawn many; gentle drifts spawn none.
+    let prevCursorX = 0;
+    let prevCursorZ = 0;
+    let velAccum = 0;
+    let lastVelRippleSec = -Infinity;
+    const VEL_RIPPLE_DIST = 3.5;       // world-units travelled between spawns
+    const VEL_RIPPLE_COOLDOWN = 0.12;  // seconds between spawns (rate-limit)
+
+    // Magnetic tilt config — runtime-tunable from TransitionTweak.
+    //   amount  → peak rotation at cursor center (radians)
+    //   falloff → curve exponent on the (1 - d²/r²) factor; 1 = linear,
+    //             >1 keeps cubes near the rim flat and only ramps near
+    //             the cursor centre (pinpoint magnetic field).
+    const tiltCfg = { amount: 0.18, falloff: 1 };
+    try {
+      const stored = localStorage.getItem("rd-tilt-config");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (typeof parsed.amount === "number") tiltCfg.amount = parsed.amount;
+        if (typeof parsed.falloff === "number") tiltCfg.falloff = parsed.falloff;
+      }
+    } catch (_) {}
+    function onTiltConfig(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      if (typeof d.amount === "number") tiltCfg.amount = d.amount;
+      if (typeof d.falloff === "number") tiltCfg.falloff = d.falloff;
+    }
+    document.addEventListener("rd:tilt-config", onTiltConfig);
+
+    function onOpacityChange(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      if (typeof d.opacity === "number") {
+        opacityOverride = d.opacity;
+        mat.opacity = d.opacity;
+      }
+    }
+    document.addEventListener("rd:cube-opacity", onOpacityChange);
+
+    function onCursorIntensity(ev: Event) {
+      const d = (ev as CustomEvent).detail || {};
+      if (typeof d.intensity === "number") {
+        CURSOR_INTENSITY = d.intensity;
+        // The animate loop overwrites cursorLight.intensity each frame
+        // (bass-modulated on audio-reactive variants) so this baseline
+        // takes effect on the next frame automatically.
+      }
+    }
+    document.addEventListener("rd:cursor-intensity", onCursorIntensity);
 
     const dx = CUBE_SIDE + GAP;
     const dz = CUBE_SIDE + GAP;
@@ -404,7 +837,10 @@ const config = JSON.stringify({
     const ndc = new THREE.Vector2();
     const target = new THREE.Vector3(0, 0, 0);
     const cursorWorld = new THREE.Vector3(0, 0, 0);
-    const IDLE_AFTER_MS = 10000;          // after this long without a move, drift on auto-pilot
+    // On touch devices pointermove only fires while the finger is down — as
+    // soon as it lifts, the cursor halo would freeze for 10s before the
+    // auto-orbit took over. Shorter timeout on mobile keeps the field alive.
+    const IDLE_AFTER_MS = isMobile ? 2500 : 10000;
     let lastMoveTime = -Infinity;         // never moved yet
 
     function onPointer(e: PointerEvent) {
@@ -432,7 +868,10 @@ const config = JSON.stringify({
       ambient.intensity = light ? AMB_INTENSITY_LIGHT : AMB_INTENSITY_DARK;
       baseDim.setHex(light ? BASE_COLOR_LIGHT : BASE_COLOR_DARK);
       basePaint.setHex(light ? PAINT_COLOR_LIGHT : PAINT_COLOR_DARK);
-      mat.opacity = (light ? MAT_OPACITY_LIGHT : MAT_OPACITY_DARK) * V.matOpacityMul;
+      mat.opacity =
+        opacityOverride !== null
+          ? opacityOverride
+          : (light ? MAT_OPACITY_LIGHT : MAT_OPACITY_DARK) * V.matOpacityMul;
       mat.metalness = light ? METALNESS_LIGHT : METALNESS_DARK;
       mat.needsUpdate = true;
     }
@@ -476,6 +915,10 @@ const config = JSON.stringify({
     // array of [col, row] pairs in 0..COLS-1 / 0..ROWS-1 grid coords. ----
     if (variantKey === "home") {
       const api = ((window as any).rdBrickGrid ||= {});
+      // Live grid dimensions — SectionSymbols reads these to scale + centre
+      // the glyph patterns to the current grid (which differs on mobile).
+      api.cols = COLS;
+      api.rows = ROWS;
       api.paintCells = (cells: [number, number][]) => {
         painted.fill(0);
         for (const [cx, cy] of cells) {
@@ -484,6 +927,12 @@ const config = JSON.stringify({
         }
       };
       api.clearCells = () => painted.fill(0);
+      // Tell deferred listeners (SectionSymbols) the API is ready.
+      document.dispatchEvent(
+        new CustomEvent("rd:brick-grid-ready", {
+          detail: { cols: COLS, rows: ROWS },
+        })
+      );
     }
 
     // ---- Resize handler (uses the canvas's actual size, not the window) ----
@@ -517,7 +966,8 @@ const config = JSON.stringify({
     // in the accent colour. They then decay back to black/painted-white.
     const BEAT_THRESHOLD_HI = 0.45;    // trigger when bass crosses up through this
     const BEAT_THRESHOLD_LO = 0.28;    // re-arm only after bass falls below this
-    const BEAT_SPLASH_COUNT = 22;      // cubes to flash per beat
+    const BEAT_SPLASH_COUNT = 22;      // cubes to flash per beat (accent)
+    const BEAT_DISCO_COUNT = 70;       // extra cubes per beat painted with random disco hues
     const BEAT_DECAY = 0.93;           // multiplicative per-frame decay
     let prevBass = 0;
     let beatArmed = true;
@@ -540,8 +990,11 @@ const config = JSON.stringify({
       typeof window.matchMedia === "function"
         ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
         : false;
-    const ENTRANCE_COL_STAGGER_MS = 14;
-    const ENTRANCE_RISE_MS = 720;
+    // Mobile shortens the per-column delay so the column-wipe entrance
+    // doesn't drag past ~2 seconds on a smaller grid. (14 × 220 = 3.08s on
+    // desktop home; 8 × 110 = 0.88s on mobile home.)
+    const ENTRANCE_COL_STAGGER_MS = isMobile ? 8 : 14;
+    const ENTRANCE_RISE_MS = isMobile ? 520 : 720;
     const ENTRANCE_TOTAL_MS = ENTRANCE_COL_STAGGER_MS * COLS + ENTRANCE_RISE_MS;
     const entranceStart =
       cfg.loadAssemble !== false && !prefersReducedMotion
@@ -565,9 +1018,25 @@ const config = JSON.stringify({
         window.removeEventListener("pointermove", onPointer);
         document.removeEventListener("rd:theme-change", onThemeChange);
         document.removeEventListener("rd:mode-change", onModeChange);
+        document.removeEventListener("rd:mouse-fx", onMouseFxChange);
+        document.removeEventListener("rd:tilt-config", onTiltConfig);
+        document.removeEventListener("rd:cube-opacity", onOpacityChange);
+        document.removeEventListener("rd:cursor-intensity", onCursorIntensity);
+        document.removeEventListener("rd:vinyl-slap", onVinylSlap);
+        document.removeEventListener("rd:disco-mode", onDiscoMode);
+        document.removeEventListener("rd:projector-light", onProjectorLight);
         if (interactive) window.removeEventListener("click", onClick);
         geom.dispose();
         mat.dispose();
+        projVideo.pause();
+        projVideo.src = "";
+        projVideoTex.dispose();
+        projScreenGeo.dispose();
+        projScreenMat.dispose();
+        projHaloGeo.dispose();
+        projHaloMat.dispose();
+        projBeamGeo.dispose();
+        projBeamMat.dispose();
         renderer.dispose();
         return;
       }
@@ -615,6 +1084,29 @@ const config = JSON.stringify({
       for (let i = ripples.length - 1; i >= 0; i--) {
         if (nowSec - ripples[i].t > RIPPLE_DURATION) ripples.splice(i, 1);
       }
+
+      // Velocity ripple — accumulate the smoothed cursor's per-frame travel
+      // and spawn a ripple once the user has dragged across enough world
+      // units, rate-limited by a short cooldown so a sharp flick produces a
+      // single clean shockwave instead of a stuttery burst.
+      if (mouseFx.ripple && !isIdle) {
+        const vdx = cursorWorld.x - prevCursorX;
+        const vdz = cursorWorld.z - prevCursorZ;
+        velAccum += Math.sqrt(vdx * vdx + vdz * vdz);
+        if (
+          velAccum > VEL_RIPPLE_DIST &&
+          nowSec - lastVelRippleSec > VEL_RIPPLE_COOLDOWN
+        ) {
+          ripples.push({ x: cursorWorld.x, z: cursorWorld.z, t: nowSec });
+          velAccum = 0;
+          lastVelRippleSec = nowSec;
+        }
+      } else {
+        velAccum = 0;
+      }
+      prevCursorX = cursorWorld.x;
+      prevCursorZ = cursorWorld.z;
+
       const rippleCount = ripples.length;
 
       // Audio bins (Uint8Array, 128 entries) — set by VinylRecord while its
@@ -636,12 +1128,269 @@ const config = JSON.stringify({
 
       // Beat detection — rising edge through BEAT_THRESHOLD_HI fires a flash;
       // beat is re-armed only after bass drops below the LO threshold.
+      // Continuous disco-mode sprinkle — independent of audio. Fires a small
+      // batch each frame so the field stays alive even with music off.
+      // Projector real-light update — map the lens's screen position to a
+      // world point on the y=0 cube plane, then position the SpotLight
+      // slightly to the right of and above that point, target it left-and-
+      // down so the cone lands as an elliptical pool on the cubes. The
+      // volumetric beam cone is parented to the SpotLight's path.
+      // Projector light — mimics the cursor halo. Mapping is the same: the
+      // projector's lens viewport position → NDC → raycast onto y=0 gives a
+      // world point on the cube floor. We park the PointLight above it at
+      // CURSOR_Y and let the per-cube loop below brighten + lift the cubes
+      // inside PROJECTOR_RADIUS (the existing cursor-halo machinery).
+      const projectorFlicker =
+        1 +
+        Math.sin(nowSec * 24 * Math.PI * 2) * 0.05 +
+        (Math.random() - 0.5) * 0.03;
+      if (projLightActive) {
+        const projRect = canvas.getBoundingClientRect();
+        // Lens screen → world floor point. This is where the *projector*
+        // hovers above (at PROJECTOR_HEIGHT). Its position on the page is
+        // what scrolls the projection around.
+        const nx = ((projLightX - projRect.left) / projRect.width) * 2 - 1;
+        const ny = -((projLightY - projRect.top) / projRect.height) * 2 + 1;
+        raycaster.setFromCamera(new THREE.Vector2(nx, ny), camera);
+        const denom = raycaster.ray.direction.y;
+        if (Math.abs(denom) > 1e-6) {
+          const tHit = -raycaster.ray.origin.y / denom;
+          projectorWorldX =
+            raycaster.ray.origin.x + raycaster.ray.direction.x * tHit;
+          projectorWorldZ =
+            raycaster.ray.origin.z + raycaster.ray.direction.z * tHit;
+        }
+
+        // ---- Configure the virtual projector camera ----
+        // It hovers PROJECTOR_HEIGHT above the lens floor point. The user's
+        // yaw rotates the aim direction around vertical; the user's pitch
+        // tilts the aim away from straight-down. lookAt then orients the
+        // camera so its frustum points at this aim target on the floor.
+        const userPitchClamped = Math.max(-1.2, Math.min(1.2, projPitch));
+        const aimDist = PROJECTOR_HEIGHT * Math.tan(userPitchClamped);
+        // 0.01 baseline offset avoids the lookAt degeneracy when target ==
+        // position.xz (target on world Y axis from the camera).
+        const dx = Math.sin(projYaw) * (0.01 + aimDist);
+        const dz = Math.cos(projYaw) * (0.01 + aimDist);
+        const targetX = projectorWorldX + dx;
+        const targetZ = projectorWorldZ + dz;
+        projectorCamera.position.set(
+          projectorWorldX,
+          PROJECTOR_HEIGHT,
+          projectorWorldZ
+        );
+        projectorCamera.lookAt(targetX, 0, targetZ);
+        projectorCamera.updateMatrixWorld();
+        projectorCamera.updateProjectionMatrix();
+
+        // ---- Per-vertex frustum-floor intersection for BOTH planes ----
+        // Each vertex unprojects its NDC corner through the virtual camera;
+        // the resulting ray hits y=0. The textured quad on the floor IS the
+        // frustum's footprint. The halo plane runs the same math but with
+        // its NDC range scaled by HALO_EXPAND, so its floor quad surrounds
+        // the video by a small margin and bleeds outside it.
+        const videoPos = projScreenGeo.attributes.position
+          .array as Float32Array;
+        const haloPos = projHaloGeo.attributes.position
+          .array as Float32Array;
+        const camX = projectorCamera.position.x;
+        const camY = projectorCamera.position.y;
+        const camZ = projectorCamera.position.z;
+        for (let i = 0; i < NUM_VERTS; i++) {
+          const ndcX = projNDCU[i] * 2 - 1;
+          const ndcY = projNDCV[i] * 2 - 1;
+          // Video plane
+          scratchNDC.set(ndcX, ndcY, 1);
+          scratchNDC.unproject(projectorCamera);
+          scratchDir
+            .set(scratchNDC.x - camX, scratchNDC.y - camY, scratchNDC.z - camZ)
+            .normalize();
+          if (scratchDir.y < -1e-6) {
+            const t = -camY / scratchDir.y;
+            videoPos[i * 3 + 0] = camX + scratchDir.x * t;
+            videoPos[i * 3 + 1] = 0.05;
+            videoPos[i * 3 + 2] = camZ + scratchDir.z * t;
+          } else {
+            const t = 100;
+            videoPos[i * 3 + 0] = camX + scratchDir.x * t;
+            videoPos[i * 3 + 1] = 0.05;
+            videoPos[i * 3 + 2] = camZ + scratchDir.z * t;
+          }
+          // Halo plane — same math, expanded NDC
+          scratchNDC.set(ndcX * HALO_EXPAND, ndcY * HALO_EXPAND, 1);
+          scratchNDC.unproject(projectorCamera);
+          scratchDir
+            .set(scratchNDC.x - camX, scratchNDC.y - camY, scratchNDC.z - camZ)
+            .normalize();
+          if (scratchDir.y < -1e-6) {
+            const t = -camY / scratchDir.y;
+            haloPos[i * 3 + 0] = camX + scratchDir.x * t;
+            haloPos[i * 3 + 1] = 0.04;
+            haloPos[i * 3 + 2] = camZ + scratchDir.z * t;
+          } else {
+            const t = 100;
+            haloPos[i * 3 + 0] = camX + scratchDir.x * t;
+            haloPos[i * 3 + 1] = 0.04;
+            haloPos[i * 3 + 2] = camZ + scratchDir.z * t;
+          }
+        }
+        projScreenGeo.attributes.position.needsUpdate = true;
+        projHaloGeo.attributes.position.needsUpdate = true;
+
+        // ---- Beam pyramid: apex + 4 floor corners ----
+        // Apex: unproject the projector's viewport pixel into a world ray
+        // (via NDC z=0), then walk along the BrickGrid camera's view
+        // direction to find the point on that ray with world Y = BEAM_APEX_Y
+        // (a sensible height above the cubes, below the camera).
+        //
+        // Any point along the ray projects back to the same viewport pixel
+        // under the ortho camera, so the apex still lands at the projector
+        // model on screen — but we get a stable 3D position above the floor
+        // instead of one ~160 units below it.
+        const beamPos = projBeamGeo.attributes.position
+          .array as Float32Array;
+        const ndcAx = ((projLightX - projRect.left) / projRect.width) * 2 - 1;
+        const ndcAy =
+          -((projLightY - projRect.top) / projRect.height) * 2 + 1;
+        const BEAM_APEX_Y = 10;
+        scratchNDC.set(ndcAx, ndcAy, 0).unproject(camera);
+        const rayStartX = scratchNDC.x;
+        const rayStartY = scratchNDC.y;
+        const rayStartZ = scratchNDC.z;
+        camera.getWorldDirection(scratchDir);
+        const beamRayWalk =
+          Math.abs(scratchDir.y) > 1e-6
+            ? (BEAM_APEX_Y - rayStartY) / scratchDir.y
+            : 0;
+        beamPos[0] = rayStartX + scratchDir.x * beamRayWalk;
+        beamPos[1] = BEAM_APEX_Y;
+        beamPos[2] = rayStartZ + scratchDir.z * beamRayWalk;
+        // Base 4 corners — projector camera frustum corners on y=0. Same
+        // math as the video/halo planes but for the 4 outer-corner NDCs.
+        const cornerNDC: [number, number][] = [
+          [-1, -1],
+          [1, -1],
+          [1, 1],
+          [-1, 1],
+        ];
+        for (let c = 0; c < 4; c++) {
+          scratchNDC.set(cornerNDC[c][0], cornerNDC[c][1], 1);
+          scratchNDC.unproject(projectorCamera);
+          scratchDir
+            .set(
+              scratchNDC.x - camX,
+              scratchNDC.y - camY,
+              scratchNDC.z - camZ
+            )
+            .normalize();
+          let bx: number;
+          let bz: number;
+          if (scratchDir.y < -1e-6) {
+            const t = -camY / scratchDir.y;
+            bx = camX + scratchDir.x * t;
+            bz = camZ + scratchDir.z * t;
+          } else {
+            const t = 100;
+            bx = camX + scratchDir.x * t;
+            bz = camZ + scratchDir.z * t;
+          }
+          beamPos[(1 + c) * 3 + 0] = bx;
+          beamPos[(1 + c) * 3 + 1] = 0.03;
+          beamPos[(1 + c) * 3 + 2] = bz;
+        }
+        projBeamGeo.attributes.position.needsUpdate = true;
+      }
+
+      // ---- Facing-gated opacity for both planes ----
+      // facing in [-1, 1]. We want zero contribution below 0 (lens facing
+      // away) and a smooth ramp up to ~0.4 (lens reasonably aligned). Lerp
+      // smoothly so the projection fades in/out as the user yaws past the
+      // perpendicular point rather than snapping.
+      const facingNorm = projLightActive
+        ? Math.max(0, Math.min(1, (projFacing - 0) / 0.4))
+        : 0;
+      const targetVideoOp = 0.9 * facingNorm;
+      const targetHaloOp = 0.22 * facingNorm;
+      const targetBeamOp = 0.5 * facingNorm; // bumped from 0.18 for visibility
+      projScreenMat.opacity += (targetVideoOp - projScreenMat.opacity) * 0.12;
+      projHaloMat.opacity += (targetHaloOp - projHaloMat.opacity) * 0.12;
+      projBeamMat.opacity += (targetBeamOp - projBeamMat.opacity) * 0.12;
+      if (projScreenMat.opacity > 0.05) {
+        if (projVideo.paused && projVideo.readyState >= 2) {
+          projVideo.play().catch(() => {});
+        }
+      } else if (projScreenMat.opacity < 0.01 && !projVideo.paused) {
+        projVideo.pause();
+      }
+
+      if (discoModeActive) {
+        for (let n = 0; n < DISCO_MODE_PER_FRAME; n++) {
+          const i = (Math.random() * total) | 0;
+          discoGlow[i] = 1;
+          discoHue[i] = Math.random();
+        }
+      }
+
+      // Disco-ball "thrown light" rays — top up while active; existing rays
+      // continue until their life expires even after the mode toggles off,
+      // so the spots fade out instead of snapping. Each frame, each ray
+      // paints cubes within its radius in its own hue with a cosine falloff,
+      // and ramps in / out across its lifetime so points appear/disappear
+      // smoothly.
+      if (discoModeActive && discoRays.length < DISCO_RAY_TARGET) {
+        spawnDiscoRay(nowSec);
+      }
+      for (let ri = discoRays.length - 1; ri >= 0; ri--) {
+        const ray = discoRays[ri];
+        const rayAge = nowSec - ray.t0;
+        if (rayAge > DISCO_RAY_LIFE_S) {
+          discoRays.splice(ri, 1);
+          continue;
+        }
+        const rx = ray.x0 + ray.vx * rayAge;
+        const rz = ray.z0 + ray.vz * rayAge;
+        const rcxIdx = Math.round((rx - offsetX) / dx);
+        const rczIdx = Math.round((rz - offsetZ) / dz);
+        const radIdx = Math.ceil(DISCO_RAY_RADIUS / dx);
+        const ageT = rayAge / DISCO_RAY_LIFE_S;
+        const envelope = ageT < 0.1
+          ? ageT * 10
+          : ageT > 0.85
+            ? Math.max(0, (1 - ageT) / 0.15)
+            : 1;
+        for (let ii = -radIdx; ii <= radIdx; ii++) {
+          for (let jj = -radIdx; jj <= radIdx; jj++) {
+            const ix = rcxIdx + ii;
+            const iz = rczIdx + jj;
+            if (ix < 0 || ix >= COLS || iz < 0 || iz >= ROWS) continue;
+            const k = iz * COLS + ix;
+            const dxk = xPositions[k] - rx;
+            const dzk = zPositions[k] - rz;
+            const d2 = dxk * dxk + dzk * dzk;
+            if (d2 < DISCO_RAY_RADIUS_SQ) {
+              const strength = (1 - d2 / DISCO_RAY_RADIUS_SQ) * envelope;
+              if (strength > discoGlow[k]) {
+                discoGlow[k] = strength;
+                discoHue[k] = ray.hue;
+              }
+            }
+          }
+        }
+      }
       if (V.beatFlash) {
         if (beatArmed && bassEnergy > BEAT_THRESHOLD_HI && prevBass <= BEAT_THRESHOLD_HI) {
           beatArmed = false;
           for (let n = 0; n < BEAT_SPLASH_COUNT; n++) {
             const i = (Math.random() * total) | 0;
             beatGlow[i] = 1;
+          }
+          // Disco beat splash — additional batch of random cubes painted with
+          // random saturated hues, fed into the discoGlow channel so the
+          // field stays continuously disco-flickered while a track is running.
+          for (let n = 0; n < BEAT_DISCO_COUNT; n++) {
+            const i = (Math.random() * total) | 0;
+            discoGlow[i] = 1;
+            discoHue[i] = Math.random();
           }
         } else if (!beatArmed && bassEnergy < BEAT_THRESHOLD_LO) {
           beatArmed = true;
@@ -657,6 +1406,18 @@ const config = JSON.stringify({
           const f = 1 - d2 / r2;
           lift = HOVER_LIFT * Math.pow(f, HOVER_FALLOFF);
         }
+        // Trail glow — cubes very close to the smoothed cursor get pinned
+        // to 1; everything else multiplicatively decays. The shader-side
+        // colour blend below paints these toward the accent so the cursor
+        // leaves a soft wake.
+        if (mouseFx.trail && !isIdle && d2 < TRAIL_RADIUS_SQ) {
+          trailGlow[k] = 1;
+        } else {
+          trailGlow[k] *= TRAIL_DECAY;
+          if (trailGlow[k] < 0.01) trailGlow[k] = 0;
+        }
+        // (Projector halo removed — visuals live on the textured projection
+        // quad rendered separately.)
         const wave = WAVE_AMP * Math.sin(
           t * WAVE_SPEED +
           xPositions[k] * WAVE_FREQ_X +
@@ -718,6 +1479,19 @@ const config = JSON.stringify({
         } else if (beatGlow[k] !== 0) {
           beatGlow[k] = 0;
         }
+        // Trail glow blends toward the accent at 70% strength so passing
+        // cubes pop without overriding paint/ripple/beat states underneath.
+        if (trailGlow[k] > 0.01) {
+          colorScratch.lerp(accentColor, trailGlow[k] * 0.7);
+        }
+        // Disco splash — last, so the slap colour pops over everything else.
+        if (discoGlow[k] > 0.005) {
+          discoColor.setHSL(discoHue[k], 0.9, 0.55);
+          colorScratch.lerp(discoColor, Math.min(1, discoGlow[k]));
+          discoGlow[k] *= DISCO_DECAY;
+        } else if (discoGlow[k] !== 0) {
+          discoGlow[k] = 0;
+        }
         mesh.setColorAt(k, colorScratch);
 
         // Column-wipe entrance: each column has a delay so the field rises
@@ -735,7 +1509,22 @@ const config = JSON.stringify({
         }
         tmp.position.set(xPositions[k], 0, zPositions[k]);
         tmp.scale.set(1, sy * entranceT, 1);
-        tmp.rotation.set(0, 0, 0);
+        // Magnetic tilt — within hover radius, tilt each cube's top toward
+        // the cursor on its X/Z axes. The (1 - d²/r²) factor is raised to
+        // tiltCfg.falloff so >1 values pinch the magnetic field to a
+        // sharper centre. Amount + falloff are live-tunable via UI.
+        let tiltX = 0;
+        let tiltZ = 0;
+        if (mouseFx.tilt && d2 > 1e-6 && d2 < r2 && tiltCfg.amount > 0) {
+          const fLin = 1 - d2 / r2;
+          const f = tiltCfg.falloff === 1 ? fLin : Math.pow(fLin, tiltCfg.falloff);
+          const len = Math.sqrt(d2);
+          const ux = -dxk / len;
+          const uz = -dzk / len;
+          tiltX = uz * tiltCfg.amount * f;
+          tiltZ = -ux * tiltCfg.amount * f;
+        }
+        tmp.rotation.set(tiltX, 0, tiltZ);
         tmp.updateMatrix();
         mesh.setMatrixAt(k, tmp.matrix);
       }

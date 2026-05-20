@@ -6,8 +6,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import EqBar from "../components/EqBar.astro";
 import BrickGrid from "../components/BrickGrid.astro";
 import VinylRecord from "../components/VinylRecord.astro";
+import DiscoBall from "../components/DiscoBall.astro";
+import ProjectorWidget from "../components/ProjectorWidget.astro";
 import SectionSymbols from "../components/SectionSymbols.astro";
-import TransitionTweak from "../components/TransitionTweak.astro";
 
 const posts = (await getCollection("posts", ({ data }) => data.status === "publish"))
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
@@ -224,15 +225,16 @@ const locations = [
        Hero photo + .bg-ash sections cover it via their own background;
        black sections reveal it (cyan halo follows the cursor). Click-to-
        paint is intentionally off: the grid is a backdrop, not a toy. -->
-  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" />
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
 
   <!-- As the visitor scrolls past each themed section, paint a glyph into
        the BrickGrid backdrop (logo, RD, date, music note). -->
   <SectionSymbols />
-  <!-- Dev: pick which morph style runs between sections. Remove once final. -->
-  <TransitionTweak />
 
-  <div class="relative z-10">
+  <!-- Wrapper kept positioned only — no z-index, otherwise it forms a
+       backdrop root and breaks backdrop-filter on cards (which then can't
+       sample the fixed BrickGrid canvas behind it). -->
+  <div class="relative">
     <!-- HERO -->
   <section
     class="relative min-h-screen flex items-end overflow-hidden vignette"
@@ -255,10 +257,23 @@ const locations = [
     >
     </div>
 
+    <!-- Phosphor flicker — blend-mode overlay that pulses brightness so
+         the hero reads as a CRT screen breathing. Stacks under the noise. -->
+    <div class="rd-vhs-flicker" aria-hidden="true"></div>
+
+    <!-- Animated TV static — SVG turbulence tile drifting in stepped frames
+         under the scanlines so the hero reads as a live, noisy broadcast. -->
+    <div class="rd-vhs-noise" aria-hidden="true"></div>
+
     <!-- Always-on VHS overlay — scoped to this hero section via VhsMode.astro. -->
     <div class="rd-vhs-overlay" aria-hidden="true">
       <div class="rd-vhs-track"></div>
     </div>
+
+    <!-- CRT power-on sequence — black blanket with a bright horizontal
+         deflection line that expands vertically to reveal the hero. Plays
+         once on page load (CSS-only). Hidden after animation ends. -->
+    <div class="rd-crt-poweron" aria-hidden="true"></div>
 
     <div class="relative z-10 mx-auto max-w-7xl px-6 lg:px-10 pb-24 pt-40 w-full">
       <div class="flex items-center gap-4 mb-8 hero-rise" style="--hero-delay: 0.05s">
@@ -330,8 +345,12 @@ const locations = [
   </section>
 
   <!-- MARQUEE — festival schedule, scrolling. Pixel-cube separator
-       between items in the logo language (cyan border + white core). -->
-  <div class="py-5 overflow-hidden">
+       between items in the logo language (cyan border + white core).
+       Translucent ink + backdrop-blur so the dates read against the
+       BrickGrid glyphs scrolling underneath. -->
+  <div
+    class="relative py-5 overflow-hidden bg-ink/50 backdrop-blur-md border-y border-bone/10"
+  >
     <div
       class="marquee whitespace-nowrap font-display text-3xl md:text-5xl text-bone/55 italic"
     >
@@ -397,7 +416,7 @@ const locations = [
 
 
   <!-- STATS — festival in numbers -->
-  <section class="">
+  <section class="" data-rd-cube-pattern="stats">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-20">
       <ul class="reveal-stagger grid grid-cols-2 md:grid-cols-4 gap-3">
         {
@@ -502,6 +521,9 @@ const locations = [
             Tri grada, jedan<br /><em class="text-accent">festival</em>.
           </h2>
         </div>
+        <div class="aspect-square w-full max-w-[140px] reveal">
+          <DiscoBall />
+        </div>
       </div>
 
       <ul class="reveal-stagger grid md:grid-cols-3 gap-3">
@@ -555,7 +577,7 @@ const locations = [
           </a>
         </div>
         <div class="md:col-span-4 flex justify-center md:justify-end">
-          <div class="aspect-square w-full max-w-[220px]">
+          <div class="aspect-square w-full max-w-[220px] reveal">
             <VinylRecord />
           </div>
         </div>
@@ -732,18 +754,28 @@ const locations = [
 
 
   <!-- PHOTO STRIP — drag-to-pan filmstrip with pixel sprocket holes -->
-  <section class="filmstrip-section overflow-hidden">
+  <section class="filmstrip-section overflow-hidden" data-rd-cube-pattern="archive">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-20 pb-6">
-      <div class="reveal flex items-end justify-between mb-10">
-        <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
-          Iz arhive
-        </p>
-        <a
-          href="/galerija/"
-          class="font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
-        >
-          Cijela galerija →
-        </a>
+      <div class="reveal flex items-end justify-between mb-16 flex-wrap gap-6">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-4">
+            Iz arhive
+          </p>
+          <h2
+            class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
+          >
+            Trenuci koji<br /><em class="text-accent">ostaju</em>.
+          </h2>
+          <a
+            href="/galerija/"
+            class="mt-6 inline-flex font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
+          >
+            Cijela galerija →
+          </a>
+        </div>
+        <div class="relative aspect-square w-full max-w-[420px]">
+          <ProjectorWidget />
+        </div>
       </div>
     </div>
 
@@ -801,15 +833,20 @@ const locations = [
     .filmstrip-track {
       position: relative;
       display: block;
-      /* Slightly lighter than ink so the strip reads as celluloid, with a
-         thin warm vignette top/bottom for that lit-from-behind feel. */
+      /* Glass celluloid — translucent ink with a backdrop blur so the cube
+         field and dust drift behind the strip. Very low alpha so the photo
+         frames composite onto the blurred BrickGrid behind, not a dark slab. */
       background:
         linear-gradient(to bottom,
           rgba(245, 241, 232, 0.04),
           transparent 28%,
           transparent 72%,
           rgba(245, 241, 232, 0.04)),
-        #0c0e10;
+        rgba(10, 10, 10, 0.08);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(245, 241, 232, 0.12);
+      border-bottom: 1px solid rgba(245, 241, 232, 0.12);
       overflow-x: auto;
       overflow-y: hidden;
       scroll-snap-type: x mandatory;
@@ -839,7 +876,7 @@ const locations = [
       position: relative;
       aspect-ratio: 3 / 2;
       overflow: hidden;
-      background: #050708;
+      background: transparent;
       box-shadow: inset 0 0 0 1px rgba(245, 241, 232, 0.06);
     }
     /* Tiny frame-edge marker on the gate corners — the little notches you
@@ -877,7 +914,12 @@ const locations = [
       right: 0;
       top: 0;
       height: 28px;
-      background: #0c0e10;
+      /* Match the glass celluloid above — translucent ink + blur, so the
+         sprocket-hole mask still punches "through" the glass to whatever
+         the BrickGrid is painting underneath. */
+      background: rgba(10, 10, 10, 0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       z-index: 2;
       pointer-events: none;
       -webkit-mask-image:
@@ -2033,7 +2075,7 @@ const locations = [
 
   {
     posts.length > 0 && (
-      <section class="">
+      <section class="" data-rd-cube-pattern="news">
         <div class="mx-auto max-w-7xl px-6 lg:px-10 py-24">
           <div class="reveal flex items-end justify-between mb-12">
             <h2 class="font-display font-light text-4xl md:text-5xl tracking-tight">
@@ -2087,7 +2129,7 @@ const locations = [
 
 
   <!-- PARTNERS — funder logo strip -->
-  <section>
+  <section data-rd-cube-pattern="partners">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-16">
       <p class="reveal text-center font-mono text-xs uppercase tracking-[0.3em] text-accent mb-10">
         Podržavaju festival
@@ -2098,7 +2140,7 @@ const locations = [
         {
           partners.map((p) => {
             const inner = (
-              <div class="bg-ink h-24 px-6 flex items-center justify-center text-center transition border border-bone/10 group-hover:bg-ash group-hover:border-accent/30">
+              <div class="bg-ink/40 backdrop-blur-md h-24 px-6 flex items-center justify-center text-center transition border border-bone/15 group-hover:bg-ink/60 group-hover:border-accent/30">
                 {p.logo ? (
                   <img
                     src={p.logo}

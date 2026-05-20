@@ -166,14 +166,16 @@ html.theme-light .filmstrip {
 html.theme-light .filmstrip-track {
   background:
     linear-gradient(to bottom,
-      rgba(60, 40, 20, 0.05),
+      rgba(60, 40, 20, 0.06),
       transparent 28%,
       transparent 72%,
-      rgba(60, 40, 20, 0.05)),
-    #c5b89e;
+      rgba(60, 40, 20, 0.06)),
+    rgba(245, 241, 232, 0.45);
+  border-top-color: rgba(60, 40, 20, 0.12);
+  border-bottom-color: rgba(60, 40, 20, 0.12);
 }
 html.theme-light .film-frame-inner {
-  background: #a59a83;
+  background: transparent;
   box-shadow: inset 0 0 0 1px rgba(60, 40, 20, 0.12);
 }
 html.theme-light .film-frame-inner::before,
@@ -181,10 +183,38 @@ html.theme-light .film-frame-inner::after {
   background: rgba(60, 40, 20, 0.3);
 }
 html.theme-light .filmstrip-edge {
-  background: #c5b89e;
+  background: rgba(245, 241, 232, 0.45);
   box-shadow:
     inset 0 1px 0 rgba(60, 40, 20, 0.08),
     inset 0 -1px 0 rgba(60, 40, 20, 0.08);
+}
+
+/* Filmstrip photos at rest — read as actual 35mm film stock held up to
+   the light: significantly translucent so the blurred BrickGrid behind
+   the glass celluloid track shows through, warm sepia base tint of aged
+   emulsion, boosted contrast to keep the silhouettes legible through the
+   transparency. Hover snaps back to a normal opaque print. */
+.filmstrip .photo-mosaic .photo-img {
+  filter: grayscale(0.55) contrast(1.15) brightness(0.95) sepia(0.3);
+  opacity: 0.35;
+  transition:
+    filter 0.6s ease,
+    opacity 0.6s ease;
+}
+.filmstrip .photo-mosaic:hover .photo-img {
+  filter: grayscale(0) contrast(1) brightness(1) sepia(0);
+  opacity: 1;
+}
+/* The JS-painted canvas overlay sits ON TOP of the img and is opaque
+   by default. Dim it to match the film-stock transparency so the cubes
+   behind the glass track show through. Hover returns it to full so the
+   mosaic-dissolve reveal of the colour photo reads cleanly. */
+.filmstrip .photo-mosaic .photo-mosaic-canvas {
+  opacity: 0.35;
+  transition: opacity 0.6s ease;
+}
+.filmstrip .photo-mosaic:hover .photo-mosaic-canvas {
+  opacity: 1;
 }
 
 /* Hero stays cinematic regardless of page mode — locally revert the
