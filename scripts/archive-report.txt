@@ -1,0 +1,70 @@
+IZVJEŠTAJ EKSTRAKCIJE ARHIVE
+============================================================
+
+filmova: 79   dana programa: 25   fotografija: 543
+
+Pokrivenost polja kod filmova:
+  director    72 / 79   91%
+  country     77 / 79   97%
+  year        44 / 79   56%
+  duration    67 / 79   85%
+  synopsis    79 / 79  100%
+  poster      55 / 79   70%
+  trailer     17 / 79   22%
+  screening   35 / 79   44%
+
+Sve ispod traži ljudsko oko. Redoslijed je redoslijed nastanka.
+
+[FILM] RD1 2017 "Viljuška puna ljubavi" — fali: year
+[FILM] RD1 2017 "Crnogorska Arhiva" — fali: director, year
+[FILM] RD1 2017 "Manitua mi" — fali: year, poster
+[FILM] RD1 2017 "Mi plačemo iza tamnih naočara" — fali: director, year
+[FILM] RD1 2017 "Mizar – zvezda nade" — fali: year, poster
+[FILM] RD1 2017 "Maske" — fali: director, year, poster
+[FILM] RD1 2017 "Limunovo drvo" — fali: director, year, poster
+[FILM] RD1 2017 "Jadranka" — fali: year
+[FILM] RD1 2017 "Tranzistor" — fali: director, year
+[FILM] RD1 2017 "Zvuk lampaša" — fali: year
+[FILM] RD1 2017 "Strip u Hrvatskoj" — fali: year
+[FILM] RD1 2017 "Sanjao sam o Smirnnoff Buffalu" — fali: year, poster
+[FILM] RD1 2017 "No Smoking in Sarajevo" — fali: year, poster
+[FILM] RD2 2018 "Priča o Evi Braun" — fali: year, poster
+[FILM] RD2 2018 "Trenje" — fali: year
+[FILM] RD2 2018 "Dva benda – jedna priča" — fali: country, year
+[FILM] RD2 2018 "Dečak iz vode" — fali: year, poster
+[TREJLER] RD2 2018: isti snimak G-2jgJKpphU i na 'Dečak iz vode' i na 'CHARLATAN MAGNIFIQUE' — provjeriti kome pripada
+[FILM] RD2 2018 "CHARLATAN MAGNIFIQUE" — fali: year, poster
+[FILM] RD2 2018 "LP BULDOŽDER" — fali: year, poster
+[FILM] RD2 2018 "Rock je kamp" — fali: year, poster
+[FILM] RD2 2018 "DUBIOZA KOLEKTIV – film za djecu i odrasle" — fali: year, poster
+[FILM] RD2 2018 "Kontakt" — fali: year
+[FILM] RD2 2018 "Crnogorska arhiva" — fali: director, year, poster
+[FILM] RD2 2018 "Cijeli svijet u jednoj dolini" — fali: year, poster
+[FILM] RD3 2019 "Pankrti Dolgcajt" — fali: year, poster
+[FILM] RD3 2019 "Laibach" — fali: year, poster
+[FILM] RD3 2019 "Buldožer Pljuni istini u oči" — fali: year
+[FILM] RD3 2019 "E Play video dnevnik" — fali: year
+[FILM] RD3 2019 "Vojvođanska rokenrol priča (Osamdesete, Devedesete, Obojeni program)" — fali: year, poster
+[FILM] RD3 2019 "Okupirani bioskop" — fali: year, poster
+[FILM] RD3 2019 "Ramble – Indians Who Rock the World" — fali: year, poster
+[FILM] RD3 2019 "Ogenj folk rock story" — fali: year, poster
+[FILM] RD3 2019 "Dok nas glazba ne rastavi" — fali: year
+[FILM] RD3 2019 "Vojvođanska strip priča" — fali: year
+[FILM] RD3 2019 "Crnogorski rok spektakl" — fali: director, year, poster
+[FILM] RD4 2020 "Praia do Ventu Eternu" — fali: poster
+[NASLOV] RD5 2021: naslovi izvedeni iz imena plakata (12 kom) — provjeriti sve
+[FILM] RD5 2021 "Buc Kesidi" — fali: duration
+[FILM] RD5 2021 "Rock End Roll" — fali: duration
+[FILM] RD5 2021 "Soviet Hippies" — fali: duration
+[FILM] RD5 2021 "Elektricni Orgazam za ljude buducnosti" — fali: duration
+[FILM] RD5 2021 "Here We Move Here We Groove" — fali: duration
+[FILM] RD5 2021 "Daleka obala u USA" — fali: duration
+[FILM] RD5 2021 "A Symphony of Noise" — fali: duration
+[FILM] RD5 2021 "NS Made Love Hunters" — fali: duration
+[FILM] RD5 2021 "xYUGOx" — fali: duration
+[FILM] RD5 2021 "Scream For Me Sarajevo" — fali: duration
+[FILM] RD5 2021 "Fuss" — fali: duration
+[FILM] RD5 2021 "Faith And Branko" — fali: duration
+[FILM] RD6 2022 "Hiccups with Little Steven - Premotavanje sa Steven Van Zandtom" — fali: poster
+[FILM] RD7 2023 "Svijetla Sarajeva" — fali: country
+[FILM] RD7 2023 "New York hodočašće" — fali: poster
