@@ -3,7 +3,9 @@
 
 Radi četvoro:
   1. pokrene `npm run build`
-  2. izbaci iz dist/media sve što sajt ne koristi (~860 MB od 994)
+  2. izbaci iz dist/media sve što sajt ne koristi (od kad je
+     site/public/media pravi folder umjesto simlinka, ovo je obično
+     prazan hod — ostaje kao mreža za slučaj da se nešto provuče)
   3. ukloni razvojne ostatke koji nemaju šta na produkciji
   4. upiše .htaccess (301 preusmjerenja, keširanje, kompresija) i robots.txt
 
