@@ -1,0 +1,102 @@
+/* =====================================================================
+   PRESS — arhiva medijskih objava, grupisana po redakciji.
+
+   Naslova nema (u originalu su zapisane samo adrese), pa težinu nosi ime
+   redakcije, a izvedeni naslov ide kao tiši drugi red.
+   ===================================================================== */
+
+.rd-press-note {
+  margin-top: 26px;
+  max-width: 640px;
+  padding: 18px 20px;
+  border-left: 2px solid var(--color-accent);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  opacity: 0.62;
+}
+
+.rd-press-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 34px 40px;
+}
+
+.rd-press-name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 2px solid rgba(245, 241, 232, 0.2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+
+html.theme-light .rd-press-name {
+  border-color: rgba(26, 26, 26, 0.25);
+}
+
+.rd-press-n {
+  margin-left: auto;
+  font-size: 0.55rem;
+  color: var(--color-accent);
+}
+
+.rd-press-links a {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(245, 241, 232, 0.14);
+  color: inherit;
+  text-decoration: none;
+}
+
+html.theme-light .rd-press-links a {
+  border-color: rgba(26, 26, 26, 0.16);
+}
+
+.rd-press-label {
+  flex: 1;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
+.rd-press-links a:hover .rd-press-label {
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.rd-press-arrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  opacity: 0.35;
+}
+
+.rd-press-links a:hover .rd-press-arrow {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
+.rd-press-links a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .rd-press-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Godina izdanja o kojem se piše — stoji uz naslov gdje je pouzdana. */
+.rd-press-year {
+  margin-left: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  color: var(--color-accent);
+  opacity: 0.8;
+}

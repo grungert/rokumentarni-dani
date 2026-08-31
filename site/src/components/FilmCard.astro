@@ -1,0 +1,76 @@
+---
+// Jedan film u katalogu.
+//
+// 24 od 79 naslova nema plakat — stara baza ih jednostavno nema. Umjesto
+// sive rupe, takva kartica dobija otkucanu nalepnicu, istu onu koja stoji
+// na kičmi kasete. Nedostatak podatka tako izgleda kao odluka, ne kao kvar.
+import { credits, splitCountries, type FilmGroup } from "../data/archive";
+import { editionTag } from "../data/archive/editions";
+
+interface Props {
+  group: FilmGroup;
+}
+const { group } = Astro.props;
+const { film, screenings, poster, trailer } = group;
+
+// Filteri čitaju ove atribute — bez njih bi JS morao nazad u podatke.
+const years = screenings.map((s) => s.editionYear).join(" ");
+const countries = splitCountries(film.country).join("|");
+const haystack = [film.title, film.subtitle, film.director, film.country]
+  .filter(Boolean)
+  .join(" ")
+  .toLowerCase();
+---
+
+<li
+  class="rd-film reveal"
+  data-film
+  data-years={years}
+  data-countries={countries}
+  data-trailer={trailer ? "1" : "0"}
+  data-search={haystack}
+>
+  <a href={`/filmovi/${group.slug}/`} class="rd-film-link">
+    <div class="rd-film-frame">
+      {
+        poster ? (
+          <img
+            class="rd-film-img"
+            src={poster}
+            alt={`Plakat: ${film.title}`}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <span class="rd-film-label">
+            <span class="rd-film-label-txt">{film.title}</span>
+          </span>
+        )
+      }
+
+      <span class="rd-film-grain" aria-hidden="true"></span>
+
+      <span class="rd-film-badges">
+        {screenings.map((s) => (
+          <span class="rd-film-badge">{editionTag(s.edition)}</span>
+        ))}
+      </span>
+
+      {
+        trailer && (
+          <span class="rd-film-tr" aria-hidden="true">
+            <span class="rd-film-tr-tri" />
+            Trejler
+          </span>
+        )
+      }
+
+      {film.duration && <span class="rd-film-min">{film.duration}&#8242;</span>}
+    </div>
+
+    <h3 class="rd-film-title">{film.title}</h3>
+    {film.subtitle && <p class="rd-film-sub">{film.subtitle}</p>}
+    {credits(film) && <p class="rd-film-credits">{credits(film)}</p>}
+    {film.synopsis && <p class="rd-film-syn">{film.synopsis}</p>}
+  </a>
+</li>

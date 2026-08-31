@@ -1,0 +1,102 @@
+---
+// Kontakt-kopija jednog izdanja — svi dani, svi kadrovi.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BrickGrid from "../../components/BrickGrid.astro";
+import SectionSymbols from "../../components/SectionSymbols.astro";
+import ContactSheet from "../../components/ContactSheet.astro";
+import PhotoLightbox from "../../components/PhotoLightbox.astro";
+import { editionOf } from "../../data/archive";
+import { photoEditions } from "../../data/archive/photos-view";
+import "../../styles/galerija.css";
+
+export function getStaticPaths() {
+  return photoEditions.map((edition) => ({
+    params: { year: String(edition.year) },
+    props: { edition },
+  }));
+}
+
+const { edition } = Astro.props;
+const meta = editionOf(edition.year);
+
+// Numeracija kadrova teče kroz cijelo izdanje, kao na traci — dan 2 ne
+// počinje od jedan.
+let running = 0;
+const daysWithOffset = edition.days.map((day) => {
+  const offset = running;
+  running += day.photos.length;
+  return { day, offset };
+});
+---
+
+<BaseLayout
+  title={`Galerija ${edition.year}`}
+  description={`${edition.total} fotografija sa Rokumentarnih dana ${edition.year} — kontakt-kopija po danima.`}
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-36 pb-14 w-full">
+        <a href="/galerija/" class="rd-film-back reveal">
+          <span aria-hidden="true">←</span> Galerija
+        </a>
+
+        <p
+          class="reveal mt-8 font-mono text-xs uppercase tracking-[0.3em] text-accent"
+        >
+          RD{edition.edition} · {meta?.dates ?? edition.year}
+        </p>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3rem,9vw,8rem)] leading-[0.85] tracking-tight mt-4"
+        >
+          {edition.year}.
+        </h1>
+
+        <p
+          class="reveal mt-8 font-display font-light text-2xl text-bone/80 max-w-2xl"
+        >
+          {edition.total} kadrova kroz {edition.days.length} dana. Klikni bilo
+          koji da ga pustiš preko cijelog platna.
+        </p>
+
+        <nav class="rd-cs-days reveal" aria-label="Dani">
+          {
+            daysWithOffset.map(({ day }) => (
+              <a href={`#dan-${day.n}`}>
+                {day.label}
+                <span>{day.photos.length}</span>
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </section>
+
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32 space-y-20">
+        {
+          daysWithOffset.map(({ day, offset }) => (
+            <ContactSheet day={day} year={edition.year} offset={offset} />
+          ))
+        }
+      </div>
+    </section>
+  </div>
+
+  <PhotoLightbox />
+
+  <script>
+    import { wireGallery } from "../../scripts/galerija";
+    import { wireReveal } from "../../scripts/reveal";
+
+    wireReveal();
+    wireGallery();
+    document.addEventListener("astro:page-load", () => {
+      wireReveal();
+      wireGallery();
+    });
+  </script>
+</BaseLayout>

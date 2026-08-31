@@ -1,0 +1,25 @@
+---
+// Info o naslovu — prazna ljuštura <dialog> u koju se klonira sadržaj kartice.
+// Native <dialog> nosi focus trap, Esc i inertnost pozadine bez našeg koda.
+---
+
+<dialog class="rd-vt-sheet" data-sheet aria-labelledby="rd-vt-sheet-title">
+  <div class="rd-vt-sheet-inner">
+    <div class="rd-vt-sheet-bar">
+      <span class="rd-vt-sheet-bar-txt">Info</span>
+      <button type="button" class="rd-vt-sheet-close" data-sheet-close>
+        <span aria-hidden="true">×</span>
+        <span class="sr-only">Zatvori</span>
+      </button>
+    </div>
+
+    <!-- Ovdje ide klon .rd-vt-detail iz kartice. -->
+    <div class="rd-vt-sheet-body" data-sheet-body></div>
+
+    <footer class="rd-vt-sheet-foot">
+      <button type="button" class="rd-vt-take" data-sheet-take>
+        <span data-sheet-take-label>Dodaj u listu</span>
+      </button>
+    </footer>
+  </div>
+</dialog>

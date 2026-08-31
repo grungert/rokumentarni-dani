@@ -1,0 +1,560 @@
+---
+// Cassette player — the realistic Codrops cassette artwork (textured body +
+// metal spool PNGs) with the blue label rebuilt in CSS in the festival's
+// accent colour. The label's TITLE/SUBJECT line shows the current track
+// (artist — title) and updates as it changes. Tape winds reel-to-reel via a
+// growing box-shadow, spools spin in the direction of playback, A/B flips it.
+//
+// Audio: festival Live Sessions + tape SFX under /public/cassette/ — see
+// ATTRIBUTIONS.txt. Body/spool PNGs reused from the Codrops pack (MIT).
+interface Props {
+  class?: string;
+}
+const { class: className = "" } = Astro.props;
+---
+
+<div class:list={["rd-cass", className]} data-rd-cass>
+  <div class="rd-cass-body" data-rd-cass-body>
+    <div class="rd-cass-label">
+      <!-- Header: SIDE box · TITLE/SUBJECT line · noise-reduction box -->
+      <div class="rd-cass-head">
+        <div class="rd-cass-sidebox">
+          <span class="rd-cass-side-word">Side</span>
+          <span class="rd-cass-side" data-rd-cass-side>A</span>
+        </div>
+        <div class="rd-cass-title">
+          <span class="rd-cass-title-cap">Title / Subject:</span>
+          <span class="rd-cass-title-line" data-rd-cass-artist>Live Sessions</span>
+          <span class="rd-cass-title-rule"></span>
+          <span class="rd-cass-title-line" data-rd-cass-track>Rokumentarni dani</span>
+          <span class="rd-cass-title-rule"></span>
+        </div>
+        <div class="rd-cass-nr">
+          <span>Noise</span>
+          <span>Reduction</span>
+          <span class="rd-cass-nr-sw">On <b>·</b> Off</span>
+        </div>
+      </div>
+
+      <!-- Reel windows -->
+      <div class="rd-cass-windows">
+        <div class="rd-cass-win">
+          <div class="rd-cass-tape" data-rd-cass-reel="left"></div>
+          <div class="rd-cass-wheel" data-rd-cass-spokes="left"></div>
+        </div>
+        <div class="rd-cass-win">
+          <div class="rd-cass-tape" data-rd-cass-reel="right"></div>
+          <div class="rd-cass-wheel" data-rd-cass-spokes="right"></div>
+        </div>
+      </div>
+
+      <!-- Footer print -->
+      <div class="rd-cass-foot">
+        <span class="rd-cass-foot-logo">RD</span>
+        <span class="rd-cass-foot-mid">
+          <b>Live Sessions Tape</b>
+          High Output · Low Noise
+        </span>
+        <span class="rd-cass-foot-c">C-90</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="rd-cass-controls" role="group" aria-label="Kaseta kontrole">
+    <button type="button" class="rd-ct" data-ct="rewind" aria-label="Premotaj nazad">◄◄</button>
+    <button type="button" class="rd-ct rd-ct-play" data-ct="play" aria-label="Pusti">►</button>
+    <button type="button" class="rd-ct" data-ct="stop" aria-label="Stop">■</button>
+    <button type="button" class="rd-ct" data-ct="forward" aria-label="Premotaj naprijed">►►</button>
+    <button type="button" class="rd-ct rd-ct-switch" data-ct="switch" aria-label="Okreni stranu">A/B</button>
+    <label class="rd-cass-vol" aria-label="Jačina">
+      <span aria-hidden="true">VOL</span>
+      <input type="range" min="0" max="100" value="80" data-ct="volume" />
+    </label>
+  </div>
+</div>
+
+<style>
+  .rd-cass { display: block; width: 100%; }
+
+  /* Realistic textured body from the PNG; label rebuilt over it in CSS. */
+  .rd-cass-body {
+    position: relative;
+    width: min(100%, 360px);
+    aspect-ratio: 586 / 379;
+    background: url("/cassette/images/cs_back.png") center/contain no-repeat;
+    filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
+    transform: perspective(1000px) rotateY(0deg);
+  }
+  .rd-cass-body.is-flipping { animation: rd-cass-flip 0.5s ease-in-out; }
+  @keyframes rd-cass-flip {
+    0% { transform: perspective(1000px) rotateY(0deg); }
+    50% { transform: perspective(1000px) rotateY(90deg); }
+    100% { transform: perspective(1000px) rotateY(0deg); }
+  }
+
+  /* Accent label — replaces the blue wrapper. */
+  .rd-cass-label {
+    position: absolute;
+    top: 12%;
+    bottom: 25%;
+    left: 4%;
+    right: 4%;
+    border-radius: 9px;
+    padding: 2.4% 4% 2.2%;
+    display: flex;
+    flex-direction: column;
+    background:
+      linear-gradient(
+        158deg,
+        color-mix(in srgb, var(--color-accent) 45%, #fff) 0%,
+        var(--color-accent) 62%,
+        color-mix(in srgb, var(--color-accent) 78%, #000) 100%
+      );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -8px 18px rgba(0, 0, 0, 0.18),
+      0 1px 3px rgba(0, 0, 0, 0.3);
+    color: #1a1209;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .rd-cass-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 3%;
+  }
+  .rd-cass-sidebox {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1.5px solid rgba(26, 18, 9, 0.7);
+    border-radius: 3px;
+    padding: 2px 6px;
+    line-height: 1;
+  }
+  .rd-cass-side-word {
+    font-family: var(--font-mono);
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .rd-cass-side {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 17px;
+  }
+  .rd-cass-title { flex: 1 1 auto; min-width: 0; padding-top: 2px; }
+  .rd-cass-title-cap {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+  .rd-cass-title-line {
+    display: block;
+    font-family: "Special Elite", "Courier New", var(--font-mono), monospace;
+    font-size: 11px;
+    line-height: 1.15;
+    color: #241405;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 2px 2px;
+  }
+  .rd-cass-title-rule {
+    display: block;
+    height: 1.5px;
+    background: rgba(26, 18, 9, 0.4);
+    margin-bottom: 3px;
+  }
+  .rd-cass-title-rule:last-child { margin-bottom: 0; }
+  .rd-cass-nr {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1.5px solid rgba(26, 18, 9, 0.6);
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-family: var(--font-mono);
+    font-size: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.35;
+  }
+  .rd-cass-nr-sw { font-size: 6.5px; }
+  .rd-cass-nr-sw b { color: #fff; }
+
+  /* Reel windows — dark band (fills the middle) with two holes; spool PNG +
+     box-shadow tape. flex:1 makes this the dominant band like the original. */
+  .rd-cass-windows {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16%;
+    margin: 2.5% 0 3.5%;
+    border-radius: 3px;
+    background:
+      linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.55));
+    box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.4), inset 0 -6px 10px rgba(0, 0, 0, 0.4);
+  }
+  .rd-cass-win {
+    position: relative;
+    width: 17%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 42%, #1a1a1f, #050507 78%);
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.6), inset 0 3px 8px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Wound tape — grown via box-shadow spread (set by JS from progress). */
+  .rd-cass-tape {
+    position: absolute;
+    width: 46%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #241608;
+    box-shadow: 0 0 0 2px #241608;
+  }
+  /* Spinning metal spool from the original artwork. */
+  .rd-cass-wheel {
+    position: absolute;
+    width: 64%;
+    aspect-ratio: 1;
+    background: url("/cassette/images/cs_wheel.png") center/contain no-repeat;
+  }
+
+  .rd-cass-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4%;
+    color: #fff;
+  }
+  .rd-cass-foot-logo {
+    flex: 0 0 auto;
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 0.8;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  }
+  .rd-cass-foot-mid {
+    flex: 1 1 auto;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 6px;
+    line-height: 1.25;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rd-cass-foot-mid b {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 0.01em;
+  }
+  .rd-cass-foot-c {
+    flex: 0 0 auto;
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 0.8;
+    white-space: nowrap;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  }
+
+  @keyframes rd-cass-reel-spin { to { transform: rotate(360deg); } }
+
+  /* Controls */
+  .rd-cass-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .rd-ct {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    background: rgba(10, 10, 10, 0.4);
+    backdrop-filter: blur(6px);
+    color: var(--color-bone, #f5f1e8);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s, background 0.18s;
+  }
+  .rd-ct:hover { border-color: var(--color-accent); color: var(--color-accent); }
+  .rd-ct.is-active {
+    background: var(--color-accent);
+    color: var(--color-ink, #0a0a0a);
+    border-color: var(--color-accent);
+  }
+  .rd-ct:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .rd-cass-vol {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(245, 241, 232, 0.5);
+  }
+  .rd-cass-vol input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 2px;
+    background: rgba(245, 241, 232, 0.25);
+    cursor: pointer;
+  }
+  .rd-cass-vol input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--color-accent);
+    border-radius: 0;
+  }
+  .rd-cass-vol input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 0;
+    background: var(--color-accent);
+    border-radius: 0;
+  }
+  :global(html.theme-light) .rd-ct {
+    background: rgba(245, 241, 232, 0.6);
+    color: #1a1a1a;
+    border-color: rgba(26, 26, 26, 0.2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rd-cass-wheel { animation: none !important; }
+    .rd-cass-body.is-flipping { animation: none; }
+  }
+</style>
+
+<script>
+  type Song = { name: string; title: string; artist: string };
+  type PlayerState = { side: number; action: string; progress: number; nowPlaying: Song };
+
+  function createPlayer(onUpdate: (s: PlayerState) => void) {
+    const fmt = document.createElement("audio").canPlayType("audio/mpeg") ? "mp3" : "ogg";
+    const base = "/cassette/";
+
+    // Festival Live Sessions recordings.
+    const SONGS: Song[] = [
+      { name: "anja-zagorac-gruv", title: "Gruv (Smanji bas!)", artist: "Anja Zagorac" },
+      { name: "autogeni-trening-koliko-ljudi", title: "Koliko ljudi treba još da umre", artist: "Autogeni trening" },
+      { name: "bacili-bellerophontes-rime-i-razlog", title: "Rime i razlog", artist: "Bacili & Bellerophontes" },
+      { name: "big-do-sloboda-govora", title: "Sloboda govora", artist: "Big Do" },
+    ];
+    const sides = [[0, 1], [2, 3]];
+    const meta = SONGS.map(() => ({ duration: 0 }));
+
+    SONGS.forEach((s, i) => {
+      const a = new Audio();
+      a.preload = "metadata";
+      a.src = base + "songs/" + s.name + "." + fmt;
+      a.addEventListener("loadedmetadata", () => { meta[i].duration = a.duration || 0; notify(); });
+    });
+
+    let currentSide = 0;
+    let sidePos = 0;
+    let action = "stop";
+    let sideBaseline = 0;
+    let seekTimer: number | null = null;
+
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.volume = 0.8;
+
+    const sfx: Record<string, HTMLAudioElement> = {};
+    ["click", "rewind", "fforward", "switch"].forEach((n) => { sfx[n] = new Audio(base + "sounds/" + n + "." + fmt); });
+    function playSfx(n: string, loop = false) {
+      const a = sfx[n]; if (!a) return;
+      a.loop = loop; try { a.currentTime = 0; } catch (_) {} a.play().catch(() => {});
+    }
+    function stopSfx(n: string) {
+      const a = sfx[n]; if (!a) return;
+      a.pause(); a.loop = false; try { a.currentTime = 0; } catch (_) {}
+    }
+
+    function sideDuration(side: number) { return sides[side].reduce((t, idx) => t + (meta[idx].duration || 0), 0); }
+    function sumBefore(songIndexInSide: number) {
+      let acc = 0;
+      for (let i = 0; i < songIndexInSide; i++) acc += meta[sides[currentSide][i]].duration || 0;
+      return acc;
+    }
+    function locate(pos: number) {
+      let acc = 0;
+      const list = sides[currentSide];
+      for (let i = 0; i < list.length; i++) {
+        const d = meta[list[i]].duration || 0;
+        if (pos < acc + d || i === list.length - 1) return { songIndex: i, offset: Math.max(0, pos - acc) };
+        acc += d;
+      }
+      return { songIndex: 0, offset: 0 };
+    }
+    function nowPlaying(): Song { const loc = locate(sidePos); return SONGS[sides[currentSide][loc.songIndex]]; }
+    function state(): PlayerState {
+      const sd = sideDuration(currentSide) || 1;
+      return { side: currentSide, action, progress: Math.min(1, Math.max(0, sidePos / sd)), nowPlaying: nowPlaying() };
+    }
+    function notify() { onUpdate(state()); }
+
+    function loadAndPlay() {
+      const loc = locate(sidePos);
+      const songIdx = sides[currentSide][loc.songIndex];
+      sideBaseline = sumBefore(loc.songIndex);
+      audio.src = base + "songs/" + SONGS[songIdx].name + "." + fmt;
+      audio.onloadedmetadata = () => { try { audio.currentTime = loc.offset; } catch (_) {} audio.play().catch(() => {}); };
+      audio.load();
+    }
+    audio.ontimeupdate = () => { if (action === "play") { sidePos = sideBaseline + audio.currentTime; notify(); } };
+    audio.onended = () => {
+      if (action !== "play") return;
+      const loc = locate(sidePos);
+      if (loc.songIndex < sides[currentSide].length - 1) { sidePos = sumBefore(loc.songIndex + 1) + 0.01; loadAndPlay(); }
+      else { api.stop(); sidePos = sideDuration(currentSide); notify(); }
+    };
+
+    function clearSeek() {
+      if (seekTimer != null) { clearInterval(seekTimer); seekTimer = null; }
+      stopSfx("rewind"); stopSfx("fforward");
+    }
+
+    const api = {
+      play() { clearSeek(); playSfx("click"); action = "play"; loadAndPlay(); notify(); },
+      stop() { clearSeek(); if (action !== "stop") playSfx("click"); action = "stop"; audio.pause(); notify(); },
+      forward() {
+        clearSeek(); playSfx("click"); audio.pause(); action = "forward"; playSfx("fforward", true);
+        seekTimer = window.setInterval(() => {
+          sidePos += 0.7; const sd = sideDuration(currentSide);
+          if (sidePos >= sd) { sidePos = sd; api.stop(); } notify();
+        }, 60);
+        notify();
+      },
+      rewind() {
+        clearSeek(); playSfx("click"); audio.pause(); action = "rewind"; playSfx("rewind", true);
+        seekTimer = window.setInterval(() => {
+          sidePos -= 0.7; if (sidePos <= 0) { sidePos = 0; api.stop(); } notify();
+        }, 60);
+        notify();
+      },
+      switchSide() {
+        if (action !== "stop") api.stop();
+        playSfx("switch");
+        currentSide = currentSide ? 0 : 1; sidePos = 0; notify();
+        return currentSide;
+      },
+      toggle() { if (action === "play") api.stop(); else api.play(); },
+      setVolume(v: number) { audio.volume = Math.max(0, Math.min(1, v)); },
+    };
+    return api;
+  }
+
+  function initCass(root: HTMLElement) {
+    if (root.dataset.rdInit) return;
+    root.dataset.rdInit = "1";
+
+    const body = root.querySelector<HTMLElement>("[data-rd-cass-body]")!;
+    const sideTag = root.querySelector<HTMLElement>("[data-rd-cass-side]")!;
+    const artistEl = root.querySelector<HTMLElement>("[data-rd-cass-artist]")!;
+    const track = root.querySelector<HTMLElement>("[data-rd-cass-track]")!;
+    const reelL = root.querySelector<HTMLElement>('[data-rd-cass-reel="left"]')!;
+    const reelR = root.querySelector<HTMLElement>('[data-rd-cass-reel="right"]')!;
+    const wheelL = root.querySelector<HTMLElement>('[data-rd-cass-spokes="left"]')!;
+    const wheelR = root.querySelector<HTMLElement>('[data-rd-cass-spokes="right"]')!;
+    const buttons = root.querySelectorAll<HTMLButtonElement>(".rd-ct[data-ct]");
+    const playBtn = root.querySelector<HTMLButtonElement>('[data-ct="play"]')!;
+    const volInput = root.querySelector<HTMLInputElement>('[data-ct="volume"]')!;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const TAPE_MIN = 2;
+    const TAPE_MAX = 11;
+    const tapeColor = "#241608";
+
+    function setSpin(action: string) {
+      let dur = 0, reverse = false;
+      if (!reduced) {
+        if (action === "play") dur = 2.4;
+        else if (action === "forward") dur = 0.5;
+        else if (action === "rewind") { dur = 0.5; reverse = true; }
+      }
+      const css = dur ? `rd-cass-reel-spin ${dur}s linear infinite ${reverse ? "reverse" : "normal"}` : "none";
+      wheelL.style.animation = css;
+      wheelR.style.animation = css;
+    }
+
+    const player = createPlayer((s) => {
+      sideTag.textContent = s.side === 0 ? "A" : "B";
+      artistEl.textContent = s.nowPlaying ? s.nowPlaying.artist : "—";
+      track.textContent = s.nowPlaying ? s.nowPlaying.title : "—";
+
+      const p = s.progress;
+      const supply = TAPE_MIN + (TAPE_MAX - TAPE_MIN) * (1 - p);
+      const takeup = TAPE_MIN + (TAPE_MAX - TAPE_MIN) * p;
+      const lv = s.side === 0 ? supply : takeup;
+      const rv = s.side === 0 ? takeup : supply;
+      reelL.style.boxShadow = `0 0 0 ${lv}px ${tapeColor}`;
+      reelR.style.boxShadow = `0 0 0 ${rv}px ${tapeColor}`;
+
+      setSpin(s.action);
+
+      buttons.forEach((b) => {
+        const ct = b.dataset.ct;
+        const active =
+          (ct === "play" && s.action === "play") ||
+          (ct === "forward" && s.action === "forward") ||
+          (ct === "rewind" && s.action === "rewind");
+        b.classList.toggle("is-active", active);
+      });
+      playBtn.textContent = s.action === "play" ? "❚❚" : "►";
+    });
+
+    buttons.forEach((b) => {
+      const ct = b.dataset.ct;
+      if (!ct || ct === "volume") return;
+      b.addEventListener("click", () => {
+        if (ct === "play") player.toggle();
+        else if (ct === "stop") player.stop();
+        else if (ct === "forward") player.forward();
+        else if (ct === "rewind") player.rewind();
+        else if (ct === "switch") {
+          player.switchSide();
+          body.classList.remove("is-flipping");
+          void body.offsetWidth;
+          body.classList.add("is-flipping");
+        }
+      });
+    });
+    body.addEventListener("animationend", () => body.classList.remove("is-flipping"));
+    volInput.addEventListener("input", () => { player.setVolume(parseInt(volInput.value, 10) / 100); });
+  }
+
+  function boot() { document.querySelectorAll<HTMLElement>("[data-rd-cass]").forEach(initCass); }
+  boot();
+  document.addEventListener("astro:page-load", boot);
+</script>

@@ -1,0 +1,251 @@
+---
+// Jedno izdanje — satnica, filmovi i fotografije na jednom mjestu.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BrickGrid from "../../components/BrickGrid.astro";
+import SectionSymbols from "../../components/SectionSymbols.astro";
+import FilmCard from "../../components/FilmCard.astro";
+import {
+  archiveKindLabel,
+  editions,
+  filmsOfEdition,
+  programOfEdition,
+} from "../../data/archive";
+import { photoEditions, photoThumb } from "../../data/archive/photos-view";
+import "../../styles/arhiva.css";
+import "../../styles/filmovi.css";
+
+export function getStaticPaths() {
+  return editions.map((edition) => ({
+    params: { year: edition.slug },
+    props: { edition },
+  }));
+}
+
+const { edition } = Astro.props;
+
+const films = filmsOfEdition(edition.n);
+const days = programOfEdition(edition.n);
+const photos = photoEditions.find((e) => e.edition === edition.n);
+
+// Susjedna izdanja — arhiva se čita naprijed-nazad, ne samo sa spiska.
+const index = editions.findIndex((e) => e.n === edition.n);
+const prev = editions[index - 1];
+const next = editions[index + 1];
+
+// Šest kadrova razmaknutih kroz izdanje, isti izbor kao na /galerija/.
+const allPhotos = photos?.days.flatMap((d) => d.photos) ?? [];
+const step = Math.max(1, Math.floor(allPhotos.length / 6));
+const preview = allPhotos.length
+  ? Array.from({ length: 6 }, (_, i) => allPhotos[i * step]).filter(Boolean)
+  : [];
+
+// Kotor 2022. je najavljen bez datuma („TBA - SUBOTA") i nema potvrde da je
+// održan — piše se onako kako je i objavljeno, bez izmišljanja datuma.
+const dayLabel = (label: string) =>
+  /TBA|TBC/i.test(label) ? "Datum nije objavljen" : label;
+---
+
+<BaseLayout
+  title={`${edition.title} · ${edition.year}`}
+  description={`${edition.title}, ${edition.dates} — ${films.length} filmova, satnica i fotografije.`}
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <!-- HERO ======================================================== -->
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-36 pb-14 w-full">
+        <a href="/arhiva/" class="rd-film-back reveal">
+          <span aria-hidden="true">←</span> Arhiva
+        </a>
+
+        <p
+          class="reveal mt-8 font-mono text-xs uppercase tracking-[0.3em] text-accent"
+        >
+          RD{edition.n} · {edition.dates}
+        </p>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3rem,10vw,9rem)] leading-[0.85] tracking-tight mt-4"
+        >
+          {edition.year}.
+        </h1>
+
+        {
+          edition.slogan && (
+            <p class="reveal mt-6 font-display italic font-light text-3xl md:text-4xl text-accent">
+              „{edition.slogan}"
+            </p>
+          )
+        }
+
+        <p
+          class="reveal mt-8 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/50 leading-relaxed"
+        >
+          {edition.cities.join(" · ")}
+        </p>
+      </div>
+    </section>
+
+    <!-- SATNICA ===================================================== -->
+    {
+      days.length > 0 && (
+        <section data-rd-cube-pattern="rd">
+          <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-20">
+            <h2 class="rd-arh-h2 reveal">Satnica</h2>
+
+            <div class="rd-arh-days">
+              {days.map((day) => (
+                <section class="rd-arh-day reveal">
+                  <header class="rd-arh-dayhead">
+                    <p class="rd-arh-daylabel">{dayLabel(day.label)}</p>
+                    {day.venue && <p class="rd-arh-venue">{day.venue}</p>}
+                  </header>
+
+                  <ol class="rd-arh-items">
+                    {day.items.map((item) => (
+                      <li
+                        class="rd-arh-item"
+                        data-kind={item.kind}
+                        data-notime={item.start ? undefined : ""}
+                      >
+                        <span class="rd-arh-time">
+                          {item.start ?? "TBA"}
+                          {item.end && (
+                            <span class="rd-arh-end">–{item.end}</span>
+                          )}
+                        </span>
+                        <span class="rd-arh-what">{item.title}</span>
+                        <span class="rd-arh-kind">
+                          {archiveKindLabel[item.kind]}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
+            </div>
+          </div>
+        </section>
+      )
+    }
+
+    <!-- Izdanje 2019. nema zasebnu satnicu — termini su bili uz filmove. -->
+    {
+      days.length === 0 && (
+        <section data-rd-cube-pattern="rd">
+          <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-20">
+            <h2 class="rd-arh-h2 reveal">Satnica</h2>
+            <p class="rd-arh-missing reveal">
+              Ovo izdanje nije imalo zasebnu satnicu — termini projekcija su
+              bili zapisani uz svaki film. Naći ćeš ih na stranicama filmova
+              ispod.
+            </p>
+          </div>
+        </section>
+      )
+    }
+
+    <!-- FILMOVI ===================================================== -->
+    {
+      films.length > 0 && (
+        <section data-rd-cube-pattern="stats">
+          <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-20">
+            <div class="rd-arh-h2row reveal">
+              <h2 class="rd-arh-h2">Filmovi</h2>
+              <a href="/filmovi/" class="rd-arh-more">
+                Cijeli katalog <span aria-hidden="true">→</span>
+              </a>
+            </div>
+
+            <ul class="rd-film-grid mt-8">
+              {films.map((group) => (
+                <FilmCard group={group} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
+
+    <!-- FOTOGRAFIJE ================================================= -->
+    {
+      photos && (
+        <section data-rd-cube-pattern="archive">
+          <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-20">
+            <div class="rd-arh-h2row reveal">
+              <h2 class="rd-arh-h2">Fotografije</h2>
+              <a href={`/galerija/${edition.year}/`} class="rd-arh-more">
+                Kontakt-kopija · {photos.total} kadrova{" "}
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+
+            <a
+              href={`/galerija/${edition.year}/`}
+              class="rd-arh-strip reveal"
+              aria-label={`Otvori galeriju ${edition.year}`}
+            >
+              {preview.map((photo) => (
+                <img
+                  src={photoThumb(photo)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="345"
+                  height="198"
+                />
+              ))}
+            </a>
+          </div>
+        </section>
+      )
+    }
+
+    <!-- SUSJEDNA IZDANJA ============================================ -->
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32">
+        <nav class="rd-arh-nav reveal" aria-label="Druga izdanja">
+          {
+            prev ? (
+              <a href={`/arhiva/${prev.slug}/`} class="rd-arh-navlink">
+                <span class="rd-arh-navdir">
+                  <span aria-hidden="true">←</span> Prethodno
+                </span>
+                <span class="rd-arh-navname">
+                  RD{prev.n} · {prev.year}
+                </span>
+              </a>
+            ) : (
+              <span />
+            )
+          }
+          {
+            next ? (
+              <a
+                href={`/arhiva/${next.slug}/`}
+                class="rd-arh-navlink rd-arh-navlink-next"
+              >
+                <span class="rd-arh-navdir">
+                  Sljedeće <span aria-hidden="true">→</span>
+                </span>
+                <span class="rd-arh-navname">
+                  RD{next.n} · {next.year}
+                </span>
+              </a>
+            ) : (
+              <span />
+            )
+          }
+        </nav>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { wireReveal } from "../../scripts/reveal";
+    wireReveal();
+    document.addEventListener("astro:page-load", wireReveal);
+  </script>
+</BaseLayout>

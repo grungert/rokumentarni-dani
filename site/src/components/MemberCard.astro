@@ -1,0 +1,73 @@
+---
+// Moja lista = watchlist, u obliku članske karte videoteke.
+//
+// Zatvorena je pill dugme u dnu ekrana sa brojem naslova; otvoreno je parče
+// papira sa redovima po danima. Zaglavlje i podnožje stoje,
+// skroluje samo lista. Redovi se crtaju iz localStorage-a, pa je markup ovdje
+// ljuštura + <template> za jedan red (da JS ne slaže HTML iz stringova).
+---
+
+<div class="rd-vt-member" data-member data-expanded="false">
+  <button type="button" class="rd-vt-member-tab" data-member-toggle aria-expanded="false">
+    <span class="rd-vt-member-tab-txt">Moja lista</span>
+    <span class="rd-vt-member-count" data-member-count>0</span>
+  </button>
+
+  <div class="rd-vt-card" data-member-panel>
+    <header class="rd-vt-card-head">
+      <div>
+        <p class="rd-vt-card-club">
+          Rokumentarni dani · član br. <span data-member-no>—</span>
+        </p>
+        <p class="rd-vt-card-name">Moja lista</p>
+      </div>
+
+      <button type="button" class="rd-vt-card-close" data-member-toggle>
+        <span aria-hidden="true">×</span>
+        <span class="sr-only">Zatvori listu</span>
+      </button>
+    </header>
+
+    <!-- Upozorenje kad se dva termina preklope. -->
+    <p class="rd-vt-card-clash" data-member-clash hidden>
+      <span class="rd-vt-card-clash-stamp">Termin zauzet</span>
+      <span data-member-clash-txt></span>
+    </p>
+
+    <div class="rd-vt-card-rows" data-member-rows></div>
+
+    <p class="rd-vt-card-empty" data-member-empty>
+      Lista je prazna. Dodaj naslov iz programa.
+    </p>
+
+    <footer class="rd-vt-card-foot">
+      <p class="rd-vt-card-total" data-member-total></p>
+      <div class="rd-vt-card-actions">
+        <button type="button" data-member-ics>Kalendar (.ics)</button>
+        <button type="button" data-member-clear>Isprazni</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Jedan red karte. -->
+  <template data-member-rowtpl>
+    <div class="rd-vt-row">
+      <span class="rd-vt-row-time" data-row-time></span>
+      <span class="rd-vt-row-main">
+        <span class="rd-vt-row-title" data-row-title></span>
+        <span class="rd-vt-row-sub" data-row-sub></span>
+      </span>
+      <button type="button" class="rd-vt-row-del" data-row-del>
+        <span aria-hidden="true">×</span>
+        <span class="sr-only">Ukloni iz liste</span>
+      </button>
+    </div>
+  </template>
+</div>
+
+<!-- Traka koja se pojavi kad neko podijeli svoju listu preko linka. -->
+<div class="rd-vt-import" data-import hidden>
+  <p data-import-txt></p>
+  <button type="button" data-import-yes>Učitaj</button>
+  <button type="button" data-import-no>Ne, hvala</button>
+</div>

@@ -1,0 +1,114 @@
+---
+// Omot kasete — pun sadržaj jedne stavke programa.
+//
+// Stoji sakriven u DOM-u uz svaku karticu (crawlable), a videoteka.ts ga
+// klonira u <dialog> tek na otvaranje — zato je slika lazy, a video
+// preload="none".
+import { kindLabel, type ProgramDay, type ProgramItem } from "../data/program";
+
+interface Props {
+  item: ProgramItem;
+  day: ProgramDay;
+}
+const { item, day } = Astro.props;
+---
+
+<div class="rd-vt-detail" data-detail={item.id} hidden>
+  <p class="rd-vt-d-eyebrow">
+    <span>{item.cat}</span>
+    <span class="rd-vt-d-dot" aria-hidden="true"></span>
+    <span>{kindLabel[item.kind]}</span>
+    {
+      item.start && (
+        <>
+          <span class="rd-vt-d-dot" aria-hidden="true" />
+          <span>
+            {day.label} · {item.start}–{item.end}
+          </span>
+        </>
+      )
+    }
+  </p>
+
+  <h2 class="rd-vt-d-title" data-sheet-title>{item.title}</h2>
+  {item.origTitle && <p class="rd-vt-d-orig">{item.origTitle}</p>}
+
+  <div class="rd-vt-d-media">
+    <img
+      src={item.still}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      width="539"
+      height="303"
+      class="rd-vt-d-still"
+    />
+    {
+      item.trailer && (
+        <>
+          <video
+            class="rd-vt-d-video"
+            data-src={item.trailer.type === "mp4" ? item.trailer.src : ""}
+            data-yt={item.trailer.type === "youtube" ? item.trailer.src : ""}
+            preload="none"
+            playsinline
+            controls
+            hidden
+          />
+          <button type="button" class="rd-vt-d-play" data-play>
+            <span class="rd-vt-d-play-tri" aria-hidden="true" />
+            <span class="rd-vt-d-play-txt">Trejler</span>
+          </button>
+        </>
+      )
+    }
+    <span class="rd-vt-d-crt" aria-hidden="true"></span>
+  </div>
+
+  <dl class="rd-vt-d-meta">
+    {
+      item.year && (
+        <div>
+          <dt>Godina</dt>
+          <dd>{item.year}.</dd>
+        </div>
+      )
+    }
+    {
+      item.country && (
+        <div>
+          <dt>Zemlja</dt>
+          <dd>{item.country}</dd>
+        </div>
+      )
+    }
+    {
+      item.director && (
+        <div>
+          <dt>Režija</dt>
+          <dd>{item.director}</dd>
+        </div>
+      )
+    }
+    <div>
+      <dt>Trajanje</dt>
+      <dd>{item.duration} min</dd>
+    </div>
+    <div>
+      <dt>Mjesto</dt>
+      <dd>{day.venue}</dd>
+    </div>
+  </dl>
+
+  <p class="rd-vt-d-syn">{item.synopsis}</p>
+
+  {
+    item.tags && (
+      <ul class="rd-vt-d-tags">
+        {item.tags.map((t) => (
+          <li>{t}</li>
+        ))}
+      </ul>
+    )
+  }
+</div>

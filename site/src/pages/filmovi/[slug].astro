@@ -1,0 +1,204 @@
+---
+// Jedan film. Ako je prikazan u dva izdanja, ovo je i dalje jedna stranica —
+// naslov je isti film, samo su ga gledali dvaput.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BrickGrid from "../../components/BrickGrid.astro";
+import SectionSymbols from "../../components/SectionSymbols.astro";
+import FilmCard from "../../components/FilmCard.astro";
+import { credits, filmGroups, editionOf } from "../../data/archive";
+import "../../styles/filmovi.css";
+
+export function getStaticPaths() {
+  return filmGroups.map((group) => ({
+    params: { slug: group.slug },
+    props: { group },
+  }));
+}
+
+const { group } = Astro.props;
+const { film, screenings, poster, trailer } = group;
+
+// „Još iz istog izdanja" — tri naslova, bez ovog istog.
+const sameEdition = filmGroups
+  .filter(
+    (other) =>
+      other.slug !== group.slug &&
+      other.screenings.some((s) => s.edition === film.edition),
+  )
+  .slice(0, 3);
+
+const meta = [
+  film.director && { label: "Režija", value: film.director },
+  film.production && { label: "Produkcija", value: film.production },
+  film.country && { label: "Zemlja", value: film.country },
+  film.year && { label: "Godina", value: `${film.year}.` },
+  film.duration && { label: "Trajanje", value: `${film.duration} min` },
+].filter(Boolean) as { label: string; value: string }[];
+---
+
+<BaseLayout
+  title={film.title}
+  description={film.synopsis?.slice(0, 160) ??
+    `${film.title} — prikazan na Rokumentarnim danima.`}
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-36 pb-16 w-full">
+        <a href="/filmovi/" class="rd-film-back reveal">
+          <span aria-hidden="true">←</span> Katalog
+        </a>
+
+        <div class="reveal flex flex-wrap items-center gap-3 mt-8 mb-6">
+          {
+            screenings.map((s) => {
+              const edition = editionOf(s.editionYear);
+              return (
+                <span class="rd-film-badge rd-film-badge-lg">
+                  RD{s.edition} · {s.editionYear}
+                  {edition?.dates && (
+                    <span class="rd-film-badge-when">{edition.dates}</span>
+                  )}
+                </span>
+              );
+            })
+          }
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(2.5rem,7vw,6rem)] leading-[0.9] tracking-tight"
+        >
+          {film.title}
+        </h1>
+        {
+          film.subtitle && (
+            <p class="reveal mt-3 font-display italic text-2xl text-bone/55">
+              {film.subtitle}
+            </p>
+          )
+        }
+        {
+          credits(film) && (
+            <p class="reveal mt-6 font-mono text-xs uppercase tracking-[0.25em] text-accent">
+              {credits(film)}
+            </p>
+          )
+        }
+      </div>
+    </section>
+
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-24">
+        <div class="grid md:grid-cols-12 gap-10 lg:gap-14 items-start">
+          <!-- EKRAN — plakat, pa trejler preko njega na klik. -->
+          <div class="md:col-span-7 reveal">
+            <div class="rd-film-screen" data-film-screen>
+              {
+                poster ? (
+                  <img
+                    class="rd-film-screen-img"
+                    src={poster}
+                    alt={`Plakat: ${film.title}`}
+                    loading="eager"
+                    decoding="async"
+                  />
+                ) : (
+                  <span class="rd-film-label rd-film-label-lg">
+                    <span class="rd-film-label-txt">{film.title}</span>
+                  </span>
+                )
+              }
+              <span class="rd-film-grain" aria-hidden="true"></span>
+
+              {
+                trailer && (
+                  <button
+                    type="button"
+                    class="rd-film-play"
+                    data-film-play={trailer}
+                  >
+                    <span class="rd-film-play-tri" aria-hidden="true" />
+                    <span class="rd-film-play-txt">Pusti trejler</span>
+                  </button>
+                )
+              }
+            </div>
+
+            {
+              !trailer && (
+                <p class="rd-film-note">
+                  Za ovaj naslov nemamo sačuvan trejler.
+                </p>
+              )
+            }
+          </div>
+
+          <div class="md:col-span-5 reveal">
+            <dl class="rd-film-meta">
+              {
+                meta.map((row) => (
+                  <div>
+                    <dt>{row.label}</dt>
+                    <dd>{row.value}</dd>
+                  </div>
+                ))
+              }
+            </dl>
+
+            {
+              film.synopsis && (
+                <p class="rd-film-body">{film.synopsis}</p>
+              )
+            }
+
+            {
+              screenings.some((s) => s.screening) && (
+                <div class="rd-film-screenings">
+                  <p class="rd-film-screenings-lbl">Prikazan</p>
+                  {screenings.map(
+                    (s) =>
+                      s.screening && (
+                        <p class="rd-film-screenings-row">
+                          <span>RD{s.edition} · {s.editionYear}</span>
+                          <span>{s.screening}</span>
+                        </p>
+                      ),
+                  )}
+                </div>
+              )
+            }
+          </div>
+        </div>
+
+        {
+          sameEdition.length > 0 && (
+            <div class="mt-24">
+              <p class="reveal font-mono text-xs uppercase tracking-[0.3em] text-accent mb-8">
+                Iz istog izdanja
+              </p>
+              <ul class="rd-film-grid">
+                {sameEdition.map((other) => (
+                  <FilmCard group={other} />
+                ))}
+              </ul>
+            </div>
+          )
+        }
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { wireFilmTrailer } from "../../scripts/filmovi-detail";
+    import { wireReveal } from "../../scripts/reveal";
+
+    wireReveal();
+    wireFilmTrailer();
+    document.addEventListener("astro:page-load", () => {
+      wireReveal();
+      wireFilmTrailer();
+    });
+  </script>
+</BaseLayout>

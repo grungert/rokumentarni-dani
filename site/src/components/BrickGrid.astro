@@ -36,7 +36,7 @@ const {
   interactive = false,
   paintColor = "#ffffff",
   cursorColor = "#39c7e2",
-  cursorIntensity = 51.5,
+  cursorIntensity = 46,
   variant = "home",
   loadAssemble = true,
   letterbox = false,
@@ -300,9 +300,9 @@ const config = JSON.stringify({
     // Runtime cursor-light intensity. Picks up persisted value from the
     // TransitionTweak slider, falls back to the prop, then to the locked
     // default. Live-updated via `rd:cursor-intensity` event.
-    let CURSOR_INTENSITY = cfg.cursorIntensity ?? 51.5;
+    let CURSOR_INTENSITY = cfg.cursorIntensity ?? 46;
     try {
-      const stored = localStorage.getItem("rd-cursor-intensity");
+      const stored = localStorage.getItem("rd-cursor-intensity-v2");
       if (stored) {
         const n = parseFloat(stored);
         if (isFinite(n) && n >= 0) CURSOR_INTENSITY = n;
@@ -721,9 +721,11 @@ const config = JSON.stringify({
     //   - tilt:   cubes within hover radius tilt their tops toward cursor
     // Persisted by TransitionTweak.astro and pushed in via `rd:mouse-fx`.
     type MouseFx = { trail: boolean; ripple: boolean; tilt: boolean };
-    const mouseFx: MouseFx = { trail: true, ripple: true, tilt: true };
+    // Kursor: podizanje kocki, meko svjetlo i talasi koji polaze iz pokreta.
+    // Trag i naginjanje ostaju isključeni — pale se u panelu.
+    const mouseFx: MouseFx = { trail: false, ripple: true, tilt: false };
     try {
-      const stored = localStorage.getItem("rd-mouse-fx");
+      const stored = localStorage.getItem("rd-mouse-fx-v2");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (typeof parsed.trail === "boolean") mouseFx.trail = parsed.trail;

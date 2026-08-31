@@ -1,0 +1,151 @@
+---
+// Katalog — svaki film koji je Rokumentarni dani ikad prikazao.
+//
+// Sedam izdanja, 79 projekcija, ali manje naslova: isti film prikazan
+// dvaput je jedan unos sa dvije oznake izdanja (v. filmGroups).
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BrickGrid from "../../components/BrickGrid.astro";
+import SectionSymbols from "../../components/SectionSymbols.astro";
+import FilmCard from "../../components/FilmCard.astro";
+import {
+  allCountries,
+  archiveFilms,
+  filmGroups,
+  filmYears,
+  editionOf,
+} from "../../data/archive";
+import "../../styles/filmovi.css";
+
+const withTrailer = filmGroups.filter((g) => g.trailer).length;
+const yearsSpan = `${Math.min(...filmYears)}–${Math.max(...filmYears)}`;
+---
+
+<BaseLayout
+  title="Filmovi"
+  description={`Katalog svih dokumentaraca prikazanih na Rokumentarnim danima ${yearsSpan} — ${filmGroups.length} naslova sa opisom, režijom i trejlerima.`}
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <!-- HERO ======================================================== -->
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-40 pb-12 w-full">
+        <div class="reveal flex items-center gap-4 mb-8">
+          <span class="h-px w-12 bg-accent"></span>
+          <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            Katalog · {yearsSpan}
+          </span>
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3.5rem,11vw,10rem)] leading-[0.85] tracking-tight mb-10"
+        >
+          Fil<em class="text-accent">movi</em>.
+        </h1>
+
+        <div class="grid md:grid-cols-12 gap-8 items-end">
+          <p
+            class="reveal md:col-span-7 font-display font-light text-2xl md:text-3xl text-bone/85 leading-snug"
+          >
+            Sve što smo prikazali od {Math.min(...filmYears)}. do danas —
+            {filmGroups.length} naslova kroz {filmYears.length} izdanja. Svaki sa
+            opisom onako kako je tada objavljen.
+          </p>
+          <p
+            class="reveal md:col-span-4 md:col-start-9 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/50 leading-relaxed"
+          >
+            {archiveFilms.length} projekcija<br />
+            {withTrailer} sa trejlerom<br />
+            {allCountries.length} zemalja
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- KATALOG ===================================================== -->
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-28">
+        <!-- Filter traka — lijepi se ispod hedera. -->
+        <div class="rd-film-bar reveal" data-film-bar>
+          <label class="rd-film-search">
+            <span class="sr-only">Pretraži filmove</span>
+            <input
+              type="search"
+              placeholder="Naslov, režija, zemlja…"
+              data-film-search
+              autocomplete="off"
+            />
+          </label>
+
+          <div class="rd-film-chips" role="group" aria-label="Izdanje">
+            <button
+              type="button"
+              class="rd-film-chip"
+              data-film-year="sve"
+              aria-pressed="true"
+            >
+              Sve
+            </button>
+            {
+              filmYears.map((year) => (
+                <button
+                  type="button"
+                  class="rd-film-chip"
+                  data-film-year={year}
+                  aria-pressed="false"
+                  title={editionOf(year)?.title}
+                >
+                  {year}
+                </button>
+              ))
+            }
+          </div>
+
+          <label class="rd-film-select">
+            <span class="sr-only">Zemlja</span>
+            <select data-film-country>
+              <option value="sve">Sve zemlje</option>
+              {allCountries.map((c) => <option value={c}>{c}</option>)}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            class="rd-film-chip"
+            data-film-trailer
+            aria-pressed="false"
+          >
+            Sa trejlerom
+          </button>
+
+          <p class="rd-film-count" aria-live="polite">
+            <span data-film-count>{filmGroups.length}</span> naslova
+          </p>
+        </div>
+
+        <ul class="rd-film-grid mt-10" data-film-grid>
+          {filmGroups.map((group) => <FilmCard group={group} />)}
+        </ul>
+
+        <p class="rd-film-empty" data-film-empty hidden>
+          Ništa ne odgovara pretrazi. <button type="button" data-film-reset>
+            Poništi filtere
+          </button>
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { wireFilmFilters } from "../../scripts/filmovi";
+    import { wireReveal } from "../../scripts/reveal";
+
+    wireReveal();
+    wireFilmFilters();
+    document.addEventListener("astro:page-load", () => {
+      wireReveal();
+      wireFilmFilters();
+    });
+  </script>
+</BaseLayout>

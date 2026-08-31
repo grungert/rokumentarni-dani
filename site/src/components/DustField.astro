@@ -211,7 +211,7 @@
     // burning GPU when invisible. Default is on.
     let dustEnabled = true;
     try {
-      const stored = localStorage.getItem("rd-mouse-fx");
+      const stored = localStorage.getItem("rd-mouse-fx-v2");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (typeof parsed.dust === "boolean") dustEnabled = parsed.dust;

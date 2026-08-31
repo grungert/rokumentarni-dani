@@ -218,6 +218,18 @@ const symbolsJson = JSON.stringify({ logo: logoCells });
       news: centred(textToCells("NEWS"), cols, rows),
       // Partners strip — tiny heart at native scale, "podržavaju festival".
       partners: centred(bitmapToCells(HEART), cols, rows),
+      // Editions timeline (O festivalu) — paint the roman numeral of the
+      // currently-visible card so the cubes spell out the edition number.
+      "year-I":   centred(scaleCells(textToCells("I"),   textScale * 2), cols, rows),
+      "year-II":  centred(scaleCells(textToCells("II"),  textScale * 2), cols, rows),
+      "year-III": centred(scaleCells(textToCells("III"), textScale * 2), cols, rows),
+      "year-IV":  centred(scaleCells(textToCells("IV"),  textScale * 2), cols, rows),
+      "year-V":   centred(scaleCells(textToCells("V"),   textScale * 2), cols, rows),
+      "year-VI":  centred(scaleCells(textToCells("VI"),  textScale * 2), cols, rows),
+      // Themes grid — simple wordmark.
+      themes: centred(scaleCells(textToCells("TEMA"), textScale), cols, rows),
+      // Team / credits section — "TIM" wordmark.
+      team: centred(scaleCells(textToCells("TIM"), textScale), cols, rows),
     };
   }
 

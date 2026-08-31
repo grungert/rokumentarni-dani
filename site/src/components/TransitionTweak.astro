@@ -9,8 +9,18 @@
 // `rd:transition-mode` custom event. Remove once a final pick is locked.
 ---
 
-<div class="rd-tx-panel" data-rd-tx-panel>
-  <p class="rd-tx-title">Transition</p>
+<div class="rd-tx-panel" data-rd-tx-panel hidden>
+  <p class="rd-tx-title">Kursor — gotove kombinacije</p>
+  <div class="rd-tx-row rd-tx-row-wrap">
+    <button type="button" data-preset="mirno">Mirno</button>
+    <button type="button" data-preset="trag">Trag</button>
+    <button type="button" data-preset="nagib">Nagib</button>
+    <button type="button" data-preset="talasi">Talasi</button>
+    <button type="button" data-preset="sve">Sve</button>
+    <button type="button" data-preset="bez">Bez</button>
+  </div>
+
+  <p class="rd-tx-title rd-tx-title-spaced">Transition</p>
   <div class="rd-tx-row">
     <button type="button" data-mode="wipe">Wipe</button>
     <button type="button" data-mode="disperse">Disperse</button>
@@ -48,10 +58,12 @@
   <div class="rd-tx-slider">
     <label>
       <span>Cursor light</span>
-      <output data-cursor-out>51</output>
+      <output data-cursor-out>46</output>
     </label>
-    <input type="range" data-cursor min="0" max="100" step="2" value="51" />
+    <input type="range" data-cursor min="0" max="100" step="2" value="46" />
   </div>
+
+  <p class="rd-tx-hint">Shift + F zatvara panel</p>
 </div>
 
 <style>
@@ -88,6 +100,22 @@
   .rd-tx-row {
     display: flex;
     gap: 4px;
+  }
+  .rd-tx-row-wrap {
+    flex-wrap: wrap;
+    max-width: 232px;
+  }
+  .rd-tx-panel[hidden] {
+    display: none;
+  }
+  .rd-tx-hint {
+    margin: 10px 0 0;
+    color: rgba(245, 241, 232, 0.35);
+    font-size: 8px;
+    letter-spacing: 0.16em;
+  }
+  :global(html.theme-light) .rd-tx-hint {
+    color: rgba(26, 26, 26, 0.45);
   }
   .rd-tx-row button {
     padding: 4px 8px;
@@ -164,10 +192,10 @@
 
 <script>
   const STORAGE_KEY = "rd-transition-mode";
-  const FX_KEY = "rd-mouse-fx";
+  const FX_KEY = "rd-mouse-fx-v2";
   const TILT_KEY = "rd-tilt-config";
   const OPACITY_KEY = "rd-cube-opacity";
-  const CURSOR_KEY = "rd-cursor-intensity";
+  const CURSOR_KEY = "rd-cursor-intensity-v2";
   type Mode = "wipe" | "disperse" | "glitch";
   type Fx = { trail: boolean; ripple: boolean; tilt: boolean; dust: boolean };
   type TiltCfg = { amount: number; falloff: number };
@@ -201,6 +229,16 @@
     );
   }
 
+  /* Gotove kombinacije — svaka postavlja i prekidače i jačinu svjetla. */
+  const PRESETS: Record<string, { fx: Omit<Fx, "dust">; cursor: number }> = {
+    mirno:  { fx: { trail: false, ripple: false, tilt: false }, cursor: 46 },
+    trag:   { fx: { trail: true,  ripple: false, tilt: false }, cursor: 46 },
+    nagib:  { fx: { trail: false, ripple: false, tilt: true  }, cursor: 46 },
+    talasi: { fx: { trail: false, ripple: true,  tilt: false }, cursor: 46 },
+    sve:    { fx: { trail: true,  ripple: true,  tilt: true  }, cursor: 56 },
+    bez:    { fx: { trail: false, ripple: false, tilt: false }, cursor: 0 },
+  };
+
   function readMode(): Mode {
     try {
       const v = localStorage.getItem(STORAGE_KEY);
@@ -210,7 +248,7 @@
   }
 
   function readFx(): Fx {
-    const def: Fx = { trail: true, ripple: true, tilt: true, dust: true };
+    const def: Fx = { trail: false, ripple: true, tilt: false, dust: true };
     try {
       const v = localStorage.getItem(FX_KEY);
       if (!v) return def;
@@ -297,7 +335,7 @@
         if (isFinite(n) && n >= 0 && n <= 200) return n;
       }
     } catch (_) {}
-    return 51;
+    return 46;
   }
 
   function applyCursor(v: number, opts: { persist?: boolean } = {}) {
@@ -384,6 +422,57 @@
     applyTilt(currentTilt, { persist: false });
     applyOpacity(currentOpacity, { persist: false });
     applyCursor(currentCursor, { persist: false });
+
+    // Preseti: postave sve odjednom i obilježe aktivno dugme.
+    function markPreset(name: string | null) {
+      document
+        .querySelectorAll<HTMLButtonElement>("[data-rd-tx-panel] [data-preset]")
+        .forEach((b) => b.classList.toggle("is-active", b.dataset.preset === name));
+    }
+
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-rd-tx-panel] [data-preset]")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const preset = PRESETS[btn.dataset.preset ?? ""];
+          if (!preset) return;
+          currentFx = { ...currentFx, ...preset.fx };
+          currentCursor = preset.cursor;
+          applyFx(currentFx);
+          applyCursor(currentCursor);
+          markPreset(btn.dataset.preset ?? null);
+        });
+      });
+
+    // Panel je alat za podešavanje, ne dio sajta: skriven je dok se ne
+    // otvori sa Shift + F ili adresom …?fx. Izbor se pamti.
+    const PANEL_KEY = "rd-fx-panel";
+    const panel = document.querySelector<HTMLElement>("[data-rd-tx-panel]");
+
+    function showPanel(on: boolean, persist = true) {
+      if (panel) panel.hidden = !on;
+      if (!persist) return;
+      try {
+        if (on) localStorage.setItem(PANEL_KEY, "1");
+        else localStorage.removeItem(PANEL_KEY);
+      } catch (_) {}
+    }
+
+    let open = false;
+    try {
+      open =
+        localStorage.getItem(PANEL_KEY) === "1" ||
+        new URLSearchParams(location.search).has("fx");
+    } catch (_) {}
+    showPanel(open, false);
+
+    document.addEventListener("keydown", (ev) => {
+      if (!ev.shiftKey || ev.key.toLowerCase() !== "f") return;
+      const el = document.activeElement;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      ev.preventDefault();
+      showPanel(!!panel?.hidden);
+    });
     wire();
   }
 

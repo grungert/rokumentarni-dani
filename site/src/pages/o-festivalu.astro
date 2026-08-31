@@ -1,0 +1,202 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import BrickGrid from "../components/BrickGrid.astro";
+import SectionSymbols from "../components/SectionSymbols.astro";
+import CassettePlayer from "../components/CassettePlayer.astro";
+
+// Team — names listed in the order the user provided. Roles to be added
+// later when known; for now the cards just credit the names.
+const team = [
+  "Dragan Lučić",
+  "Bojan Tešić",
+  "Dijana Elezović",
+  "Snežana Nikčević",
+  "Luka Rakojević",
+  "Đorđije Njunjić",
+  "Nikola Radenović",
+  "Petar Luburić",
+  "Pavić Radović",
+];
+---
+
+<BaseLayout
+  title="O festivalu"
+  description="Rokumentarni dani — festival dokumentarnog filma o muzici"
+>
+  <!-- Same backdrop language as the homepage: brick-grid canvas + the
+       scroll-driven cube glyphs. No channel HUD / flash / SMPTE bars. -->
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <!-- HERO ======================================================== -->
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-40 pb-24 w-full">
+        <div class="reveal flex items-center gap-4 mb-8">
+          <span class="h-px w-12 bg-accent"></span>
+          <span
+            class="font-mono text-xs uppercase tracking-[0.3em] text-accent"
+          >
+            O festivalu
+          </span>
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3.5rem,11vw,10rem)] leading-[0.85] tracking-tight mb-12"
+        >
+          Rokumentarni <em class="text-accent">dani</em>.
+        </h1>
+
+        <p
+          class="reveal font-display font-light text-3xl md:text-5xl text-bone/85 leading-[1.1] tracking-tight"
+        >
+          Festival filmsko-muzičkih ostvarenja — tematske večeri, razgovori
+          i radionice o moći muzike i načinima na koje je ona mijenjala
+          svijet.
+        </p>
+      </div>
+    </section>
+
+    <!-- ABOUT TEXT — general, evergreen story of the festival, synthesised
+         from what RD has actually done across editions (films + own
+         productions, concerts, DJ sets, exhibitions, panels, workshops). -->
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 py-24">
+        <div class="grid md:grid-cols-12 gap-8 lg:gap-12 items-start">
+          <!-- Visual column — interactive 3D cassette player. Sticky on
+               desktop so it stays beside the text as the visitor reads. -->
+          <div class="md:col-span-5 md:sticky md:top-28">
+            <p
+              class="reveal font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6"
+            >
+              Kratko o nama
+            </p>
+            <CassettePlayer class="reveal" />
+          </div>
+
+          <!-- Text column — narrower measure + smaller font for comfortable
+               reading. -->
+          <div
+            class="md:col-span-6 md:col-start-7 reveal space-y-6 text-base md:text-lg text-bone/80 leading-relaxed"
+          >
+          <p
+            class="first-letter:font-display first-letter:text-7xl first-letter:float-left first-letter:mr-3 first-letter:leading-[0.85] first-letter:text-accent"
+          >
+            Rokumentarni dani su festival dokumentarnog filma o muzici —
+            jedinstven u regionu. Rođen u Nikšiću, festival počiva na ideji da
+            muzika nije samo zvuk nego svjedočanstvo o svom vremenu: prostor
+            slobode, otpora i sjećanja. Film je njeno trajno pamćenje.
+          </p>
+          <p>
+            Svake godine biramo selekciju dokumentaraca — od regionalnih
+            premjera do klasika žanra — i dopunjavamo je sopstvenim
+            produkcijama o crnogorskim i ex-yu izvođačima. Oko filmova raste
+            mreža programa: koncerti i DJ setovi, izložbe od umjetničkih
+            plakata do stripa, berze vinila, Live Sessions snimci i podcast.
+            Nakon projekcija slijede razgovori sa autorima i gostima iz
+            regiona — jer priča o muzici ne završava sa odjavnom špicom.
+          </p>
+          <p>
+            Programe okupljamo oko tema koje muzika otvara — antiratne poruke,
+            položaj manjina, ženski glasovi u modernoj muzici, kontrakultura i
+            aktivizam. Iz Nikšića se festival širi na Podgoricu, Kotor,
+            Mojkovac i Risan, a kroz interaktivne radionice sa srednjoškolcima
+            razgovaramo o tome kako je muzika mijenjala svijet.
+          </p>
+          <p>
+            Ulaz na sve programe je besplatan. Vjerujemo da slobodan pristup
+            kulturi nije privilegija, već infrastruktura.
+          </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEAM ======================================================== -->
+    <section data-rd-cube-pattern="team">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32">
+        <div class="reveal flex items-end justify-between mb-12 flex-wrap gap-6">
+          <div>
+            <p
+              class="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-4"
+            >
+              Ekipa
+            </p>
+            <h2
+              class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
+            >
+              Ljudi iza
+              <em class="text-accent">festivala</em>.
+            </h2>
+          </div>
+          <p
+            class="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/55 max-w-xs"
+          >
+            Volonteri i organizatori koji nose festival kroz sva izdanja.
+          </p>
+        </div>
+
+        <!-- Names as a single flowing line that wraps — separated by the
+             site's pixel-cube glyph (same as the homepage marquee). Quiet
+             by default, accent only on hover. -->
+        <ul
+          class="reveal-stagger flex flex-wrap items-center gap-x-5 gap-y-3 max-w-4xl"
+        >
+          {
+            team.map((name, i) => (
+              <li class="flex items-center gap-5">
+                <span class="font-display font-light text-xl md:text-2xl leading-none text-bone/80 hover:text-accent transition-colors">
+                  {name}
+                </span>
+                {i < team.length - 1 && (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="6"
+                    height="6"
+                    viewBox="0 0 1 1"
+                    shape-rendering="crispEdges"
+                    class="text-accent/60 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <rect width="1" height="1" fill="currentColor" />
+                  </svg>
+                )}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Scroll-into-view reveals — same lightweight pattern the rest of the
+    // site uses. Re-runs on astro:page-load so view-transitions still work.
+    function wireReveal() {
+      const targets = document.querySelectorAll(".reveal, .reveal-stagger");
+      if (!targets.length) return;
+      const reduced =
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced || !("IntersectionObserver" in window)) {
+        targets.forEach((t) => t.classList.add("is-visible"));
+        return;
+      }
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: "0px 0px -60px 0px" },
+      );
+      targets.forEach((t) => io.observe(t));
+    }
+
+    wireReveal();
+    document.addEventListener("astro:page-load", wireReveal);
+  </script>
+</BaseLayout>

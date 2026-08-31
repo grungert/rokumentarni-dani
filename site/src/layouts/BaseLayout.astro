@@ -6,6 +6,7 @@ import SiteFooter from "../components/SiteFooter.astro";
 import ThemePanel from "../components/ThemePanel.astro";
 import VhsMode from "../components/VhsMode.astro";
 import DustField from "../components/DustField.astro";
+import TransitionTweak from "../components/TransitionTweak.astro";
 
 interface Props {
   title: string;
@@ -28,7 +29,7 @@ const fullTitle =
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Special+Elite&display=swap"
       rel="stylesheet"
     />
 
@@ -45,7 +46,9 @@ const fullTitle =
       } catch (_) {}
     </script>
   </head>
-  <body class="min-h-screen bg-ink text-bone grain">
+  <!-- bg-ink lives on <html> in global.css — leaving body transparent
+       so the BrickGrid canvas at `-z-10` shows through on every page. -->
+  <body class="min-h-screen text-bone grain">
     <!-- Floating dust/grain field — slow 3D drift behind content. -->
     <DustField />
 
@@ -60,6 +63,10 @@ const fullTitle =
 
     <!-- Konami code easter egg → VHS mode. ↑↑↓↓←→←→BA -->
     <VhsMode />
+
+    <!-- Panel za podešavanje efekata — skriven dok se ne otvori sa Shift + F
+         ili adresom …?fx. Izbaciti kad se efekti zaključaju. -->
+    <TransitionTweak />
 
     <!-- Pixel flicker overlay shown during route changes -->
     <div id="page-flicker" aria-hidden="true"></div>

@@ -1,0 +1,935 @@
+/* =====================================================================
+   IZLOG — mreža programa.
+
+   Kadar, naziv i trejler stoje na licu kartice — program se čita bez
+   ijednog klika. Ista pravila kao u videoteka.css — kartice ostaju tamne i u
+   light modu (omot kasete je predmet, ne UI), akcenat ide kroz
+   var(--color-accent) da prati temu iz ThemePanel-a.
+
+   Kartica je istovremeno .rd-vt-slot (videoteka.ts crta „uzeto" po njoj),
+   pa se dimenzije kičme sa police gase specifičnijim selektorom.
+   ===================================================================== */
+
+/* Glatko klizanje za skokove unutar strane (dani, rezultati filtera).
+   Stoji na dokumentu jer i Astro ClientRouter skroluje na hash sam — CSS
+   hvata i njegove pozive, ne samo naše. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ---------------------------------------------------------- BESPLATAN ULAZ */
+
+.rd-izlog-free {
+  display: inline-flex;
+  align-items: stretch;
+  margin-top: 4px;
+  border: 1px solid var(--color-accent);
+}
+
+.rd-izlog-free-tag {
+  padding: 13px 18px;
+  background: var(--color-accent);
+  /* Fiksno tamno slovo — akcenat se mijenja u ThemePanel-u, a mora ostati
+     čitljivo i na najsvjetlijoj boji koju korisnik izabere. */
+  color: #0a0a0a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.rd-izlog-free-txt {
+  padding: 13px 18px;
+  /* Podloga, jer kocke iz BrickGrid-a prolaze i ovuda. */
+  background: color-mix(in srgb, var(--color-ink) 85%, transparent);
+  backdrop-filter: blur(6px);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--color-bone);
+}
+
+/* ------------------------------------------------------------ DANI (SKOK) */
+
+.rd-izlog-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 40px;
+}
+
+.rd-izlog-daylink {
+  display: grid;
+  gap: 3px;
+  padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-bone) 18%, transparent);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.rd-izlog-daylink:hover,
+.rd-izlog-daylink:focus-visible {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.rd-izlog-daylink-name {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--color-bone);
+}
+
+.rd-izlog-daylink-date {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-bone) 62%, transparent);
+}
+
+/* ------------------------------------------------------------- FILTER TRAKA */
+
+.rd-izlog-bar {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 241, 232, 0.1);
+  background: rgba(10, 10, 10, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+html.theme-light .rd-izlog-bar {
+  background: rgba(245, 241, 232, 0.92);
+  border-color: rgba(26, 26, 26, 0.18);
+}
+
+.rd-izlog-bar-lbl {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-right: 4px;
+}
+
+.rd-izlog-chip {
+  padding: 7px 13px;
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  background: transparent;
+  color: color-mix(in srgb, var(--color-bone) 70%, transparent);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+html.theme-light .rd-izlog-chip {
+  border-color: rgba(26, 26, 26, 0.28);
+  color: color-mix(in srgb, var(--color-bone) 78%, transparent);
+}
+
+.rd-izlog-chip:hover {
+  color: var(--color-bone);
+  border-color: var(--k);
+}
+
+/* Izabran filter nosi boju svoje vrste — ista koja stoji na karticama. */
+.rd-izlog-chip[aria-pressed="true"] {
+  background: var(--k);
+  border-color: var(--k);
+  color: #0a0a0a;
+}
+
+.rd-izlog-chip-n {
+  opacity: 0.55;
+  margin-left: 7px;
+}
+
+.rd-izlog-bar-spacer {
+  flex: 1 1 auto;
+}
+
+.rd-izlog-empty {
+  padding: 60px 0;
+  text-align: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-bone) 62%, transparent);
+}
+
+/* Tastatura mora vidjeti gdje je. Akcenat, ne default plavi prsten. */
+.rd-izlog-chip:focus-visible,
+.rd-izlog-daylink:focus-visible,
+.rd-izlog-play:focus-visible,
+.rd-izlog-stop:focus-visible,
+.rd-izlog-more:focus-visible,
+.rd-izlog-take:focus-visible,
+.rd-izlog-titlebtn:focus-visible {
+  outline: 2px solid var(--k, var(--color-accent));
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- DAN */
+
+.rd-izlog-day {
+  /* Heder + filter traka + zaglavlje dana — sve troje stoji, pa skok na dan
+     mora da računa sa cijelim spratom. --rd-bar-h mjeri izlog.ts. */
+  scroll-margin-top: calc(64px + var(--rd-bar-h, 58px) + 8px);
+}
+
+.rd-izlog-day + .rd-izlog-day {
+  margin-top: 64px;
+}
+
+.rd-izlog-day[hidden] {
+  display: none;
+}
+
+.rd-izlog-dayhead {
+  /* Lijepi se odmah ispod filter trake i stoji dok traje taj dan — pa se
+     uvijek zna u kom si danu. Sljedeći dan ga gurne gore i preuzme mjesto,
+     jer sticky vrijedi samo unutar svoje <section>. */
+  position: sticky;
+  top: calc(64px + var(--rd-bar-h, 58px));
+  z-index: 20;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 14px 12px;
+  /* Ploča mora biti gotovo neprozirna — kartice prolaze ispod nje. */
+  background: color-mix(in srgb, var(--color-ink) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-bone) 14%, transparent);
+  margin-bottom: 26px;
+}
+
+.rd-izlog-daynum {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.rd-izlog-dayname {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 0.95;
+  color: var(--color-bone);
+  transition: font-size 0.2s ease;
+}
+
+/* Zalijepljeno zaglavlje je oznaka, ne naslov — naslov dana se skuplja na
+   veličinu ostalog teksta i traka postaje tanka. */
+.rd-izlog-dayhead {
+  transition: padding 0.2s ease;
+}
+
+.rd-izlog-dayhead.is-stuck {
+  padding: 8px 14px;
+}
+
+.rd-izlog-dayhead.is-stuck .rd-izlog-dayname {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-izlog-dayname,
+  .rd-izlog-dayhead {
+    transition: none;
+  }
+}
+
+.rd-izlog-daymeta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-bone) 62%, transparent);
+}
+
+/* Na svijetloj podlozi zaglavlje dana stoji preko šarene mreže kocki —
+   tamnija verzija akcenta i jači sivi da ostane čitljivo. */
+html.theme-light .rd-izlog-daynum {
+  color: var(--color-accent-deep, #8c4334);
+}
+
+html.theme-light .rd-izlog-daymeta,
+html.theme-light .rd-izlog-daylink-date {
+  color: color-mix(in srgb, var(--color-bone) 72%, transparent);
+}
+
+html.theme-light .rd-izlog-daylink {
+  border-color: color-mix(in srgb, var(--color-bone) 28%, transparent);
+  background: color-mix(in srgb, var(--color-ink) 72%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+html.theme-light .rd-izlog-dayhead {
+  background: color-mix(in srgb, var(--color-ink) 94%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-bone) 22%, transparent);
+}
+
+/* ---------------------------------------------------------------- MREŽA */
+
+.rd-izlog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 22px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Poništava geometriju kičme sa police (.rd-vt-slot). */
+.rd-izlog-grid .rd-izlog-card {
+  position: relative;
+  width: auto;
+  height: auto;
+  flex: initial;
+}
+
+.rd-izlog-grid .rd-izlog-card[hidden] {
+  display: none;
+}
+
+/* Ulazak i izlazak pri filtriranju vodi izlog.ts (WAAPI + FLIP), da kartice
+   koje ostaju kliznu na nova mjesta umjesto da preskoče. */
+
+/* Prvo pojavljivanje: kartice ulaze u talasu, redom u danu. --i postavlja
+   ProgramPoster, .reveal/.is-visible pali reveal.ts. */
+@media (prefers-reduced-motion: no-preference) {
+  .rd-izlog-card.reveal {
+    opacity: 0;
+    transform: translateY(26px) scale(0.985);
+    transition:
+      opacity 0.62s ease-out,
+      transform 0.62s cubic-bezier(0.2, 0, 0.1, 1);
+  }
+
+  .rd-izlog-card.reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Redoslijed vrijedi za sve što nosi --i na ovoj strani (hero, kartice). */
+  .reveal {
+    transition-delay: calc(var(--i, 0) * 60ms);
+  }
+}
+
+/* --------------------------------------------------------------- KARTICA */
+
+/* Boje vrsta programa — jedno mjesto za karticu i za čip u filteru, da se
+   filter i mreža uvijek slažu. Film ide na akcenat teme. */
+.rd-izlog-card,
+.rd-izlog-chip {
+  --k: var(--color-accent);
+}
+
+.rd-izlog-card[data-kind="videodrom"],
+.rd-izlog-chip[data-filter-kind="videodrom"] { --k: #7fd4c1; }
+
+.rd-izlog-card[data-kind="koncert"],
+.rd-izlog-chip[data-filter-kind="koncert"]   { --k: #f0c419; }
+
+.rd-izlog-card[data-kind="tribina"],
+.rd-izlog-chip[data-filter-kind="tribina"]   { --k: #9aa8ff; }
+
+.rd-izlog-card[data-kind="rezerva"],
+.rd-izlog-chip[data-filter-kind="rezerva"]   { --k: #8a8378; }
+
+.rd-izlog-box {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(245, 241, 232, 0.1);
+  border-radius: 3px;
+  /* Providna kutija, kao filter traka — kocke iz BrickGrid-a se naziru kroz
+     dio sa opisom. Tamna ostaje i u light modu: tekst na kartici je svijetao,
+     a kaseta je predmet, ne UI. */
+  background: rgba(14, 14, 14, 0.72);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 30px -26px #000;
+  transition: border-color 0.25s ease, transform 0.35s cubic-bezier(0.2, 0, 0.1, 1),
+    box-shadow 0.35s ease;
+}
+
+.rd-izlog-card:hover .rd-izlog-box {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--k) 55%, transparent);
+  box-shadow: 0 26px 40px -26px #000;
+}
+
+/* Light mode: providnost od 72% preko svijetle strane daje prljavo sivo i
+   guta kontrast tekstu. Kutija ostaje tamna — samo se malo više zatvori,
+   dobije jasnu ivicu i dublju sjenku da se odvoji od papira. */
+html.theme-light .rd-izlog-box {
+  background: rgba(12, 12, 12, 0.94);
+  border-color: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 22px 38px -24px rgba(0, 0, 0, 0.55);
+}
+
+html.theme-light .rd-izlog-card:hover .rd-izlog-box {
+  box-shadow: 0 30px 48px -22px rgba(0, 0, 0, 0.6);
+}
+
+/* Prazno stanje i sitni natpisi na svijetloj podlozi trpe od providnosti. */
+html.theme-light .rd-izlog-empty {
+  color: color-mix(in srgb, var(--color-bone) 72%, transparent);
+}
+
+.rd-izlog-card.is-playing .rd-izlog-box {
+  border-color: var(--k);
+}
+
+.rd-izlog-card.is-clash .rd-izlog-box {
+  border-color: #e5484d;
+}
+
+/* Dva uzeta termina se sudaraju — kartica to kaže, ne samo ivicom. */
+.rd-izlog-clash {
+  display: none;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-left: 2px solid #e5484d;
+  background: rgba(229, 72, 77, 0.1);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ff9ea1;
+}
+
+.rd-izlog-card.is-clash .rd-izlog-clash {
+  display: block;
+}
+
+/* ----------------------------------------------------------------- EKRAN */
+
+.rd-izlog-screen {
+  position: relative;
+  aspect-ratio: 539 / 303;
+  background: #000;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(245, 241, 232, 0.09);
+}
+
+.rd-izlog-still,
+.rd-izlog-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rd-izlog-still {
+  filter: grayscale(1) contrast(1.06) brightness(0.82);
+  transform: scale(1.02);
+  transition: filter 0.5s ease, transform 0.7s cubic-bezier(0.2, 0, 0.1, 1),
+    opacity 0.35s ease;
+}
+
+.rd-izlog-card:hover .rd-izlog-still {
+  filter: grayscale(0.25) contrast(1.04) brightness(0.95);
+  transform: scale(1.06);
+}
+
+/* Preview i trejler dijele isti <video>; sa zvukom ide contain, da se
+   kadar ne siječe kad korisnik zaista gleda. */
+.rd-izlog-video {
+  background: #000;
+}
+
+.rd-izlog-card.is-playing .rd-izlog-video {
+  object-fit: contain;
+}
+
+.rd-izlog-card.is-playing .rd-izlog-still,
+.rd-izlog-card.is-preview .rd-izlog-still {
+  opacity: 0;
+}
+
+.rd-izlog-crt {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background-image: url("/textures/crt.png");
+  background-size: 3px 3px;
+  opacity: 0.26;
+  mix-blend-mode: overlay;
+}
+
+/* Traka smetnji koja projuri kroz kadar kad video krene — VHS tracking. */
+.rd-izlog-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  top: -30px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(245, 241, 232, 0.16) 40%,
+    rgba(245, 241, 232, 0.05) 60%,
+    transparent
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rd-izlog-card.is-preview .rd-izlog-track,
+  .rd-izlog-card.is-playing .rd-izlog-track {
+    animation: rd-izlog-tracking 2.6s linear infinite;
+  }
+}
+
+@keyframes rd-izlog-tracking {
+  0%   { top: -30px; opacity: 0; }
+  8%   { opacity: 0.9; }
+  92%  { opacity: 0.9; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* OSD — natpisi kao na ekranu videorekordera. */
+.rd-izlog-osd {
+  position: absolute;
+  z-index: 5;
+  padding: 4px 7px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.62);
+  color: #f5f1e8;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.rd-izlog-osd-time {
+  top: 10px;
+  left: 10px;
+}
+
+.rd-izlog-osd-kind {
+  top: 10px;
+  right: 10px;
+  background: color-mix(in srgb, var(--k) 88%, #000);
+  color: #0a0a0a;
+}
+
+.rd-izlog-osd-play {
+  bottom: 10px;
+  left: 10px;
+  display: none;
+  color: var(--k);
+}
+
+.rd-izlog-card.is-playing .rd-izlog-osd-play {
+  display: block;
+  animation: rd-izlog-blink 1.6s steps(1) infinite;
+}
+
+@keyframes rd-izlog-blink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0.25; }
+}
+
+/* Oznaka „u listi" — kartonski jezičak koji viri iz vrha kutije, kao karton
+   člana iz kutije kasete. Ne dira kadar, a u mreži se vidi iz aviona. */
+.rd-izlog-mark {
+  position: absolute;
+  z-index: 2;
+  top: 1px;
+  left: 18px;
+  /* Sjedi preko vrha kadra dok je sakriven — ne smije da otima klik. */
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 5px;
+  border-radius: 2px 2px 0 0;
+  background: var(--k);
+  color: #0a0a0a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  line-height: 1;
+  box-shadow: 0 -6px 12px -8px rgba(0, 0, 0, 0.9);
+  /* Sakriven: leži iza kutije. Dodavanjem izlazi gore. */
+  transform: translateY(0);
+  opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.2, 0, 0.1, 1), opacity 0.16s ease;
+}
+
+.rd-izlog-mark-tick {
+  font-size: 0.62rem;
+  letter-spacing: 0;
+}
+
+.rd-izlog-card.is-taken .rd-izlog-mark {
+  transform: translateY(-100%);
+  opacity: 1;
+}
+
+/* Kopija kadra koja leti u člansku kartu — pravi je i uklanja izlog.ts. */
+.rd-izlog-fly {
+  position: fixed;
+  z-index: 70;
+  margin: 0;
+  object-fit: cover;
+  border: 2px solid var(--k, var(--color-accent));
+  border-radius: 2px;
+  filter: grayscale(1) contrast(1.06) brightness(0.95);
+  /* Sjaj u boji vrste — kopija se ne gubi u tamnoj pozadini dok leti. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--k, var(--color-accent)) 45%, transparent),
+    0 0 34px -4px color-mix(in srgb, var(--k, var(--color-accent)) 65%, transparent),
+    0 20px 40px -20px #000;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Bljesak u trenutku dodavanja — pali ga izlog.ts, traje jednom. */
+.rd-izlog-card.is-flash .rd-izlog-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--k) 45%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 300% 100%;
+  animation: rd-izlog-sweep 0.62s ease-out;
+}
+
+@keyframes rd-izlog-sweep {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-izlog-mark {
+    transition: none;
+  }
+
+  .rd-izlog-card.is-flash .rd-izlog-screen::after {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------- DUGMAD NA EKRANU */
+
+.rd-izlog-play {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: grid;
+  gap: 9px;
+  place-content: center;
+  justify-items: center;
+  border: 0;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.3);
+  color: #f5f1e8;
+  transition: background 0.25s ease, opacity 0.25s ease;
+}
+
+.rd-izlog-play:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.rd-izlog-card.is-playing .rd-izlog-play {
+  display: none;
+}
+
+.rd-izlog-play-tri {
+  width: 0;
+  height: 0;
+  border-left: 20px solid var(--k);
+  border-top: 13px solid transparent;
+  border-bottom: 13px solid transparent;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+  transition: transform 0.25s ease;
+}
+
+.rd-izlog-play:hover .rd-izlog-play-tri {
+  transform: scale(1.18);
+}
+
+.rd-izlog-play-txt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.rd-izlog-stop {
+  position: absolute;
+  z-index: 8;
+  right: 10px;
+  bottom: 10px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(245, 241, 232, 0.3);
+  background: rgba(0, 0, 0, 0.65);
+  color: #f5f1e8;
+  font-size: 0.6rem;
+  cursor: pointer;
+}
+
+.rd-izlog-stop:hover {
+  border-color: var(--k);
+  color: var(--k);
+}
+
+.rd-izlog-notrailer {
+  position: absolute;
+  z-index: 5;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 7px;
+  background: rgba(0, 0, 0, 0.62);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.66);
+}
+
+/* Bez trejlera nema ni scrima — kadar tad nosi karticu sam, pa ga malo
+   spustimo da naslov ostane prvi na oku. */
+.rd-izlog-card:not(:has(.rd-izlog-play)) .rd-izlog-still {
+  filter: grayscale(1) contrast(1.06) brightness(0.7);
+}
+
+/* ------------------------------------------------------------ NALJEPNICA */
+
+.rd-izlog-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 6px;
+  padding: 18px 18px 16px;
+  border-top: 2px solid var(--k);
+}
+
+.rd-izlog-cat {
+  display: flex;
+  gap: 7px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.58);
+}
+
+.rd-izlog-title {
+  margin: 2px 0 0;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: 1.65rem;
+  line-height: 1.05;
+  color: #f5f1e8;
+}
+
+.rd-izlog-titlebtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background-image: linear-gradient(var(--k), var(--k));
+  background-size: 0 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 0.4s ease, color 0.3s ease;
+}
+
+.rd-izlog-titlebtn:hover {
+  background-size: 100% 1px;
+  color: var(--k);
+}
+
+.rd-izlog-orig {
+  font-family: "Cormorant Garamond", serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: rgba(245, 241, 232, 0.62);
+}
+
+.rd-izlog-credit {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.68);
+}
+
+.rd-izlog-syn {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: rgba(245, 241, 232, 0.72);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rd-izlog-actions {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rd-izlog-more {
+  padding: 9px 14px;
+  border: 1px solid rgba(245, 241, 232, 0.2);
+  background: transparent;
+  color: rgba(245, 241, 232, 0.75);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.rd-izlog-more:hover {
+  border-color: var(--k);
+  color: var(--k);
+}
+
+/* Dugme za listu je jedan znak: „+" prije, „✓" poslije. Tekst nosi title i
+   sr-only, jer natpis u kartici otima pažnju slici i naslovu. */
+.rd-izlog-take {
+  display: inline-grid;
+  place-items: center;
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(245, 241, 232, 0.2);
+  background: transparent;
+  color: rgba(245, 241, 232, 0.75);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.rd-izlog-take:hover {
+  border-color: var(--k);
+  color: var(--k);
+}
+
+.rd-izlog-card.is-taken .rd-izlog-take {
+  background: var(--k);
+  border-color: var(--k);
+  color: #0a0a0a;
+}
+
+.rd-izlog-card.is-taken .rd-izlog-take:hover {
+  background: transparent;
+  color: var(--k);
+}
+
+.rd-izlog-take .rd-vt-quick-glyph {
+  font-size: 0.95rem;
+}
+
+/* ------------------------------------------------------------------ MOBILNO */
+
+@media (max-width: 640px) {
+  .rd-izlog-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .rd-izlog-bar {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  /* Na uskom ekranu zalijepljena traka nosi samo dan i datum — mjesto i
+     zbir minuta ostaju u zaglavlju dok je ono slobodno. */
+  .rd-izlog-dayhead.is-stuck {
+    gap: 10px;
+  }
+
+  .rd-izlog-dayhead.is-stuck .rd-izlog-daymeta {
+    display: none;
+  }
+
+  .rd-izlog-days {
+    gap: 6px;
+  }
+
+  .rd-izlog-daylink {
+    padding: 8px 12px;
+  }
+
+  .rd-izlog-chip {
+    padding: 6px 10px;
+    font-size: 0.53rem;
+    letter-spacing: 0.14em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-izlog-box,
+  .rd-izlog-still {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------- BROJAČ NA KARTI */
+
+/* Poskok brojača — potvrda da je klik na kartici stigao do liste u uglu. */
+.rd-vt-member-count.is-bump {
+  animation: rd-izlog-bump 0.45s cubic-bezier(0.2, 0, 0.1, 1);
+}
+
+@keyframes rd-izlog-bump {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-vt-member-count.is-bump {
+    animation: none;
+  }
+}

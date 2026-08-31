@@ -1,0 +1,150 @@
+---
+// Jedna stavka programa kao VHS omot okrenut licem napolje.
+//
+// Odmah je vidljivo troje: still, naziv i trejler. Trejler ima dva nivoa —
+// nijemi preview na hover (učitava se tek tad) i pravo puštanje sa zvukom i
+// kontrolama na klik. Puni opis živi u omotu, pa kartica nosi i sakriveni
+// ProgramDetail koji se klonira u <dialog>.
+//
+// <li> namjerno nosi i klasu .rd-vt-slot: videoteka.ts po njoj crta stanje
+// „uzeto" i članska karta radi bez ijedne nove linije logike.
+import ProgramDetail from "./ProgramDetail.astro";
+import { kindLabel, type ProgramDay, type ProgramItem } from "../data/program";
+
+interface Props {
+  item: ProgramItem;
+  day: ProgramDay;
+  /** Mjesto u danu — ulazi u --i, pa kartice ulaze u talasu. */
+  index?: number;
+}
+const { item, day, index = 0 } = Astro.props;
+
+const credits = [item.director, item.country, item.year ? `${item.year}.` : null]
+  .filter(Boolean)
+  .join(" · ");
+---
+
+<li
+  class="rd-izlog-card rd-vt-slot reveal"
+  style={`--i:${Math.min(index, 7)}`}
+  data-id={item.id}
+  data-day={day.id}
+  data-kind={item.kind}
+  data-date={day.date}
+  data-start={item.start ?? ""}
+  data-duration={item.duration}
+>
+  <article class="rd-izlog-box">
+    <!-- EKRAN — still, pa preview, pa trejler preko njega. -->
+    <div class="rd-izlog-screen" data-screen>
+      <img
+        class="rd-izlog-still"
+        src={item.still}
+        alt={`Kadar iz: ${item.title}`}
+        loading="lazy"
+        decoding="async"
+        width="539"
+        height="303"
+      />
+
+      {
+        item.trailer && (
+          <video
+            class="rd-izlog-video"
+            data-src={item.trailer.type === "mp4" ? item.trailer.src : ""}
+            data-yt={item.trailer.type === "youtube" ? item.trailer.src : ""}
+            preload="none"
+            playsinline
+            loop
+            muted
+            hidden
+          />
+        )
+      }
+
+      <span class="rd-izlog-crt" aria-hidden="true"></span>
+      <span class="rd-izlog-track" aria-hidden="true"></span>
+
+      <span class="rd-izlog-osd rd-izlog-osd-time" aria-hidden="true">
+        {item.start ? `${item.start}–${item.end}` : "REZ"}
+      </span>
+      <span class="rd-izlog-osd rd-izlog-osd-kind" aria-hidden="true">
+        {kindLabel[item.kind]}
+      </span>
+      <span class="rd-izlog-osd rd-izlog-osd-play" aria-hidden="true">
+        &#9658; Play
+      </span>
+
+      {
+        item.trailer ? (
+          <>
+            <button type="button" class="rd-izlog-play" data-izlog-play>
+              <span class="rd-izlog-play-tri" aria-hidden="true" />
+              <span class="rd-izlog-play-txt">Trejler</span>
+              <span class="sr-only">— {item.title}</span>
+            </button>
+            <button type="button" class="rd-izlog-stop" data-izlog-stop hidden>
+              <span aria-hidden="true">&#9632;</span>
+              <span class="sr-only">Zaustavi trejler — {item.title}</span>
+            </button>
+          </>
+        ) : (
+          <span class="rd-izlog-notrailer">Bez trejlera</span>
+        )
+      }
+    </div>
+
+    <!-- NALJEPNICA — naziv i osnovni podaci, uvijek vidljivi. -->
+    <div class="rd-izlog-body">
+      <p class="rd-izlog-cat">
+        <span>{item.cat}</span>
+        <span class="rd-izlog-sep" aria-hidden="true">·</span>
+        <span>{item.duration}&#8242;</span>
+      </p>
+
+      <h3 class="rd-izlog-title">
+        <button type="button" class="rd-izlog-titlebtn" data-open={item.id}>
+          {item.title}
+        </button>
+      </h3>
+
+      {item.origTitle && <p class="rd-izlog-orig">{item.origTitle}</p>}
+      {credits && <p class="rd-izlog-credit">{credits}</p>}
+
+      <p class="rd-izlog-syn">{item.synopsis}</p>
+
+      {/* Vidi se tek kad videoteka.ts označi sudar sa drugim uzetim terminom. */}
+      <p class="rd-izlog-clash" aria-live="polite">
+        Preklapa se sa drugim terminom na tvojoj karti.
+      </p>
+
+      <div class="rd-izlog-actions">
+        <button type="button" class="rd-izlog-more" data-open={item.id}>
+          Info
+        </button>
+
+        <button
+          type="button"
+          class="rd-izlog-take"
+          data-toggle={item.id}
+          aria-pressed="false"
+          title="Dodaj u listu"
+        >
+          <span class="rd-vt-quick-glyph" aria-hidden="true">+</span>
+          <span class="sr-only">Dodaj u listu — {item.title}</span>
+        </button>
+      </div>
+    </div>
+    <!-- Kartonski jezičak koji viri iz vrha kutije kad je naslov u listi —
+         pali ga videoteka.ts preko .is-taken. Stoji izvan .rd-izlog-box jer
+         kutija siječe sve što izađe iz okvira. -->
+  </article>
+
+  <span class="rd-izlog-mark" aria-hidden="true">
+    <span class="rd-izlog-mark-tick">&#10003;</span>
+    <span class="rd-izlog-mark-txt">U listi</span>
+  </span>
+
+  <!-- Omot — sakriven, klonira se u <dialog> na otvaranje. -->
+  <ProgramDetail item={item} day={day} />
+</li>

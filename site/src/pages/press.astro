@@ -1,0 +1,106 @@
+---
+// Press — šta su mediji pisali.
+//
+// Sadržaj je do sada stajao na /sample-page/, sa WordPress slugom i bez
+// ijedne veze ka njemu. Ovdje dobija adresu i oblik, i kaže otvoreno šta je
+// odakle: većina je iz 2017, nekoliko je nađeno naknadno pretragom weba.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import BrickGrid from "../components/BrickGrid.astro";
+import SectionSymbols from "../components/SectionSymbols.astro";
+import { allPress } from "../data/press";
+import "../styles/press.css";
+
+// Grupisano po redakciji — 18 redakcija je čitljivije od 30 redova u nizu.
+const byOutlet = new Map<string, typeof allPress>();
+for (const link of allPress) {
+  const list = byOutlet.get(link.outlet) ?? [];
+  list.push(link);
+  byOutlet.set(link.outlet, list);
+}
+
+const outlets = [...byOutlet.entries()].sort(
+  (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]),
+);
+---
+
+<BaseLayout
+  title="Press"
+  description="Šta su mediji pisali o Rokumentarnim danima — arhiva objava iz 2017. godine."
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-40 pb-14 w-full">
+        <div class="reveal flex items-center gap-4 mb-8">
+          <span class="h-px w-12 bg-accent"></span>
+          <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            Press · {allPress.length} objava
+          </span>
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3.5rem,11vw,10rem)] leading-[0.85] tracking-tight mb-10"
+        >
+          Pi<em class="text-accent">sali</em> su.
+        </h1>
+
+        <p
+          class="reveal font-display font-light text-2xl md:text-3xl text-bone/85 leading-snug max-w-3xl"
+        >
+          {allPress.length} objava u {outlets.length} redakcija, iz regiona i
+          Crne Gore.
+        </p>
+
+        <p class="rd-press-note reveal">
+          Najveći dio spiska sačuvan je sa starog sajta i pokriva prvo
+          izdanje, 2017 — tada naslovi nisu bili zapisani, samo adrese, pa su
+          ovdje izvedeni iz njih. Adrese su tadašnje i dio njih vjerovatno
+          više ne radi; ostavljamo ih jer su zapis o tome ko je pratio
+          festival. Nekoliko kasnijih objava dodato je naknadno, sa pravim
+          naslovima.
+        </p>
+      </div>
+    </section>
+
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32">
+        <ul class="rd-press-list">
+          {
+            outlets.map(([outlet, links]) => (
+              <li class="rd-press-outlet reveal">
+                <p class="rd-press-name">
+                  {outlet}
+                  <span class="rd-press-n">{links.length}</span>
+                </p>
+
+                <ul class="rd-press-links">
+                  {links.map((link) => (
+                    <li>
+                      <a href={link.url} rel="noopener nofollow">
+                        <span class="rd-press-label">
+                          {link.label || "objava"}
+                          {link.year && (
+                            <span class="rd-press-year">{link.year}.</span>
+                          )}
+                        </span>
+                        <span class="rd-press-arrow" aria-hidden="true">↗</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { wireReveal } from "../scripts/reveal";
+    wireReveal();
+    document.addEventListener("astro:page-load", wireReveal);
+  </script>
+</BaseLayout>

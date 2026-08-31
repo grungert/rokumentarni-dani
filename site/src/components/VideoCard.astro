@@ -1,0 +1,38 @@
+---
+// Jedan snimak — sličica sa YouTube-a, iframe tek na klik.
+//
+// Do klika stranica ne dodiruje Google: sličica ide sa i.ytimg.com, a
+// youtube-nocookie iframe nastaje tek kad neko zaista hoće da gleda.
+import type { Video } from "../data/produkcija";
+
+interface Props {
+  video: Video;
+  /** Oznaka u uglu — „Live Sessions" ili „Premotavanje". */
+  tag: string;
+}
+const { video, tag } = Astro.props;
+---
+
+<li class="rd-vid reveal">
+  <div class="rd-vid-frame" data-video={video.id}>
+    <img
+      class="rd-vid-thumb"
+      src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      width="480"
+      height="360"
+    />
+    <span class="rd-vid-grain" aria-hidden="true"></span>
+    <span class="rd-vid-tag">{tag}</span>
+
+    <button type="button" class="rd-vid-play" data-video-play={video.id}>
+      <span class="rd-vid-tri" aria-hidden="true"></span>
+      <span class="sr-only">Pusti — {video.artist}</span>
+    </button>
+  </div>
+
+  <h3 class="rd-vid-artist">{video.artist}</h3>
+  <p class="rd-vid-title">{video.title}</p>
+</li>

@@ -1,0 +1,129 @@
+---
+// Arhiva — sedam izdanja na jednoj traci.
+//
+// Ovo je jedino mjesto gdje se sve troje spaja: satnica, filmovi i
+// fotografije jednog izdanja. Svako izdanje kaže i šta ima i šta nema —
+// prazno polje je podatak o arhivi, ne propust u dizajnu.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BrickGrid from "../../components/BrickGrid.astro";
+import SectionSymbols from "../../components/SectionSymbols.astro";
+import { archiveFilms, editions, statsOfEdition } from "../../data/archive";
+import { photoEditions } from "../../data/archive/photos-view";
+import "../../styles/arhiva.css";
+
+const photosByEdition = new Map(photoEditions.map((e) => [e.edition, e.total]));
+
+const rows = editions
+  .map((edition) => ({
+    edition,
+    stats: statsOfEdition(edition.n),
+    photos: photosByEdition.get(edition.n) ?? 0,
+  }))
+  .reverse();
+
+const totalPhotos = [...photosByEdition.values()].reduce((a, b) => a + b, 0);
+---
+
+<BaseLayout
+  title="Arhiva"
+  description="Sedam izdanja Rokumentarnih dana, 2017–2023 — satnice, filmovi i fotografije svakog izdanja na jednom mjestu."
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-40 pb-14 w-full">
+        <div class="reveal flex items-center gap-4 mb-8">
+          <span class="h-px w-12 bg-accent"></span>
+          <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            2017–2023
+          </span>
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3.5rem,11vw,10rem)] leading-[0.85] tracking-tight mb-10"
+        >
+          Ar<em class="text-accent">hiva</em>.
+        </h1>
+
+        <div class="grid md:grid-cols-12 gap-8 items-end">
+          <p
+            class="reveal md:col-span-7 font-display font-light text-2xl md:text-3xl text-bone/85 leading-snug"
+          >
+            Sedam izdanja, sve što je prikazano i sve što je snimljeno. Svako
+            izdanje ima svoju satnicu, selekciju filmova i — gdje ih ima —
+            fotografije.
+          </p>
+          <p
+            class="reveal md:col-span-4 md:col-start-9 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/50 leading-relaxed"
+          >
+            {editions.length} izdanja<br />
+            {archiveFilms.length} projekcija<br />
+            {totalPhotos} fotografija
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32">
+        <ol class="rd-arh-list">
+          {
+            rows.map(({ edition, stats, photos }) => (
+              <li class="rd-arh-row reveal">
+                <a href={`/arhiva/${edition.slug}/`} class="rd-arh-link">
+                  <p class="rd-arh-year">{edition.year}</p>
+
+                  <div class="rd-arh-main">
+                    <p class="rd-arh-tag">RD{edition.n}</p>
+                    <h2 class="rd-arh-title">
+                      {edition.slogan ?? edition.title}
+                    </h2>
+                    <p class="rd-arh-when">
+                      {edition.dates}
+                      <span aria-hidden="true"> · </span>
+                      {edition.cities.join(", ")}
+                    </p>
+                  </div>
+
+                  <ul class="rd-arh-stats">
+                    <li>
+                      <b>{stats.films}</b> filmova
+                    </li>
+                    <li class={stats.days ? "" : "is-empty"}>
+                      {stats.days ? (
+                        <>
+                          <b>{stats.days}</b> dana satnice
+                        </>
+                      ) : (
+                        "bez satnice"
+                      )}
+                    </li>
+                    <li class={photos ? "" : "is-empty"}>
+                      {photos ? (
+                        <>
+                          <b>{photos}</b> fotografija
+                        </>
+                      ) : (
+                        "bez fotografija"
+                      )}
+                    </li>
+                  </ul>
+
+                  <span class="rd-arh-go" aria-hidden="true">→</span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { wireReveal } from "../../scripts/reveal";
+    wireReveal();
+    document.addEventListener("astro:page-load", wireReveal);
+  </script>
+</BaseLayout>

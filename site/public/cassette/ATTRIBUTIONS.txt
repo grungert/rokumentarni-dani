@@ -1,0 +1,20 @@
+Cassette player assets — attributions
+=====================================
+
+Music (songs/): Rokumentarni dani — Live Sessions recordings.
+  - Anja Zagorac — Gruv (Smanji bas!)
+  - Autogeni trening — Koliko ljudi treba još da umre
+  - Bacili & Bellerophontes — Rime i razlog
+  - Big Do — Sloboda govora
+  (Converted from the original .m4a masters to mp3.)
+
+Tape sound effects (sounds/click, rewind, fforward, switch):
+  "Tape Recorder.wav" by Pogotron — Freesound.org
+  https://freesound.org/people/Pogotron/sounds/61075/
+
+Original cassette player concept + tape SFX packaging:
+  "Old School Cassette Player with HTML5 Audio" by Codrops (MIT)
+  https://tympanus.net/codrops/2012/07/12/old-school-cassette-player-with-html5-audio/
+
+The cassette on the site is an original CSS reskin; only the tape sound
+effects are reused from the Codrops pack. The music is the festival's own.

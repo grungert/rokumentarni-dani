@@ -1,0 +1,65 @@
+---
+// Kontakt-kopija jednog dana.
+//
+// Kadrovi su uniformni jer WP-ovi izrezi 345x198 već jesu tvrdo isječeni na
+// isti odnos — isto kao na pravoj kontakt-kopiji, gdje svi kadrovi stoje u
+// istoj rešetki bez obzira kako je slika komponovana. Puna slika, neisječena,
+// vidi se tek u projekciji (lightbox).
+import { photoSrcset, photoThumb, type PhotoDay } from "../data/archive/photos-view";
+
+interface Props {
+  day: PhotoDay;
+  year: number;
+  /** Redni broj prve fotografije u cijelom izdanju — numeracija kadrova teče. */
+  offset: number;
+}
+const { day, year, offset } = Astro.props;
+---
+
+<section class="rd-cs" id={`dan-${day.n}`}>
+  <header class="rd-cs-head reveal">
+    <h2 class="rd-cs-day">{day.label}</h2>
+    <p class="rd-cs-count">{day.photos.length} kadrova</p>
+    <span class="rd-cs-rule" aria-hidden="true"></span>
+    <p class="rd-cs-roll">RD{year === 2017 ? 1 : 2} · {year}</p>
+  </header>
+
+  <div class="rd-cs-sheet">
+    <span class="rd-cs-perf rd-cs-perf-top" aria-hidden="true"></span>
+
+    <ul class="rd-cs-grid">
+      {
+        day.photos.map((photo, i) => (
+          <li class="rd-cs-cell">
+            <button
+              type="button"
+              class="rd-cs-frame"
+              data-photo={photo.id}
+              data-full={photo.src}
+              data-w={photo.w}
+              data-h={photo.h}
+            >
+              <img
+                src={photoThumb(photo)}
+                {/* Samo izrezi istog odnosa (~1.75) — 768x512 je 1.5 i dao bi
+                    drugačije isječen kadar na retina ekranu nego na običnom. */}
+                srcset={photoSrcset(photo, ["345x198", "539x303"])}
+                sizes="(max-width: 700px) 45vw, (max-width: 1100px) 30vw, 200px"
+                alt={`${day.label}, kadar ${offset + i + 1}`}
+                loading="lazy"
+                decoding="async"
+                width="345"
+                height="198"
+              />
+              <span class="rd-cs-no" aria-hidden="true">
+                {String(offset + i + 1).padStart(3, "0")}
+              </span>
+            </button>
+          </li>
+        ))
+      }
+    </ul>
+
+    <span class="rd-cs-perf rd-cs-perf-bottom" aria-hidden="true"></span>
+  </div>
+</section>

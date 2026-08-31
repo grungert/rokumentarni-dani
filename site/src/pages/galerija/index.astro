@@ -1,0 +1,123 @@
+---
+// Galerija — pregled izdanja koja imaju fotografije.
+//
+// Fotografije postoje samo za RD1 2017 i RD2 2018; od 2019. su objavljivali
+// plakate i stillove, ne fotografije sa događaja. To se ne krije — piše
+// otvoreno, sa pozivom da nam ljudi pošalju svoje.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BrickGrid from "../../components/BrickGrid.astro";
+import SectionSymbols from "../../components/SectionSymbols.astro";
+import { editionOf } from "../../data/archive";
+import { photoEditions, photoThumb } from "../../data/archive/photos-view";
+import "../../styles/galerija.css";
+
+const total = photoEditions.reduce((sum, e) => sum + e.total, 0);
+---
+
+<BaseLayout
+  title="Galerija"
+  description={`${total} fotografija sa Rokumentarnih dana — kontakt-kopije po danima, iz izdanja 2017. i 2018.`}
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-40 pb-16 w-full">
+        <div class="reveal flex items-center gap-4 mb-8">
+          <span class="h-px w-12 bg-accent"></span>
+          <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            Arhiva · {total} kadrova
+          </span>
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3.5rem,11vw,10rem)] leading-[0.85] tracking-tight mb-10"
+        >
+          Gale<em class="text-accent">rija</em>.
+        </h1>
+
+        <p
+          class="reveal font-display font-light text-2xl md:text-3xl text-bone/85 leading-snug max-w-3xl"
+        >
+          Kontakt-kopije sa festivala — sve što je fotografisano, po danima,
+          onim redom kojim je i snimano.
+        </p>
+      </div>
+    </section>
+
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-16 space-y-8">
+        {
+          photoEditions.map((edition) => {
+            const meta = editionOf(edition.year);
+            // Šest kadrova sa razmakom kroz cijelo izdanje, da preview ne
+            // bude šest uzastopnih slika iz iste minute.
+            const all = edition.days.flatMap((d) => d.photos);
+            const step = Math.max(1, Math.floor(all.length / 6));
+            const preview = Array.from({ length: 6 }, (_, i) => all[i * step])
+              .filter(Boolean);
+
+            return (
+              <a href={`/galerija/${edition.year}/`} class="rd-roll reveal">
+                <div class="rd-roll-info">
+                  <p class="rd-roll-tag">RD{edition.edition} · {edition.year}</p>
+                  <h2 class="rd-roll-title">{meta?.title}</h2>
+                  {meta?.dates && <p class="rd-roll-when">{meta.dates}</p>}
+                  <p class="rd-roll-stats">
+                    {edition.total} fotografija
+                    <span aria-hidden="true"> · </span>
+                    {edition.days.length} dana
+                  </p>
+                  <span class="rd-roll-go">
+                    Otvori kontakt-kopiju <span aria-hidden="true">→</span>
+                  </span>
+                </div>
+
+                <div class="rd-roll-strip" aria-hidden="true">
+                  <span class="rd-cs-perf rd-cs-perf-top" />
+                  <div class="rd-roll-frames">
+                    {preview.map((photo) => (
+                      <img
+                        src={photoThumb(photo)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        width="345"
+                        height="198"
+                      />
+                    ))}
+                  </div>
+                  <span class="rd-cs-perf rd-cs-perf-bottom" />
+                </div>
+              </a>
+            );
+          })
+        }
+      </div>
+    </section>
+
+    <!-- Rupa u arhivi — kaže se otvoreno, sa pozivom. -->
+    <section data-rd-cube-pattern="stats">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32">
+        <div class="rd-gap reveal">
+          <p class="rd-gap-lbl">Rupa u arhivi</p>
+          <p class="rd-gap-txt">
+            Od 2019. nadalje nemamo sačuvane fotografije sa festivala — samo
+            plakate i kadrove iz filmova. Ako si slikao na nekom od tih
+            izdanja, javi nam se: te fotografije nedostaju svima.
+          </p>
+          <a href="mailto:bucanpas@gmail.com" class="rd-gap-cta">
+            Pošalji fotografije <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { wireReveal } from "../../scripts/reveal";
+    wireReveal();
+    document.addEventListener("astro:page-load", wireReveal);
+  </script>
+</BaseLayout>

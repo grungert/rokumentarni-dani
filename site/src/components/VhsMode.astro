@@ -10,6 +10,32 @@
 ---
 
 <style is:global>
+  /* CRT screen shape — rounded corners so the hero reads as a TV cabinet.
+     Slideshow + overlays still fill the full viewport; only the four
+     corners clip away to the dark body ink. The bow / curvature illusion
+     is sold by `.rd-crt-bow` (layered radial gradients) — keeping it on a
+     dedicated element so it can sit above scanlines + grain. */
+  [data-hero-images] {
+    border-radius: clamp(22px, 3.2vw, 48px);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  }
+
+  /* CRT bow overlay — the same PNG used in the classic CodePen VCR pen.
+     It bakes the curved-glass corner pinch + soft vignette into one
+     stretchable alpha asset, which sells the convex tube look far more
+     convincingly than CSS radial gradients can. Stretched to cover the
+     whole hero. */
+  [data-hero-images] .rd-crt-bow {
+    position: absolute;
+    inset: 0;
+    z-index: 36;
+    pointer-events: none;
+    border-radius: inherit;
+    background-image: url("/textures/crt.png");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
   [data-hero-images] .rd-vhs-overlay {
     position: absolute;
     inset: 0;
@@ -38,26 +64,28 @@
     background-size: 100% 4px, 100% 100%;
     background-repeat: repeat-y, no-repeat;
   }
-  [data-hero-images] .rd-vhs-track {
+  /* Tiled webp noise grain — 100×100 noise tile repeated across the
+     hero. The `noise` keyframe flips/scales the tile in hard 50ms steps,
+     which reads as a chunky live-broadcast static. Lovebird-style. */
+  [data-hero-images] .rd-vhs-tile-noise {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      transparent 45%,
-      rgba(255, 255, 255, 0.04) 47%,
-      rgba(255, 255, 255, 0.14) 50%,
-      rgba(255, 255, 255, 0.04) 53%,
-      transparent 55%,
-      transparent 100%
-    );
+    z-index: 31;
+    pointer-events: none;
+    overflow: hidden;
+    transform-origin: 50% 50%;
+    background: transparent url("/textures/lovebird-noise.webp") repeat 0 0;
+    background-size: 100px 100px;
+    background-repeat: repeat;
+    opacity: 0.55;
     mix-blend-mode: screen;
-    transform: translateY(-100%);
-    animation: rd-vhs-track 6.5s linear infinite;
+    animation: rd-tile-noise 0.2s steps(1) infinite;
   }
-  @keyframes rd-vhs-track {
-    from { transform: translateY(-100%); }
-    to   { transform: translateY(100%); }
+  @keyframes rd-tile-noise {
+    0%   { transform: scale(1);    }
+    25%  { transform: scaleX(-2);  }
+    50%  { transform: scale(-1);   }
+    75%  { transform: scaleY(-1);  }
   }
   /* Chromatic aberration only on hero display type. */
   [data-hero-images] h1,
@@ -69,7 +97,7 @@
       -1.4px 0 0 rgba(0, 220, 255, 0.6);
   }
   @media (prefers-reduced-motion: reduce) {
-    [data-hero-images] .rd-vhs-track { animation: none; opacity: 0; }
+    [data-hero-images] .rd-vhs-tile-noise { animation: none; }
   }
 
   /* Animated TV static. A small fractal-noise tile drifts in stepped
@@ -194,3 +222,4 @@
     }
   }
 </style>
+

@@ -1,0 +1,535 @@
+/* =====================================================================
+   KATALOG FILMOVA
+
+   Ista pravila kao u videoteka.css: kartica je predmet (tamna u oba
+   moda), akcenat ide kroz var(--color-accent) da prati temu iz
+   ThemePanel-a. Plakati su uglavnom pejzažni (1.9:1) pa okvir drži 16:9
+   i sječe preko `cover`; naslovi bez plakata dobijaju otkucanu nalepnicu.
+   ===================================================================== */
+
+/* ------------------------------------------------------------ FILTER TRAKA */
+
+.rd-film-bar {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 241, 232, 0.1);
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+html.theme-light .rd-film-bar {
+  background: rgba(245, 241, 232, 0.88);
+  border-color: rgba(26, 26, 26, 0.14);
+}
+
+.rd-film-search input {
+  width: min(280px, 46vw);
+  padding: 9px 12px;
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  background: transparent;
+  color: inherit;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+.rd-film-search input::placeholder {
+  color: rgba(245, 241, 232, 0.35);
+}
+
+html.theme-light .rd-film-search input {
+  border-color: rgba(26, 26, 26, 0.22);
+}
+
+html.theme-light .rd-film-search input::placeholder {
+  color: rgba(26, 26, 26, 0.4);
+}
+
+.rd-film-search input:focus-visible,
+.rd-film-select select:focus-visible,
+.rd-film-chip:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.rd-film-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rd-film-chip {
+  padding: 8px 12px;
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+html.theme-light .rd-film-chip {
+  border-color: rgba(26, 26, 26, 0.22);
+}
+
+.rd-film-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.rd-film-chip[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0a0a0a;
+}
+
+.rd-film-select select {
+  padding: 9px 10px;
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  background: transparent;
+  color: inherit;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html.theme-light .rd-film-select select {
+  border-color: rgba(26, 26, 26, 0.22);
+}
+
+.rd-film-select option {
+  background: #0f0f0f;
+  color: #f5f1e8;
+}
+
+.rd-film-count {
+  margin-left: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.rd-film-empty {
+  margin-top: 60px;
+  text-align: center;
+  font-family: "Special Elite", monospace;
+  font-size: 1.1rem;
+  opacity: 0.6;
+}
+
+.rd-film-empty button {
+  margin-left: 8px;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ MREŽA */
+
+.rd-film-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 34px 26px;
+}
+
+.rd-film-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Okvir plakata — kadar iz projektora. */
+.rd-film-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #0b0b0b;
+  border: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+.rd-film-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.05);
+  transform: scale(1.01);
+  transition:
+    filter 0.4s ease,
+    transform 0.6s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.rd-film-link:hover .rd-film-img,
+.rd-film-link:focus-visible .rd-film-img {
+  filter: none;
+  transform: scale(1.05);
+}
+
+.rd-film-link:focus-visible .rd-film-frame {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Naslov bez plakata — otkucana nalepnica, ista kao na kičmi kasete. */
+.rd-film-label {
+  position: absolute;
+  inset: 12px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #ece5d5;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.rd-film-label::before,
+.rd-film-label::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.rd-film-label::before {
+  top: 12px;
+}
+
+.rd-film-label::after {
+  bottom: 12px;
+}
+
+.rd-film-label-txt {
+  font-family: "Special Elite", monospace;
+  font-size: clamp(1rem, 2.4vw, 1.5rem);
+  line-height: 1.25;
+  text-align: center;
+  color: #131313;
+}
+
+.rd-film-label-lg .rd-film-label-txt {
+  font-size: clamp(1.4rem, 3.4vw, 2.4rem);
+}
+
+/* Zrno filma preko svega. */
+.rd-film-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("/textures/crt.png");
+  background-size: 3px 3px;
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+}
+
+.rd-film-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.rd-film-badge {
+  padding: 4px 8px;
+  background: rgba(10, 10, 10, 0.82);
+  color: #f5f1e8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
+.rd-film-badge-lg {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(245, 241, 232, 0.16);
+  font-size: 0.6rem;
+}
+
+.rd-film-badge-when {
+  opacity: 0.5;
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+
+.rd-film-min {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 3px 7px;
+  background: var(--color-accent);
+  color: #0a0a0a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  font-weight: 500;
+}
+
+.rd-film-tr {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(10, 10, 10, 0.82);
+  color: #f5f1e8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.rd-film-tr-tri {
+  width: 0;
+  height: 0;
+  border-left: 7px solid var(--color-accent);
+  border-top: 4.5px solid transparent;
+  border-bottom: 4.5px solid transparent;
+}
+
+.rd-film-title {
+  margin-top: 14px;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.rd-film-link:hover .rd-film-title {
+  color: var(--color-accent);
+}
+
+.rd-film-sub {
+  margin-top: 3px;
+  font-style: italic;
+  font-size: 0.9rem;
+  opacity: 0.5;
+}
+
+.rd-film-credits {
+  margin-top: 7px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  opacity: 0.85;
+}
+
+.rd-film-syn {
+  margin-top: 9px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  opacity: 0.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------- STRANICA FILMA */
+
+.rd-film-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.6;
+  text-decoration: none;
+}
+
+.rd-film-back:hover {
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.rd-film-screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #060606;
+  border: 1px solid rgba(245, 241, 232, 0.14);
+}
+
+.rd-film-screen-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rd-film-frameplayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  z-index: 3;
+}
+
+/* Kad trejler krene, zrno i plakat ne smiju da smetaju slici. */
+.rd-film-screen[data-playing="true"] .rd-film-grain,
+.rd-film-screen[data-playing="true"] .rd-film-screen-img {
+  display: none;
+}
+
+.rd-film-play {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  gap: 12px;
+  place-content: center;
+  justify-items: center;
+  border: 0;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.35);
+  color: #f5f1e8;
+  transition: background 0.25s ease;
+}
+
+.rd-film-play:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.rd-film-play-tri {
+  width: 0;
+  height: 0;
+  border-left: 26px solid var(--color-accent);
+  border-top: 16px solid transparent;
+  border-bottom: 16px solid transparent;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
+}
+
+.rd-film-play-txt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.rd-film-note {
+  margin-top: 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.4;
+}
+
+.rd-film-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+.rd-film-meta dt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.rd-film-meta dd {
+  margin: 4px 0 0;
+  font-size: 0.98rem;
+}
+
+.rd-film-body {
+  margin-top: 22px;
+  font-size: 1rem;
+  line-height: 1.75;
+  opacity: 0.82;
+}
+
+.rd-film-screenings {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+.rd-film-screenings-lbl {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 10px;
+}
+
+.rd-film-screenings-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px dashed rgba(245, 241, 232, 0.12);
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.rd-film-screenings-row span:first-child {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------- RESPONSIVE */
+
+@media (max-width: 720px) {
+  .rd-film-bar {
+    top: 56px;
+  }
+
+  .rd-film-count {
+    margin-left: 0;
+  }
+
+  .rd-film-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rd-film-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-film-img {
+    transition: none;
+  }
+
+  .rd-film-link:hover .rd-film-img {
+    transform: scale(1.01);
+  }
+}

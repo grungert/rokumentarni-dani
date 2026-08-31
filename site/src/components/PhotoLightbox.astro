@@ -1,0 +1,61 @@
+---
+// Projekcija — puna slika preko cijelog platna.
+//
+// Ljuštura je prazna: galerija.js u nju ubacuje izvor tek na klik, pa se
+// nijedna velika slika ne skine dok je neko ne zatraži. Native <dialog>
+// nosi focus trap i Esc.
+//
+// Izlaz je namjerno ponuđen na četiri načina — X gore desno, klik pored
+// slike, Esc i dugme u dnu. Ko god da otvori sliku, jedan od ta četiri mu
+// je prvi na pameti.
+---
+
+<dialog class="rd-lb" data-lightbox aria-label="Projekcija fotografije">
+  <!-- Gornja traka — brojač lijevo, izlaz desno. -->
+  <div class="rd-lb-top">
+    <p class="rd-lb-where">
+      <span class="rd-lb-day" data-lb-day></span>
+      <span class="rd-lb-no">
+        <span data-lb-no>—</span>
+        <span class="rd-lb-sep" aria-hidden="true">/</span>
+        <span data-lb-total>—</span>
+      </span>
+    </p>
+
+    <button type="button" class="rd-lb-x" data-lb-close>
+      <span aria-hidden="true">×</span>
+      <span class="sr-only">Zatvori projekciju</span>
+    </button>
+  </div>
+
+  <!-- Platno. Klik pored slike zatvara. -->
+  <div class="rd-lb-stage" data-lb-stage>
+    <img class="rd-lb-img" data-lb-img alt="" />
+    <span class="rd-lb-grain" aria-hidden="true"></span>
+    <span class="rd-lb-vignette" aria-hidden="true"></span>
+  </div>
+
+  <!-- Strelice uz ivice — tu ih ruka traži. -->
+  <button type="button" class="rd-lb-edge rd-lb-edge-prev" data-lb-prev>
+    <span class="rd-lb-edge-glyph" aria-hidden="true">←</span>
+    <span class="sr-only">Prethodna fotografija</span>
+  </button>
+
+  <button type="button" class="rd-lb-edge rd-lb-edge-next" data-lb-next>
+    <span class="rd-lb-edge-glyph" aria-hidden="true">→</span>
+    <span class="sr-only">Sljedeća fotografija</span>
+  </button>
+
+  <!-- Donja traka — prečice i izlaz ispisani, da se ne pogađaju. -->
+  <div class="rd-lb-bottom">
+    <p class="rd-lb-keys" aria-hidden="true">
+      <kbd>←</kbd><kbd>→</kbd> listaj
+      <span class="rd-lb-dot">·</span>
+      <kbd>Esc</kbd> zatvori
+    </p>
+
+    <button type="button" class="rd-lb-close" data-lb-close>
+      Zatvori
+    </button>
+  </div>
+</dialog>

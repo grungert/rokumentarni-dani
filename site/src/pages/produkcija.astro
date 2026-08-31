@@ -1,0 +1,176 @@
+---
+// Sopstvena produkcija — ono što festival snima, a ne samo prikazuje.
+//
+// Do sada je Live Sessions živio kao tri kartice na naslovnoj, a podcast od
+// pedesetak epizoda nije imao adresu uopšte. Ovdje stoji sve troje: serijal,
+// podcast i filmovi koje je ekipa sama potpisala.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import BrickGrid from "../components/BrickGrid.astro";
+import SectionSymbols from "../components/SectionSymbols.astro";
+import VideoCard from "../components/VideoCard.astro";
+import FilmCard from "../components/FilmCard.astro";
+import {
+  PODCAST_PLAYLIST_ID,
+  YOUTUBE_CHANNEL,
+  fetchPlaylist,
+  liveSessions,
+} from "../data/produkcija";
+import { filmGroups } from "../data/archive";
+import "../styles/produkcija.css";
+import "../styles/filmovi.css";
+
+const podcasts = await fetchPlaylist(PODCAST_PLAYLIST_ID);
+
+// Filmovi koje je ekipa sama potpisala — prepoznaju se po režiji ili
+// produkciji, a već stoje u katalogu jer su i prikazani na festivalu.
+const ownFilms = filmGroups.filter((group) =>
+  group.screenings.some((film) =>
+    /rokumentarni dani|bučan pas|djomila/i.test(
+      `${film.director ?? ""} ${film.production ?? ""}`,
+    ),
+  ),
+);
+---
+
+<BaseLayout
+  title="Produkcija"
+  description="Live Sessions, podcast Premotavanje i filmovi u produkciji Rokumentarnih dana — ono što festival snima, a ne samo prikazuje."
+>
+  <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
+  <SectionSymbols />
+
+  <div class="relative">
+    <!-- HERO ======================================================== -->
+    <section data-rd-cube-pattern="logo">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pt-40 pb-14 w-full">
+        <div class="reveal flex items-center gap-4 mb-8">
+          <span class="h-px w-12 bg-accent"></span>
+          <span class="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            Naša produkcija
+          </span>
+        </div>
+
+        <h1
+          class="reveal font-display font-light text-[clamp(3.5rem,11vw,10rem)] leading-[0.85] tracking-tight mb-10"
+        >
+          Ono što <em class="text-accent">snimamo</em>.
+        </h1>
+
+        <div class="grid md:grid-cols-12 gap-8 items-end">
+          <p
+            class="reveal md:col-span-7 font-display font-light text-2xl md:text-3xl text-bone/85 leading-snug"
+          >
+            Festival nije samo platno. Snimamo originalne izvedbe crnogorskih
+            autora, vodimo razgovore sa muzičarima iz regiona i potpisujemo
+            sopstvene filmove.
+          </p>
+          <p
+            class="reveal md:col-span-4 md:col-start-9 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/50 leading-relaxed"
+          >
+            {liveSessions.length} Live Sessions<br />
+            {podcasts.length > 0 && <>{podcasts.length} epizoda podcasta<br /></>}
+            {ownFilms.length} sopstvenih filmova
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE SESSIONS =============================================== -->
+    <section data-rd-cube-pattern="rd">
+      <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-20">
+        <div class="rd-prod-head reveal">
+          <div>
+            <h2 class="rd-prod-h2">Live Sessions</h2>
+            <p class="rd-prod-lede">
+              Serijal je nastao iz potrebe da se autorska crnogorska muzika
+              zabilježi u originalnim izvođenjima njenih kreatora. Snimanje je
+              podržalo Ministarstvo kulture Crne Gore.
+            </p>
+          </div>
+          <a href={YOUTUBE_CHANNEL} class="rd-prod-more" rel="noopener">
+            Kanal na YouTube-u <span aria-hidden="true">→</span>
+          </a>
+        </div>
+
+        <ul class="rd-vid-grid mt-10">
+          {liveSessions.map((video) => (
+            <VideoCard video={video} tag="Live Sessions" />
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <!-- PREMOTAVANJE ================================================ -->
+    {
+      podcasts.length > 0 && (
+        <section data-rd-cube-pattern="stats">
+          <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-20">
+            <div class="rd-prod-head reveal">
+              <div>
+                <h2 class="rd-prod-h2">Premotavanje</h2>
+                <p class="rd-prod-lede">
+                  Podcast usko vezan za festival — razgovori sa domaćim i
+                  stranim muzičarima. Ispod je posljednjih {podcasts.length}{" "}
+                  epizoda; cijela plejlista je na kanalu.
+                </p>
+              </div>
+              <a
+                href={`https://www.youtube.com/playlist?list=${PODCAST_PLAYLIST_ID}`}
+                class="rd-prod-more"
+                rel="noopener"
+              >
+                Cijela plejlista <span aria-hidden="true">→</span>
+              </a>
+            </div>
+
+            <ul class="rd-vid-grid mt-10">
+              {podcasts.map((video) => (
+                <VideoCard video={video} tag="Premotavanje" />
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
+
+    <!-- SOPSTVENI FILMOVI =========================================== -->
+    {
+      ownFilms.length > 0 && (
+        <section data-rd-cube-pattern="archive">
+          <div class="mx-auto max-w-7xl px-6 lg:px-10 pb-32">
+            <div class="rd-prod-head reveal">
+              <div>
+                <h2 class="rd-prod-h2">Naši filmovi</h2>
+                <p class="rd-prod-lede">
+                  Filmovi koje je ekipa sama snimila i potpisala — i prikazala
+                  na festivalu, pa stoje i u katalogu.
+                </p>
+              </div>
+              <a href="/filmovi/" class="rd-prod-more">
+                Cijeli katalog <span aria-hidden="true">→</span>
+              </a>
+            </div>
+
+            <ul class="rd-film-grid mt-10">
+              {ownFilms.map((group) => (
+                <FilmCard group={group} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
+  </div>
+
+  <script>
+    import { wireVideoFacades } from "../scripts/produkcija";
+    import { wireReveal } from "../scripts/reveal";
+
+    wireReveal();
+    wireVideoFacades();
+    document.addEventListener("astro:page-load", () => {
+      wireReveal();
+      wireVideoFacades();
+    });
+  </script>
+</BaseLayout>

@@ -1,0 +1,185 @@
+/* =====================================================================
+   PRODUKCIJA — Live Sessions, podcast i sopstveni filmovi.
+
+   Kartica snimka je isti predmet kao i drugdje na sajtu: tamna, sa zrnom
+   preko slike i akcentom samo na dugmetu za puštanje.
+   ===================================================================== */
+
+.rd-prod-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.rd-prod-h2 {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 1;
+}
+
+.rd-prod-lede {
+  margin-top: 12px;
+  max-width: 620px;
+  font-size: 1rem;
+  line-height: 1.7;
+  opacity: 0.72;
+}
+
+.rd-prod-more {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rd-prod-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ---------------------------------------------------------------- KARTICE */
+
+.rd-vid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 30px 24px;
+}
+
+.rd-vid-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+/* YouTube-ova hqdefault sličica je 4:3 sa crnim trakama — isjecanje na
+   16:9 ih uklanja i vraća kadar. */
+.rd-vid-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.05);
+  transition:
+    filter 0.35s ease,
+    transform 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.rd-vid-frame:hover .rd-vid-thumb {
+  filter: none;
+  transform: scale(1.04);
+}
+
+.rd-vid-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("/textures/crt.png");
+  background-size: 3px 3px;
+  opacity: 0.2;
+  mix-blend-mode: overlay;
+}
+
+.rd-vid-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  background: rgba(10, 10, 10, 0.82);
+  color: #f5f1e8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
+.rd-vid-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.3);
+  transition: background 0.25s ease;
+}
+
+.rd-vid-play:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.rd-vid-play:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -3px;
+}
+
+.rd-vid-tri {
+  width: 0;
+  height: 0;
+  border-left: 22px solid var(--color-accent);
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.75));
+  transition: transform 0.25s ease;
+}
+
+.rd-vid-play:hover .rd-vid-tri {
+  transform: scale(1.15);
+}
+
+.rd-vid-player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  z-index: 3;
+}
+
+/* Kad snimak krene, zrno i oznaka sklanjaju se sa slike. */
+.rd-vid-frame[data-playing="true"] .rd-vid-grain,
+.rd-vid-frame[data-playing="true"] .rd-vid-tag,
+.rd-vid-frame[data-playing="true"] .rd-vid-thumb {
+  display: none;
+}
+
+.rd-vid-artist {
+  margin-top: 14px;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.rd-vid-title {
+  margin-top: 5px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+@media (max-width: 720px) {
+  .rd-vid-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-vid-thumb,
+  .rd-vid-tri {
+    transition: none;
+  }
+
+  .rd-vid-frame:hover .rd-vid-thumb {
+    transform: none;
+  }
+}

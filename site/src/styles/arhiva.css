@@ -1,0 +1,386 @@
+/* =====================================================================
+   ARHIVA — spisak izdanja i stranica jednog izdanja.
+
+   Satnica je namjerno štampana, a ne kartice: sedam izdanja × po četiri
+   dana je previše kutija. Monospace vrijeme, tanka linija, boja koja nosi
+   vrstu termina — isti ključ boja kao na kasetama iz programa.
+   ===================================================================== */
+
+/* ---------------------------------------------------------- SPISAK IZDANJA */
+
+.rd-arh-list {
+  border-top: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+html.theme-light .rd-arh-list,
+html.theme-light .rd-arh-row {
+  border-color: rgba(26, 26, 26, 0.16);
+}
+
+.rd-arh-row {
+  border-bottom: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+.rd-arh-link {
+  display: grid;
+  grid-template-columns: 150px 1fr auto 30px;
+  align-items: center;
+  gap: 26px;
+  padding: 26px 8px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background 0.25s ease,
+    padding 0.25s ease;
+}
+
+.rd-arh-link:hover {
+  background: rgba(245, 241, 232, 0.04);
+  padding-left: 18px;
+}
+
+html.theme-light .rd-arh-link:hover {
+  background: rgba(26, 26, 26, 0.04);
+}
+
+.rd-arh-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.rd-arh-year {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: clamp(2.6rem, 5vw, 4rem);
+  line-height: 0.85;
+  letter-spacing: -0.02em;
+  opacity: 0.85;
+}
+
+.rd-arh-link:hover .rd-arh-year {
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.rd-arh-tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.rd-arh-title {
+  margin-top: 6px;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: 1.7rem;
+  line-height: 1.05;
+}
+
+.rd-arh-when {
+  margin-top: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.rd-arh-stats {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.rd-arh-stats b {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+/* Ono čega nema piše se tiše, ali piše — to je podatak o arhivi. */
+.rd-arh-stats .is-empty {
+  opacity: 0.4;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.08em;
+}
+
+.rd-arh-go {
+  font-family: "JetBrains Mono", monospace;
+  opacity: 0.3;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.rd-arh-link:hover .rd-arh-go {
+  opacity: 1;
+  color: var(--color-accent);
+  transform: translateX(5px);
+}
+
+/* -------------------------------------------------------- JEDNO IZDANJE */
+
+.rd-arh-h2 {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.rd-arh-h2row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.rd-arh-more {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.rd-arh-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.rd-arh-missing {
+  margin-top: 16px;
+  max-width: 640px;
+  font-size: 0.98rem;
+  line-height: 1.7;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------- SATNICA */
+
+.rd-arh-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px 40px;
+  margin-top: 30px;
+}
+
+.rd-arh-dayhead {
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(245, 241, 232, 0.2);
+}
+
+html.theme-light .rd-arh-dayhead {
+  border-color: rgba(26, 26, 26, 0.25);
+}
+
+.rd-arh-daylabel {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.rd-arh-venue {
+  margin-top: 5px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  color: var(--color-accent);
+  opacity: 0.8;
+}
+
+.rd-arh-items {
+  margin-top: 4px;
+}
+
+.rd-arh-item {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px dashed rgba(245, 241, 232, 0.14);
+}
+
+html.theme-light .rd-arh-item {
+  border-color: rgba(26, 26, 26, 0.16);
+}
+
+.rd-arh-time {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.rd-arh-end {
+  opacity: 0.4;
+  font-size: 0.62rem;
+}
+
+.rd-arh-what {
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+/* Vrsta termina — isti ključ boja kao kičme kaseta na /program/. */
+.rd-arh-kind {
+  padding: 3px 7px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0a0a0a;
+  background: var(--kind, #ded4bd);
+  white-space: nowrap;
+}
+
+.rd-arh-item[data-kind="film"] {
+  --kind: #ded4bd;
+}
+.rd-arh-item[data-kind="koncert"] {
+  --kind: var(--color-accent);
+}
+.rd-arh-item[data-kind="videodrom"] {
+  --kind: #8fb3ad;
+}
+.rd-arh-item[data-kind="tribina"] {
+  --kind: #cda868;
+}
+.rd-arh-item[data-kind="dj"] {
+  --kind: #b9a7c9;
+}
+
+/* ----------------------------------------------------------- FOTO TRAKA */
+
+.rd-arh-strip {
+  display: flex;
+  gap: 4px;
+  margin-top: 24px;
+  padding: 8px;
+  background: #060605;
+  border: 1px solid rgba(245, 241, 232, 0.1);
+  overflow: hidden;
+}
+
+.rd-arh-strip img {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 140px;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.05);
+  transition: filter 0.4s ease;
+}
+
+.rd-arh-strip:hover img {
+  filter: none;
+}
+
+.rd-arh-strip:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------ SUSJEDNA IZDANJA */
+
+.rd-arh-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(245, 241, 232, 0.12);
+}
+
+html.theme-light .rd-arh-nav {
+  border-color: rgba(26, 26, 26, 0.16);
+}
+
+.rd-arh-navlink {
+  display: grid;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rd-arh-navlink-next {
+  text-align: right;
+}
+
+.rd-arh-navdir {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.rd-arh-navname {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.rd-arh-navlink:hover .rd-arh-navname {
+  color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------- RESPONSIVE */
+
+@media (max-width: 860px) {
+  .rd-arh-link {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "year go"
+      "main main"
+      "stats stats";
+    gap: 12px;
+    padding: 20px 4px;
+  }
+
+  .rd-arh-year {
+    grid-area: year;
+  }
+  .rd-arh-main {
+    grid-area: main;
+  }
+  .rd-arh-stats {
+    grid-area: stats;
+    text-align: left;
+    grid-auto-flow: column;
+    justify-content: start;
+    gap: 14px;
+  }
+  .rd-arh-go {
+    grid-area: go;
+  }
+
+  .rd-arh-item {
+    grid-template-columns: 78px 1fr;
+    row-gap: 6px;
+  }
+
+  .rd-arh-kind {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .rd-arh-strip img {
+    height: 88px;
+  }
+}
+
+/* Termin bez objavljenog vremena (RD6 — Nikšić, Mojkovac, Kotor). */
+.rd-arh-item[data-notime] .rd-arh-time {
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  opacity: 0.4;
+}

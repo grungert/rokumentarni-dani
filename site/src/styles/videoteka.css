@@ -1,0 +1,859 @@
+/* =====================================================================
+   VIDEOTEKA — omot i članska karta.
+
+   Zajednički dio programa: <dialog> sa omotom kasete i članska karta
+   (watchlist). Izgled same mreže programa je u izlog.css.
+
+   Namjerna odluka: omot i karta su tamni i u light modu. Kaseta nije UI
+   nego predmet — pa ostaje predmet, a stranica oko nje se mijenja.
+   Akcenat svuda ide kroz var(--color-accent) da prati temu koju korisnik
+   izabere u ThemePanel-u.
+   ===================================================================== */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Glif „+" / „✓" na dugmetu za uzimanje — crta ga videoteka.ts. */
+.rd-vt-quick-glyph {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+
+/* ------------------------------------------------------------------ OMOT */
+
+.rd-vt-sheet {
+  /* Tailwind reset gasi UA `margin: auto` na <dialog> — bez ovoga dijalog
+     stoji u gornjem lijevom uglu umjesto na sredini ekrana. */
+  margin: auto;
+  width: min(920px, calc(100vw - 32px));
+  max-height: min(88vh, 760px);
+  padding: 0;
+  /* --k upisuje videoteka.ts: boja vrste kartice koja je otvorila dijalog. */
+  --k: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--k) 45%, transparent);
+  background: #0d0d0d;
+  color: #f5f1e8;
+  overflow: hidden;
+  box-shadow:
+    0 0 40px -10px color-mix(in srgb, var(--k) 40%, transparent),
+    0 40px 80px -40px #000;
+}
+
+.rd-vt-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(3px);
+  animation: rd-vt-backdrop 0.3s ease;
+}
+
+@keyframes rd-vt-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+
+.rd-vt-sheet-inner {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  max-height: inherit;
+}
+
+.rd-vt-sheet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(245, 241, 232, 0.12);
+  background: linear-gradient(180deg, rgba(245, 241, 232, 0.05), transparent);
+}
+
+.rd-vt-sheet-bar-txt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--k);
+}
+
+.rd-vt-sheet-close {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  background: transparent;
+  color: #f5f1e8;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rd-vt-sheet-close:hover,
+.rd-vt-sheet-close:focus-visible {
+  border-color: var(--k);
+  color: var(--k);
+}
+
+.rd-vt-sheet-body {
+  overflow-y: auto;
+  padding: 26px;
+}
+
+.rd-vt-sheet-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(245, 241, 232, 0.12);
+  background: #0a0a0a;
+}
+
+.rd-vt-take {
+  padding: 12px 22px;
+  border: 1px solid var(--k);
+  cursor: pointer;
+  background: var(--k);
+  color: #0a0a0a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  transition: background 0.2s ease;
+}
+
+.rd-vt-take:hover {
+  background: transparent;
+  color: var(--k);
+}
+
+.rd-vt-take[data-taken="true"] {
+  background: transparent;
+  color: var(--k);
+}
+
+.rd-vt-take[data-taken="true"]:hover {
+  background: var(--k);
+  color: #0a0a0a;
+}
+
+/* Sadržaj omota (klon iz police). */
+.rd-vt-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 30px;
+  align-items: start;
+}
+
+.rd-vt-d-eyebrow {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--k);
+}
+
+.rd-vt-d-dot {
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.rd-vt-d-title {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 300;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+
+.rd-vt-d-orig {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  font-style: italic;
+  color: rgba(245, 241, 232, 0.62);
+}
+
+/* Ekran — still, pa video preko njega. */
+.rd-vt-d-media {
+  position: relative;
+  grid-column: 1;
+  margin-top: 20px;
+  aspect-ratio: 539 / 303;
+  background: #000;
+  overflow: hidden;
+  border-bottom: 2px solid var(--k);
+}
+
+.rd-vt-d-still,
+.rd-vt-d-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.06);
+}
+
+.rd-vt-d-video {
+  filter: none;
+  object-fit: contain;
+  background: #000;
+}
+
+.rd-vt-d-crt {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("/textures/crt.png");
+  background-size: 3px 3px;
+  opacity: 0.28;
+  mix-blend-mode: overlay;
+}
+
+.rd-vt-d-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 10px;
+  place-content: center;
+  justify-items: center;
+  border: 0;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.25);
+  color: #f5f1e8;
+  transition: background 0.25s ease;
+}
+
+.rd-vt-d-play:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.rd-vt-d-play-tri {
+  width: 0;
+  height: 0;
+  border-left: 22px solid var(--k);
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+}
+
+.rd-vt-d-play-txt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.rd-vt-d-meta {
+  grid-column: 2;
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.rd-vt-d-meta dt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.6);
+}
+
+.rd-vt-d-meta dd {
+  margin: 3px 0 0;
+  font-size: 0.95rem;
+  color: rgba(245, 241, 232, 0.9);
+}
+
+.rd-vt-d-syn {
+  grid-column: 2;
+  margin-top: 20px;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgba(245, 241, 232, 0.82);
+}
+
+.rd-vt-d-tags {
+  grid-column: 2;
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rd-vt-d-tags li {
+  padding: 4px 9px;
+  border: 1px solid rgba(245, 241, 232, 0.22);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.68);
+}
+
+/* ---------------------------------------------------------- ČLANSKA KARTA */
+
+.rd-vt-member {
+  position: fixed;
+  right: 20px;
+  /* Iznad plutajuće ikone teme (bottom:16 + ~52px), da se ne poklapaju. */
+  bottom: 84px;
+  z-index: 60;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  /* Omotač je visok koliko i zatvorena karta (~420×410) i lebdi preko desne
+     kolone programa — bez ovoga jede klikove na kartice ispod sebe. Klik
+     hvataju samo tab i otvorena karta. */
+  pointer-events: none;
+}
+
+/* Omotač je zakačen za dno, pa raste naviše. Tab ide u posljednji red da
+   ostane prikovan na istoj visini — inače ga karta gura gore kako lista
+   raste. Dugme je i dalje prvo u DOM-u, prije panela kojim upravlja. */
+.rd-vt-member-tab {
+  order: 2;
+}
+
+.rd-vt-card {
+  order: 1;
+}
+
+.rd-vt-member-tab {
+  pointer-events: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 1px solid rgba(245, 241, 232, 0.2);
+  background: #0a0a0a;
+  color: #f5f1e8;
+  cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  box-shadow: 0 14px 28px -18px #000;
+  /* --rd-drop upisuje izlog.ts: boja vrste koja je upravo sletjela. */
+  --rd-drop: var(--color-accent);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Doček kartice: ivica se iscrta u krug — gore, desno, dolje, lijevo — i kad
+   se zatvori, nestane. Boju upisuje izlog.ts u --rd-drop. */
+.rd-vt-member-tab.is-hit::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--rd-drop), var(--rd-drop)),
+    linear-gradient(var(--rd-drop), var(--rd-drop)),
+    linear-gradient(var(--rd-drop), var(--rd-drop)),
+    linear-gradient(var(--rd-drop), var(--rd-drop));
+  background-repeat: no-repeat;
+  /* gornja, desna, donja, lijeva ivica */
+  background-position: 0 0, 100% 0, 100% 100%, 0 100%;
+  background-size: 0 2px, 2px 0, 0 2px, 2px 0;
+  animation: rd-vt-tabtrace 0.85s linear forwards;
+}
+
+.rd-vt-member-tab.is-hit .rd-vt-member-count {
+  background: var(--rd-drop);
+}
+
+@keyframes rd-vt-tabtrace {
+  0% {
+    background-size: 0 2px, 2px 0, 0 2px, 2px 0;
+    opacity: 1;
+  }
+  22% {
+    background-size: 100% 2px, 2px 0, 0 2px, 2px 0;
+  }
+  44% {
+    background-size: 100% 2px, 2px 100%, 0 2px, 2px 0;
+  }
+  66% {
+    background-size: 100% 2px, 2px 100%, 100% 2px, 2px 0;
+  }
+  85% {
+    background-size: 100% 2px, 2px 100%, 100% 2px, 2px 100%;
+    opacity: 1;
+  }
+  100% {
+    background-size: 100% 2px, 2px 100%, 100% 2px, 2px 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-vt-member-tab.is-hit::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.rd-vt-member-tab:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Browserov plavi prsten na tamnoj kartici izgleda kao greška. */
+.rd-vt-member-tab:focus-visible,
+.rd-vt-quick:focus-visible,
+.rd-vt-take:focus-visible,
+.rd-vt-sheet-close:focus-visible,
+.rd-vt-card-actions button:focus-visible,
+.rd-vt-row-del:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.rd-vt-member-count {
+  display: grid;
+  transition: background 0.4s ease;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  background: var(--color-accent);
+  color: #0a0a0a;
+  font-size: 0.6rem;
+  letter-spacing: 0;
+}
+
+.rd-vt-card {
+  position: relative;
+  isolation: isolate;
+  width: min(420px, calc(100vw - 40px));
+  /* Visina staje između filter trake i ikone teme; unutra skroluje spisak.
+     Flex, ne grid — upozorenje o preklapanju i prazno stanje se pale i gase,
+     pa broj redova nije fiksan. */
+  max-height: min(58vh, 480px);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px 16px;
+  color: #17140d;
+  /* Papir: osnovna boja, vlakna u jednom pravcu i zaprljanje po ivicama. */
+  background-color: #eee5cf;
+  background-image:
+    repeating-linear-gradient(96deg, rgba(60, 45, 20, 0.05) 0 1px, transparent 1px 4px),
+    radial-gradient(120% 90% at 6% -10%, rgba(92, 70, 34, 0.18), transparent 55%),
+    radial-gradient(110% 85% at 104% 108%, rgba(92, 70, 34, 0.2), transparent 55%);
+  background-blend-mode: multiply, multiply, multiply;
+  box-shadow:
+    0 30px 60px -30px #000,
+    inset 0 0 42px rgba(92, 70, 34, 0.18);
+  transform-origin: bottom right;
+  /* Zatvorena: odletjela dolje pod tab, zakrenuta i zamućena od brzine. */
+  transform: translateY(52px) rotate(-8deg) scale(0.88);
+  opacity: 0;
+  filter: blur(2px);
+  pointer-events: none;
+  transition:
+    transform 0.34s cubic-bezier(0.55, 0, 0.85, 0.35),
+    filter 0.24s ease-in,
+    opacity 0.26s ease-in 0.06s;
+}
+
+/* Trag pregiba — papir je jednom bio presavijen. */
+.rd-vt-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 41%;
+  height: 3px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.55;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(92, 70, 34, 0.22) 10%,
+    rgba(255, 255, 255, 0.55) 48%,
+    rgba(92, 70, 34, 0.2) 86%,
+    transparent 100%
+  );
+}
+
+/* Zrno papira preko svega — štampa, ne ekran. */
+.rd-vt-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.75;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.9 1.1' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23p)' opacity='0.42'/></svg>");
+}
+
+.rd-vt-member[data-expanded="true"] .rd-vt-card {
+  /* Otvorena: izleti uz blagi prebačaj, pa se smiri nakrivo. */
+  transform: rotate(-0.5deg);
+  opacity: 1;
+  filter: none;
+  pointer-events: auto;
+  transition:
+    transform 0.44s cubic-bezier(0.18, 1.2, 0.32, 1),
+    filter 0.2s ease-out,
+    opacity 0.22s ease;
+}
+
+/* Redovi ulaze u talasu, jednom po otvaranju. */
+.rd-vt-member.is-opening .rd-vt-card-rows > * {
+  animation: rd-vt-rowin 0.4s cubic-bezier(0.2, 0, 0.1, 1) backwards;
+}
+
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(1) { animation-delay: 0.06s; }
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(2) { animation-delay: 0.1s; }
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(3) { animation-delay: 0.14s; }
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(4) { animation-delay: 0.18s; }
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(5) { animation-delay: 0.22s; }
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(6) { animation-delay: 0.26s; }
+.rd-vt-member.is-opening .rd-vt-card-rows > *:nth-child(n + 7) { animation-delay: 0.3s; }
+
+/* Zatvaranje: isti talas, samo unazad i naniže. */
+.rd-vt-member.is-closing .rd-vt-card-rows > * {
+  animation: rd-vt-rowout 0.26s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+.rd-vt-member.is-closing .rd-vt-card-rows > *:nth-last-child(1) { animation-delay: 0s; }
+.rd-vt-member.is-closing .rd-vt-card-rows > *:nth-last-child(2) { animation-delay: 0.03s; }
+.rd-vt-member.is-closing .rd-vt-card-rows > *:nth-last-child(3) { animation-delay: 0.06s; }
+.rd-vt-member.is-closing .rd-vt-card-rows > *:nth-last-child(4) { animation-delay: 0.09s; }
+.rd-vt-member.is-closing .rd-vt-card-rows > *:nth-last-child(5) { animation-delay: 0.12s; }
+.rd-vt-member.is-closing .rd-vt-card-rows > *:nth-last-child(n + 6) { animation-delay: 0.15s; }
+
+@keyframes rd-vt-rowout {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+@keyframes rd-vt-rowin {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-vt-card,
+  .rd-vt-member[data-expanded="true"] .rd-vt-card {
+    transition-duration: 0.01ms;
+  }
+
+  .rd-vt-member.is-opening .rd-vt-card-rows > *,
+  .rd-vt-member.is-closing .rd-vt-card-rows > * {
+    animation: none;
+  }
+
+  .rd-vt-card {
+    filter: none;
+  }
+}
+
+/* × u zaglavlju — isti okidač kao tab. */
+.rd-vt-card-close {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  background: transparent;
+  color: #17140d;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.rd-vt-card-close:hover,
+.rd-vt-card-close:focus-visible {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0a0a0a;
+}
+
+.rd-vt-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.75);
+}
+
+.rd-vt-card-club {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.rd-vt-card-name {
+  font-family: "Special Elite", monospace;
+  font-size: 1.35rem;
+  line-height: 1.1;
+  margin-top: 3px;
+}
+
+.rd-vt-card-clash {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: rgba(229, 72, 77, 0.12);
+  border: 1px solid rgba(229, 72, 77, 0.5);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.rd-vt-card-clash-stamp {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1.5px solid #b4242a;
+  color: #b4242a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+}
+
+.rd-vt-card-rows {
+  display: grid;
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Mjesta za traku skrola, da tekst ne dodiruje ivicu karte. */
+  padding-right: 4px;
+  margin-right: -4px;
+}
+
+/* Traka skrola u tonu kartona. */
+.rd-vt-card-rows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rd-vt-card-rows::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.rd-vt-card-rows::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.rd-vt-row {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.28);
+}
+
+.rd-vt-row.is-clash {
+  background: rgba(229, 72, 77, 0.1);
+}
+
+.rd-vt-row-daylabel {
+  padding: 14px 0 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.rd-vt-row-time {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.rd-vt-row-title {
+  display: block;
+  font-family: "Special Elite", monospace;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.rd-vt-row-sub {
+  display: block;
+  margin-top: 2px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.rd-vt-row-del {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  background: transparent;
+  color: #17140d;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.rd-vt-row-del:hover,
+.rd-vt-row-del:focus-visible {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0a0a0a;
+}
+
+.rd-vt-card-empty {
+  padding: 22px 0 10px;
+  font-family: "Special Elite", monospace;
+  font-size: 0.95rem;
+  opacity: 0.55;
+}
+
+.rd-vt-card-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid rgba(0, 0, 0, 0.75);
+}
+
+.rd-vt-card-total {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  line-height: 1.7;
+}
+
+.rd-vt-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.rd-vt-card-actions button {
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.75);
+  background: transparent;
+  color: #17140d;
+  cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.rd-vt-card-actions button[data-confirm="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0a0a0a;
+}
+
+.rd-vt-card-actions button:hover {
+  background: #17140d;
+  color: #efe7d2;
+}
+
+/* ---------------------------------------------------------- SHARE IMPORT */
+
+.rd-vt-import {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f0c419;
+  color: #1a1400;
+  box-shadow: 0 20px 40px -22px #000;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rd-vt-import button {
+  padding: 7px 11px;
+  border: 1px solid #1a1400;
+  background: transparent;
+  color: #1a1400;
+  cursor: pointer;
+  font: inherit;
+}
+
+.rd-vt-import button:hover {
+  background: #1a1400;
+  color: #f0c419;
+}
+
+/* ------------------------------------------------------------- RESPONSIVE */
+
+@media (max-width: 900px) {
+  /* Omot u jednoj koloni — meta i sinopsis ispod ekrana. */
+  .rd-vt-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .rd-vt-d-media,
+  .rd-vt-d-meta,
+  .rd-vt-d-syn,
+  .rd-vt-d-tags {
+    grid-column: 1;
+  }
+
+  .rd-vt-member {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-vt-card {
+    transition-duration: 0.01ms;
+  }
+}
