@@ -1,15 +1,18 @@
 ---
 import Logo from "./Logo.astro";
+import { currentEdition } from "../data/archive/editions";
 
 // Program is now the primary CTA — it adopts the cyan-bg Karte styling.
 // The rest of the nav stays as plain mono-caps links.
 const nav = [
   { href: "/o-festivalu/", label: "O festivalu" },
-  { href: "/program/", label: "Program", primary: true },
+  // Broj izdanja dolazi iz podataka — sljedeće godine se mijenja na
+  // jednom mjestu, a ne po komponentama.
+  { href: "/program/", label: `Program RD${currentEdition.n}`, primary: true },
   { href: "/filmovi/", label: "Filmovi" },
-  { href: "/galerija/", label: "Galerija" },
+  { href: "/produkcija/", label: "Produkcija" },
+  { href: "/arhiva/", label: "Arhiva" },
   { href: "/blog/", label: "Novosti" },
-  { href: "/kontakt/", label: "Kontakt" },
 ];
 
 const currentPath = Astro.url.pathname;
@@ -21,13 +24,28 @@ const currentPath = Astro.url.pathname;
   <div
     class="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between"
   >
-    <a
-      href="/"
-      class="flex items-center"
-      aria-label="Rokumentarni dani — početna"
-    >
-      <Logo variant="full" class="h-8" twinkle />
-    </a>
+    <div class="flex items-center gap-3">
+      <a
+        href="/"
+        class="flex items-center"
+        aria-label="Rokumentarni dani — početna"
+      >
+        <Logo variant="full" class="h-8" twinkle />
+      </a>
+
+      <!-- Tekuće izdanje uz logo. Stoji izvan veze da ga čitači ekrana
+           pročitaju kao podatak, a ne da ga aria-label na logu proguta. -->
+      <span class="flex items-baseline leading-none">
+        <span
+          class="font-mono text-base font-medium uppercase tracking-[0.1em] text-accent leading-none"
+        >
+          RD
+        </span>
+        <span class="font-mono text-base font-medium text-bone leading-none">
+          {currentEdition.n}
+        </span>
+      </span>
+    </div>
 
     <nav class="hidden md:block">
       <ul class="flex items-center gap-7 text-xs font-mono uppercase tracking-[0.25em]">
@@ -42,7 +60,6 @@ const currentPath = Astro.url.pathname;
                     class="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-ink bg-accent px-4 py-2 hover:bg-bone transition"
                   >
                     {item.label}
-                    <span aria-hidden="true">→</span>
                   </a>
                 </li>
               );
@@ -81,7 +98,57 @@ const currentPath = Astro.url.pathname;
         </li>
       </ul>
     </nav>
+
+    <!-- Do sada na telefonu nije bilo nikakve navigacije — samo logo. -->
+    <div class="md:hidden flex items-center gap-3">
+      <button
+        type="button"
+        class="rd-mode-toggle"
+        data-rd-mode-toggle
+        aria-label="Toggle light and dark mode"
+        aria-pressed="false"
+      >
+        <svg class="rd-mode-icon rd-mode-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+        <svg class="rd-mode-icon rd-mode-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="rd-burger"
+        data-rd-menu-toggle
+        aria-expanded="false"
+        aria-controls="rd-mobile-nav"
+      >
+        <span class="rd-burger-bar" aria-hidden="true"></span>
+        <span class="rd-burger-bar" aria-hidden="true"></span>
+        <span class="sr-only">Meni</span>
+      </button>
+    </div>
   </div>
+
+  <!-- Panel se otvara ispod trake; zatvara ga izbor, Esc ili klik napolju. -->
+  <nav id="rd-mobile-nav" class="rd-mnav md:hidden" data-rd-menu aria-label="Glavni meni">
+    <ul>
+      {
+        nav.map((item) => {
+          const active = currentPath.startsWith(item.href);
+          return (
+            <li>
+              <a href={item.href} class:list={[active && "is-active"]}>
+                {item.label}
+                {active && <span aria-hidden="true">·</span>}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </nav>
 </header>
 
 <style>
@@ -109,6 +176,86 @@ const currentPath = Astro.url.pathname;
   .rd-mode-sun { display: none; }
   :global(html.theme-light) .rd-mode-moon { display: none; }
   :global(html.theme-light) .rd-mode-sun { display: inline-block; }
+
+  /* --- mobilni meni --- */
+
+  .rd-burger {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(245, 241, 232, 0.18);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  :global(html.theme-light) .rd-burger {
+    border-color: rgba(26, 26, 26, 0.2);
+  }
+
+  .rd-burger-bar {
+    display: block;
+    width: 14px;
+    height: 1.5px;
+    background: currentColor;
+    opacity: 0.75;
+    transition: transform 0.25s ease, opacity 0.2s ease;
+  }
+
+  /* Otvoreno stanje pretvara dvije crte u ×. */
+  .rd-burger[aria-expanded="true"] .rd-burger-bar:first-child {
+    transform: translateY(3.25px) rotate(45deg);
+  }
+  .rd-burger[aria-expanded="true"] .rd-burger-bar:last-child {
+    transform: translateY(-3.25px) rotate(-45deg);
+  }
+
+  .rd-mnav {
+    overflow: hidden;
+    max-height: 0;
+    border-top: 1px solid transparent;
+    transition: max-height 0.3s cubic-bezier(0.2, 0.9, 0.25, 1), border-color 0.3s;
+  }
+
+  .rd-mnav[data-open="true"] {
+    /* Dovoljno za sedam stavki; overflow ostaje sakriven ako ih bude više. */
+    max-height: 70vh;
+    overflow-y: auto;
+    border-top-color: rgba(245, 241, 232, 0.12);
+  }
+
+  .rd-mnav a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 24px;
+    border-bottom: 1px solid rgba(245, 241, 232, 0.07);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  :global(html.theme-light) .rd-mnav a {
+    border-bottom-color: rgba(26, 26, 26, 0.1);
+  }
+
+  .rd-mnav a.is-active,
+  .rd-mnav a:hover {
+    color: var(--color-accent, #4ac5e4);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rd-mnav,
+    .rd-burger-bar {
+      transition: none;
+    }
+  }
 </style>
 
 <script>
@@ -148,9 +295,44 @@ const currentPath = Astro.url.pathname;
     });
   }
 
+  function setMenu(open: boolean) {
+    const panel = document.querySelector<HTMLElement>("[data-rd-menu]");
+    const btn = document.querySelector<HTMLButtonElement>("[data-rd-menu-toggle]");
+    if (!panel || !btn) return;
+    panel.dataset.open = String(open);
+    btn.setAttribute("aria-expanded", String(open));
+  }
+
+  function wireMenu() {
+    const btn = document.querySelector<HTMLButtonElement>("[data-rd-menu-toggle]");
+    if (!btn || btn.dataset.rdInit) return;
+    btn.dataset.rdInit = "1";
+
+    btn.addEventListener("click", () => {
+      setMenu(btn.getAttribute("aria-expanded") !== "true");
+    });
+
+    // Izbor stavke, Esc i klik izvan zaglavlja zatvaraju meni. Bez ovoga
+    // panel ostane otvoren preko sadržaja na koji si upravo otišao.
+    document.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("[data-rd-menu] a")) return setMenu(false);
+      if (target.closest("header")) return;
+      setMenu(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setMenu(false);
+    });
+  }
+
   function boot() {
     applyMode(readStoredMode(), { persist: false });
     wireModeToggle();
+    wireMenu();
+    // Poslije navigacije panel mora da krene zatvoren.
+    setMenu(false);
   }
 
   document.addEventListener("astro:page-load", boot);

@@ -3,6 +3,12 @@ import { getCollection } from "astro:content";
 import fs from "node:fs";
 import path from "node:path";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  PODCAST_PLAYLIST_ID,
+  fetchPlaylist,
+  liveSessions,
+} from "../data/produkcija";
+import { editions } from "../data/archive/editions";
 import EqBar from "../components/EqBar.astro";
 import BrickGrid from "../components/BrickGrid.astro";
 import VinylRecord from "../components/VinylRecord.astro";
@@ -87,11 +93,17 @@ const programs = [
   },
 ];
 
-// Quick stats strip — keep numbers honest, edit yearly.
+// Brojke se računaju iz arhive, ne prepisuju rukom — inače zastare tiho.
+// Ranije je ovdje pisalo „10 godina" i „IX završenih izdanja", a festival
+// je počeo maja 2017. i ima sedam završenih izdanja.
+const FIRST_YEAR = 2017;
+const years = new Date().getFullYear() - FIRST_YEAR;
+const cities = new Set(editions.flatMap((e) => e.cities));
+
 const stats = [
-  { value: "10", label: "Godina festivala" },
-  { value: "IX", label: "Završenih izdanja" },
-  { value: "3", label: "Grada" },
+  { value: String(years), label: "Godina festivala" },
+  { value: String(editions.length), label: "Završenih izdanja" },
+  { value: String(cities.size), label: "Grada" },
   { value: "∞", label: "Besplatan ulaz" },
 ];
 
@@ -118,49 +130,9 @@ for (const g of galleryDirs) {
   }
 }
 
-// Live Sessions on the BucanPas YouTube channel — 7 hardcoded videos.
-// Add/edit freely; the card grid pulls 3 at a time, modal navigates the whole list.
-const liveSessions = [
-  { id: "tJ4dnWwYHYo", artist: "Anja Zagorac",            title: "Rokumentarni dani · Live Sessions" },
-  { id: "amoqTYC3TQ8", artist: "Bacili & Bellerophontes", title: "Rokumentarni dani · Live Sessions" },
-  { id: "Y1K-84ZZqj4", artist: "Autogeni trening",        title: "Rokumentarni dani · Live Sessions · Unplugged" },
-  { id: "LGOcJXbpOrg", artist: "Live Session",            title: "Rokumentarni dani · Live Sessions" },
-  { id: "Lm7KIW0sFO4", artist: "Live Session",            title: "Rokumentarni dani · Live Sessions" },
-  { id: "JGVyJZ0V4lo", artist: "Live Session",            title: "Rokumentarni dani · Live Sessions" },
-  { id: "oWNPxBrqlIU", artist: "Live Session",            title: "Rokumentarni dani · Live Sessions" },
-];
-
-// Podcast playlist on YouTube — fetched at build time via the playlist's
-// public RSS feed (no API key required). YouTube returns the latest ~15
-// entries; the grid shuffles + cycles them.
-const PODCAST_PLAYLIST_ID = "PLI5tSRbbmD83Vl8Jxmtl3Zjp0QU4yw-IM";
-let podcasts: { id: string; artist: string; title: string }[] = [];
-try {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 5000);
-  const res = await fetch(
-    `https://www.youtube.com/feeds/videos.xml?playlist_id=${PODCAST_PLAYLIST_ID}`,
-    { signal: ctrl.signal }
-  );
-  clearTimeout(timer);
-  if (res.ok) {
-    const xml = await res.text();
-    const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
-    podcasts = entries
-      .map((m) => {
-        const body = m[1];
-        const id = body.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1] ?? "";
-        const raw = body.match(/<title>([^<]+)<\/title>/)?.[1] ?? "";
-        const parts = raw.split(/\s+[—–-]\s+/);
-        return parts.length > 1
-          ? { id, artist: parts[0].trim(), title: parts.slice(1).join(" — ").trim() }
-          : { id, artist: raw, title: "Rokumentarni dani · Podcast" };
-      })
-      .filter((p) => p.id);
-  }
-} catch (e) {
-  console.warn("[index] Podcast RSS fetch failed:", e);
-}
+// Live Sessions i podcast dolaze iz zajedničkog izvora — isti spisak
+// koristi i /produkcija/, pa ne mogu da se raziđu.
+const podcasts = await fetchPlaylist(PODCAST_PLAYLIST_ID);
 
 // Partners. `logo` is a URL/path to a logo file when you have one — until
 // then the wordmark is rendered as styled text. Drop logos under
@@ -265,10 +237,18 @@ const locations = [
          under the scanlines so the hero reads as a live, noisy broadcast. -->
     <div class="rd-vhs-noise" aria-hidden="true"></div>
 
+    <!-- Tiled webp noise that scale-flips every 50ms (4-step keyframe)
+         for a chunky, jittery grain — the "lovebird" theme noise pattern
+         dropped onto the hero so it reads as live broadcast snow. -->
+    <div class="rd-vhs-tile-noise" aria-hidden="true"></div>
+
     <!-- Always-on VHS overlay — scoped to this hero section via VhsMode.astro. -->
-    <div class="rd-vhs-overlay" aria-hidden="true">
-      <div class="rd-vhs-track"></div>
-    </div>
+    <div class="rd-vhs-overlay" aria-hidden="true"></div>
+
+    <!-- CRT bow — heavy corner vignette + curved top/bottom glass highlight
+         on top of every other overlay, so the hero reads as a convex
+         tube screen rather than a flat rectangle. -->
+    <div class="rd-crt-bow" aria-hidden="true"></div>
 
     <!-- CRT power-on sequence — black blanket with a bright horizontal
          deflection line that expands vertically to reveal the hero. Plays
@@ -567,14 +547,22 @@ const locations = [
             Originalne <em class="text-accent">izvedbe</em><br />
             i razgovori.
           </h2>
-          <a
-            href="https://www.youtube.com/@BucanPas"
-            target="_blank"
-            rel="noopener"
-            class="mt-6 inline-flex font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
-          >
-            Sve na YouTube ↗
-          </a>
+          <div class="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3">
+            <a
+              href="/produkcija/"
+              class="inline-flex font-mono text-xs uppercase tracking-[0.25em] text-accent underline-accent"
+            >
+              Cijela produkcija →
+            </a>
+            <a
+              href="https://www.youtube.com/@BucanPas"
+              target="_blank"
+              rel="noopener"
+              class="inline-flex font-mono text-xs uppercase tracking-[0.25em] text-bone/60 hover:text-accent"
+            >
+              Sve na YouTube ↗
+            </a>
+          </div>
         </div>
         <div class="md:col-span-4 flex justify-center md:justify-end">
           <div class="aspect-square w-full max-w-[220px] reveal">

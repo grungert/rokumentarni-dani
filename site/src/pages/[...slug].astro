@@ -1,13 +1,24 @@
 ---
 import { getCollection, render } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { redirectedSlugs } from "../data/legacy-redirects";
 
 export async function getStaticPaths() {
+  // Skip slugs that have their own dedicated .astro page so the explicit
+  // route isn't shadowed by this catch-all template.
+  const EXPLICIT_SLUGS = new Set(["o-festivalu"]);
   const pages = await getCollection("pages", ({ data }) => data.status === "publish");
-  return pages.map((entry) => ({
-    params: { slug: entry.data.slug ?? entry.id },
-    props: { entry },
-  }));
+  return pages
+    .filter((entry) => {
+      const slug = entry.data.slug ?? entry.id;
+      // Stare stranice čiji sadržaj sada živi u arhivi, katalogu i galeriji
+      // ne generišemo — na njihovoj adresi stoji redirekcija.
+      return !EXPLICIT_SLUGS.has(slug) && !redirectedSlugs.has(slug);
+    })
+    .map((entry) => ({
+      params: { slug: entry.data.slug ?? entry.id },
+      props: { entry },
+    }));
 }
 
 const { entry } = Astro.props;
