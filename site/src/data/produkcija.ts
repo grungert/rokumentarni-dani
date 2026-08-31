@@ -14,21 +14,18 @@ export interface Video {
 /**
  * Live Sessions — snimljene originalne izvedbe crnogorskih autora.
  *
- * NAPOMENA: četiri epizode nemaju ime izvođača, stoji im samo „Live Session".
- * Serijal iz 2020. je imao sedam epizoda — Big Do, SoloSoul, Anja Zagorac,
- * Bacili & Bellerophontes, Yonic, Autogeni trening i Emily Rose — pa su
- * imena koja fale među njima, ali se ne zna koji snimak je koji i ne
- * pogađamo. Najlakše se rješava ako serijal ima YouTube plejlistu: tada
- * naslovi dolaze sami, isto kao kod podcasta ispod.
+ * Imena su preuzeta sa samog YouTube-a (oEmbed), ne pogađana: četiri
+ * epizode su ovdje ranije stajale kao bezimeni „Live Session". Poklapaju
+ * se sa serijalom iz 2020, koji je imao sedam epizoda.
  */
 export const liveSessions: Video[] = [
   { id: "tJ4dnWwYHYo", artist: "Anja Zagorac", title: "Rokumentarni dani · Live Sessions" },
   { id: "amoqTYC3TQ8", artist: "Bacili & Bellerophontes", title: "Rokumentarni dani · Live Sessions" },
   { id: "Y1K-84ZZqj4", artist: "Autogeni trening", title: "Rokumentarni dani · Live Sessions · Unplugged" },
-  { id: "LGOcJXbpOrg", artist: "Live Session", title: "Rokumentarni dani · Live Sessions" },
-  { id: "Lm7KIW0sFO4", artist: "Live Session", title: "Rokumentarni dani · Live Sessions" },
-  { id: "JGVyJZ0V4lo", artist: "Live Session", title: "Rokumentarni dani · Live Sessions" },
-  { id: "oWNPxBrqlIU", artist: "Live Session", title: "Rokumentarni dani · Live Sessions" },
+  { id: "LGOcJXbpOrg", artist: "Yonic", title: "Rokumentarni dani · Live Sessions" },
+  { id: "Lm7KIW0sFO4", artist: "Emily Rose", title: "Rokumentarni dani · Live Sessions" },
+  { id: "JGVyJZ0V4lo", artist: "Big Do", title: "Rokumentarni dani · Live Sessions" },
+  { id: "oWNPxBrqlIU", artist: "Solosoul", title: "Rokumentarni dani · Live Sessions · Unplugged" },
 ];
 
 export const PODCAST_PLAYLIST_ID = "PLI5tSRbbmD83Vl8Jxmtl3Zjp0QU4yw-IM";

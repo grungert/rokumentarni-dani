@@ -67,13 +67,26 @@ export const editions: Edition[] = [
 
 /**
  * Tekuće izdanje — ono koje je na /program/, i jedino koje NIJE u nizu
- * `editions` iznad: taj niz su završena izdanja i iz njega se računa
- * statistika na naslovnoj. Kad RD8 prođe, seli se gore i ovdje ostaje RD9.
+ * `editions` iznad: taj niz su ZAVRŠENA izdanja i iz njega se računa
+ * statistika na naslovnoj („7 završenih izdanja").
+ *
+ * Isti oblik kao arhivska izdanja, namjerno: kad RD8 prođe, cijeli ovaj
+ * objekat se preseli u niz gore, a ovdje ga zamijeni RD9. Zaglavlje,
+ * naslovna i /program/ tada same pokupe novi broj i datume — nigdje se ne
+ * dira kod, samo ovaj fajl.
+ *
+ * Satnica tekućeg izdanja stoji odvojeno, u data/program.ts, jer nosi
+ * podatke kakve arhiva nema: trejlere, sinopsise i stavke za listu
+ * gledanja.
  */
-export const currentEdition = {
+export const currentEdition: Edition = {
   n: 8,
   year: 2026,
-} as const;
+  slug: "2026",
+  title: "Rokumentarni dani 8",
+  dates: "10–13. decembar 2026",
+  cities: ["Nikšić", "Podgorica"],
+};
 
 export const editionByNumber = new Map(editions.map((e) => [e.n, e]));
 

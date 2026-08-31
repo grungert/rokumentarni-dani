@@ -619,9 +619,9 @@ export const archiveFilms: ArchiveFilm[] = [
     poster: "/media/2019/05/Screen-Shot-2020-10-10-at-17.jpg",
   },
   {
-    id: "rd5-buc-kesidi",
-    slug: "buc-kesidi",
-    title: "Buc Kesidi",
+    id: "rd5-buc-kesidi-euforija-uzivo",
+    slug: "buc-kesidi-euforija-uzivo",
+    title: "Buč Kesidi, Euforija uživo",
     edition: 5,
     editionYear: 2021,
     director: "David Jovanović",
@@ -631,9 +631,9 @@ export const archiveFilms: ArchiveFilm[] = [
     poster: "/media/2021/11/NKPG-buc-kesidi.png",
   },
   {
-    id: "rd5-rock-end-roll",
-    slug: "rock-end-roll",
-    title: "Rock End Roll",
+    id: "rd5-rock-n-roll",
+    slug: "rock-n-roll",
+    title: "Rock'n'Roll",
     edition: 5,
     editionYear: 2021,
     director: "Borislav Kolev",
@@ -657,7 +657,7 @@ export const archiveFilms: ArchiveFilm[] = [
   {
     id: "rd5-elektricni-orgazam-za-ljude-buducnosti",
     slug: "elektricni-orgazam-za-ljude-buducnosti",
-    title: "Elektricni Orgazam za ljude buducnosti",
+    title: "Električni Orgazam za ljude budućnosti",
     edition: 5,
     editionYear: 2021,
     director: "Marija Vukić",
@@ -669,7 +669,7 @@ export const archiveFilms: ArchiveFilm[] = [
   {
     id: "rd5-here-we-move-here-we-groove",
     slug: "here-we-move-here-we-groove",
-    title: "Here We Move Here We Groove",
+    title: "Here We Move, Here We Groove",
     edition: 5,
     editionYear: 2021,
     director: "Sergej Kreso",
@@ -705,7 +705,7 @@ export const archiveFilms: ArchiveFilm[] = [
   {
     id: "rd5-ns-made-love-hunters",
     slug: "ns-made-love-hunters",
-    title: "NS Made Love Hunters",
+    title: "NS Made: Love Hunters",
     edition: 5,
     editionYear: 2021,
     director: "Vladimir Bajić",
@@ -729,7 +729,7 @@ export const archiveFilms: ArchiveFilm[] = [
   {
     id: "rd5-scream-for-me-sarajevo",
     slug: "scream-for-me-sarajevo",
-    title: "Scream For Me Sarajevo",
+    title: "Scream for me Sarajevo",
     edition: 5,
     editionYear: 2021,
     director: "Tarik Hodžić",
@@ -739,9 +739,9 @@ export const archiveFilms: ArchiveFilm[] = [
     poster: "/media/2021/11/NK-scream-for-me-sarajevo.png",
   },
   {
-    id: "rd5-fuss",
-    slug: "fuss",
-    title: "Fuss",
+    id: "rd5-fus-dobri-duh-niksica",
+    slug: "fus-dobri-duh-niksica",
+    title: "FUS – Dobri duh Nikšića",
     edition: 5,
     editionYear: 2021,
     director: "Sead Šabotić",
@@ -753,7 +753,7 @@ export const archiveFilms: ArchiveFilm[] = [
   {
     id: "rd5-faith-and-branko",
     slug: "faith-and-branko",
-    title: "Faith And Branko",
+    title: "Faith and Branko",
     edition: 5,
     editionYear: 2021,
     director: "Catherine Harte",
