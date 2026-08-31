@@ -40,6 +40,8 @@ const meta = [
   title={film.title}
   description={film.synopsis?.slice(0, 160) ??
     `${film.title} — prikazan na Rokumentarnim danima.`}
+  image={poster}
+  type="article"
 >
   <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
   <SectionSymbols />

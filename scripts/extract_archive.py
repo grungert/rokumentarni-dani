@@ -278,6 +278,7 @@ def film_records(spec: EditionSpec, content: str, att: dict[int, str]) -> list[d
 
     if spec.films_style == "h3":
         parts = re.split(r"<h3[^>]*>(.*?)</h3>", content, flags=re.S)
+        head = parts[0] if parts else ""
         blocks = [(tidy(parts[i]), parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
     elif spec.films_style == "strong":
         # <strong> se u ovim godinama koristi i za naslov filma i za
@@ -302,6 +303,7 @@ def film_records(spec: EditionSpec, content: str, att: dict[int, str]) -> list[d
                 continue
             accepted.append(m)
 
+        head = content[:accepted[0].start()] if accepted else ""
         blocks = [
             (tidy(m.group(1)),
              content[m.end():(accepted[i + 1].start()
@@ -309,6 +311,7 @@ def film_records(spec: EditionSpec, content: str, att: dict[int, str]) -> list[d
             for i, m in enumerate(accepted)
         ]
     elif spec.films_style == "image":
+        head = ""
         # 2021: naslov nosi plakat, pa je granica sam plakat.
         chunks = re.split(r"@@IMG:(\d+)@@", content)
         blocks = []
@@ -327,10 +330,21 @@ def film_records(spec: EditionSpec, content: str, att: dict[int, str]) -> list[d
     else:
         return []
 
+    # Plakat i trejler u ovom HTML-u stoje ISPRED svog naslova, ne ispod
+    # njega: [vc_single_image] i [qode_video_box] dolaze pa tek onda <h3>
+    # ili <strong>. Ako se traže u tijelu ispod naslova, svaki film pokupi
+    # prilog onog sljedećeg — provjereno na svim godinama.
+    # Izuzetak je 2021, gdje je plakat sam granica bloka i nosi naslov.
+    if spec.films_style == "image":
+        assets = [body for _, body in blocks]
+    else:
+        assets = [head] + [body for _, body in blocks[:-1]]
+
     films: list[dict] = []
     seen_trailers: dict[str, str] = {}
 
-    for title, body in blocks:
+    for index, (title, body) in enumerate(blocks):
+        asset_segment = assets[index] if index < len(assets) else ""
         # 2019. je podnaslov (ime ciklusa) pisala u drugom redu istog <h3>.
         subtitle = None
         if "\n" in title:
@@ -354,7 +368,8 @@ def film_records(spec: EditionSpec, content: str, att: dict[int, str]) -> list[d
             candidates.append(chunk)
         synopsis = max(candidates, key=len) if candidates else None
 
-        img_ids = [int(x) for x in re.findall(r"@@IMG:(\d+)@@", body)]
+        img_ids = [int(x) for x in
+                   reversed(re.findall(r"@@IMG:(\d+)@@", asset_segment))]
         poster = None
         for img_id in img_ids:
             rel = att.get(img_id)
@@ -366,7 +381,7 @@ def film_records(spec: EditionSpec, content: str, att: dict[int, str]) -> list[d
                                f"ne postoji na disku")
 
         trailer = None
-        for url in re.findall(r"@@YT:([^@]+)@@", body):
+        for url in reversed(re.findall(r"@@YT:([^@]+)@@", asset_segment)):
             trailer = youtube_id(url)
             if trailer:
                 break

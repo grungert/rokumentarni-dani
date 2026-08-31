@@ -48,6 +48,7 @@ const dayLabel = (label: string) =>
 <BaseLayout
   title={`${edition.title} · ${edition.year}`}
   description={`${edition.title}, ${edition.dates} — ${films.length} filmova, satnica i fotografije.`}
+  image={preview[0]?.src ?? films.find((f) => f.poster)?.poster}
 >
   <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
   <SectionSymbols />

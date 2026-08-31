@@ -32,6 +32,7 @@ const daysWithOffset = edition.days.map((day) => {
 <BaseLayout
   title={`Galerija ${edition.year}`}
   description={`${edition.total} fotografija sa Rokumentarnih dana ${edition.year} — kontakt-kopija po danima.`}
+  image={edition.days[0]?.photos[0]?.src}
 >
   <BrickGrid class="fixed inset-0 -z-10 pointer-events-none" interactive />
   <SectionSymbols />
