@@ -28,3 +28,7 @@ scripts/media-copy-report.txt
 .env
 .env.*
 !.env.example
+
+# Stanje alata, ne projekat.
+.claude/
+.serena/
