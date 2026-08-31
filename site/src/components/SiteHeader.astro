@@ -24,17 +24,16 @@ const currentPath = Astro.url.pathname;
   <div
     class="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between"
   >
-    <div class="flex items-center gap-3">
-      <a
-        href="/"
-        class="flex items-center"
-        aria-label="Rokumentarni dani — početna"
-      >
-        <Logo variant="full" class="h-8" twinkle />
-      </a>
+    <!-- Logo i oznaka izdanja su JEDNA veza ka početnoj: dvije susjedne
+         veze ka istom mjestu su suvišan korak pri tabovanju. Broj izdanja
+         je u aria-label, jer bi ga inače progutao. -->
+    <a
+      href="/"
+      class="flex items-center gap-3"
+      aria-label={`Rokumentarni dani RD${currentEdition.n} — početna`}
+    >
+      <Logo variant="full" class="h-8" twinkle />
 
-      <!-- Tekuće izdanje uz logo. Stoji izvan veze da ga čitači ekrana
-           pročitaju kao podatak, a ne da ga aria-label na logu proguta. -->
       <span class="flex items-baseline leading-none">
         <span
           class="font-mono text-base font-medium uppercase tracking-[0.1em] text-accent leading-none"
@@ -45,7 +44,7 @@ const currentPath = Astro.url.pathname;
           {currentEdition.n}
         </span>
       </span>
-    </div>
+    </a>
 
     <nav class="hidden md:block">
       <ul class="flex items-center gap-7 text-xs font-mono uppercase tracking-[0.25em]">
