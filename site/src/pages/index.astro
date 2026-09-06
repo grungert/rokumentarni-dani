@@ -8,7 +8,8 @@ import {
   fetchPlaylist,
   liveSessions,
 } from "../data/produkcija";
-import { editions } from "../data/archive/editions";
+import { currentEdition, editions } from "../data/archive/editions";
+import { program } from "../data/program";
 import EqBar from "../components/EqBar.astro";
 import BrickGrid from "../components/BrickGrid.astro";
 import VinylRecord from "../components/VinylRecord.astro";
@@ -22,12 +23,16 @@ const posts = (await getCollection("posts", ({ data }) => data.status === "publi
 
 // Hero slideshow — first image is rendered server-side as a fallback, the
 // rest preload and cycle on the client with a mosaic-dissolve transition.
+//
+// Četiri koncerta izdanja, redom kojim se sviraju. Fajlovi sa prefiksom
+// `hero-` postoje samo zbog ove trake: Janjov plakat je uspravan pa je
+// isječen na 16:9, a Sarin kadar iz modala ima samo 480px i raspao bi se
+// preko cijelog ekrana, pa ovdje ide njen drugi zvanični spot u 1280px.
 const heroImages = [
-  "/media/2023/11/lennon-1024x584.jpg",
-  "/media/2023/11/bella-1024x587.jpg",
-  "/media/2023/11/littlerichard-1024x576.jpg",
-  "/media/2022/12/DAN3-1024x587.jpg",
-  "/media/2022/12/DAN5-1024x587.jpg",
+  "/media/2026/09/hero-janjo.jpg",
+  "/media/2026/09/mucin.jpg",
+  "/media/2026/09/short-reports.jpg",
+  "/media/2026/09/hero-sara-renar.jpg",
 ];
 const heroImage = heroImages[0];
 
@@ -35,15 +40,18 @@ const heroImage = heroImages[0];
 // featuredImage yet. Edit freely.
 const newsFallbackImage = "/media/2022/12/DAN3-1024x587.jpg";
 
-// Schedule snippets to scroll across the marquee.
-// Each item: day · date · city. Edit yearly.
-const scheduleItems = [
-  "Dan I · 12 Dec · Niksić",
-  "Dan II · 13 Dec · Podgorica",
-  "Dan III · 14 Dec · Kotor",
-  "Dan IV · 15 Dec · Niksić",
-  "Dan V · 16 Dec · Podgorica",
-];
+// Traka sa satnicom — čita se iz data/program.ts, ne prepisuje se rukom,
+// inače tiho zastari kao što je zastarila prošlog izdanja.
+const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
+const scheduleItems = program.map((day, i) => {
+  const [, month, dayNum] = day.date.split("-");
+  const MONTHS = [
+    "Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
+    "Jul", "Avg", "Sep", "Okt", "Nov", "Dec",
+  ];
+  const short = `${Number(dayNum)} ${MONTHS[Number(month) - 1]}`;
+  return `Dan ${ROMAN[i + 1] ?? i + 1} · ${short} · ${day.city}`;
+});
 
 // All the things the festival actually does, beyond the headline films.
 const programs = [
@@ -84,7 +92,7 @@ const programs = [
   {
     n: "07",
     title: "DJ sets",
-    desc: "Otvaranje i zatvaranje festivala uz selektore iz Crne Gore i regiona.",
+    desc: "Selektori iz Crne Gore i regiona, kad izdanje ima večernji program za njih.",
   },
   {
     n: "08",
@@ -93,15 +101,15 @@ const programs = [
   },
 ];
 
-// Brojke se računaju iz arhive, ne prepisuju rukom — inače zastare tiho.
-// Ranije je ovdje pisalo „10 godina" i „IX završenih izdanja", a festival
-// je počeo maja 2017. i ima sedam završenih izdanja.
-const FIRST_YEAR = 2017;
-const years = new Date().getFullYear() - FIRST_YEAR;
+// Brojke se računaju iz podataka, ne prepisuju rukom — inače zastare tiho.
+//
+// „Godina festivala" prati broj izdanja, ne razliku kalendarskih godina:
+// festival je počeo 2017, ali nije održan svake godine, pa je 2026. osmo
+// izdanje a ne deveta godina. Kad dođe RD9, broj se pomjeri sam.
 const cities = new Set(editions.flatMap((e) => e.cities));
 
 const stats = [
-  { value: String(years), label: "Godina festivala" },
+  { value: String(currentEdition.n), label: "Godina festivala" },
   { value: String(editions.length), label: "Završenih izdanja" },
   { value: String(cities.size), label: "Grada" },
   { value: "∞", label: "Besplatan ulaz" },
@@ -134,53 +142,50 @@ for (const g of galleryDirs) {
 // koristi i /produkcija/, pa ne mogu da se raziđu.
 const podcasts = await fetchPlaylist(PODCAST_PLAYLIST_ID);
 
-// Partners. `logo` is a URL/path to a logo file when you have one — until
-// then the wordmark is rendered as styled text. Drop logos under
-// site/public/partners/ and reference them as e.g. "/partners/smart.svg".
-const partners = [
+// Partner i donator osmog izdanja. Logotipi stoje u site/public/partners/.
+// `light` je za amblem koji je tamn na bijelom i traži svijetlu podlogu —
+// zvanični grb se ne prebojava ni invertuje da bi legao na tamnu stranu.
+const supporters = [
   {
-    name: "SMART Balkan",
-    url: "https://smartbalkan.org/",
-    logo: null,
+    role: "Partner",
+    name: "Kružni tok",
+    logo: "/partners/kruzni-tok.png",
+    // Natpis u logotipu je bijel; stoji na tamnoj pločici kao i ostatak sajta.
+    light: false,
   },
   {
-    name: "MFA Norway",
-    fullName: "Ministarstvo vanjskih poslova Norveške",
-    url: "https://www.regjeringen.no/en/dep/ud/",
-    logo: null,
-  },
-  { name: "CPCD", url: "https://cpcd.ba/", logo: null },
-  { name: "CRPM", url: "https://crpm.org.mk/", logo: null },
-  { name: "IDM", url: "https://idmalbania.org/", logo: null },
-  {
-    name: "CK Nikšić",
-    fullName: "Centar za kulturu Nikšić",
-    url: null,
-    logo: null,
+    role: "Donator",
+    name: "Sekretarijat za kulturu Glavnog grada Podgorice",
+    logo: "/partners/sekretarijat-za-kulturu.jpg",
+    // Grb i tekst su tamni na bijelom — zvanični amblem se ne prebojava,
+    // pa mu se podmeće svijetla podloga.
+    light: true,
   },
 ];
 
+// Potvrđena je samo Podgorica; druge dvije stanice nemaju ni grad ni prostor
+// dok ih festival ne objavi, pa se ovdje ne pogađaju.
 const locations = [
   {
-    city: "Niksić",
-    role: "Domaćin festivala",
-    venues: ["Blues Brothers Bar", "Centar za kulturu", "JU Zahumlje"],
-    blurb:
-      "Glavna stanica festivala — odakle je sve počelo i gdje se festival vraća svake godine.",
-  },
-  {
     city: "Podgorica",
-    role: "Glavni grad",
-    venues: ["201 Engaging Space"],
+    role: `Domaćin RD${currentEdition.n}`,
+    venues: ["Kružni tok", currentEdition.dates ?? ""].filter(Boolean),
     blurb:
-      "Projekcije i razgovori u srcu prijestonice, na pola puta između publike i scene.",
+      "Kompletan program osmog izdanja — četiri dana projekcija, koncerata i razgovora na Kružnom toku.",
   },
   {
-    city: "Kotor",
-    role: "Primorska stanica",
-    venues: ["Lokacija svake godine drugačija"],
+    city: "Uskoro",
+    role: "Druga stanica",
+    venues: ["Grad i prostor se najavljuju"],
     blurb:
-      "Završetak festivala uz Bokokotorski zaliv — film, more i muzika kao trostruko ogledalo.",
+      "Festival ne ostaje samo u prijestonici. Druga stanica izdanja je u pripremi i objavljujemo je uskoro.",
+  },
+  {
+    city: "Uskoro",
+    role: "Treća stanica",
+    venues: ["Grad i prostor se najavljuju"],
+    blurb:
+      "I treća stanica se dogovara. Čim termin i prostor budu potvrđeni, stižu ovdje i u program.",
   },
 ];
 ---
@@ -290,7 +295,7 @@ const locations = [
             >
               Datum
             </p>
-            <p class="font-display text-2xl">Sljedeće izdanje uskoro</p>
+            <p class="font-display text-2xl">{currentEdition.dates}</p>
           </div>
           <div>
             <p
@@ -298,7 +303,11 @@ const locations = [
             >
               Lokacija
             </p>
-            <p class="font-display text-2xl">Niksić · Podgorica · Kotor</p>
+            <p class="font-display text-2xl">
+              {currentEdition.cities.join(" · ")}{
+                currentEdition.venue && ` · ${currentEdition.venue}`
+              }
+            </p>
           </div>
         </div>
       </div>
@@ -376,13 +385,13 @@ const locations = [
           class="first-letter:font-display first-letter:text-7xl first-letter:float-left first-letter:mr-3 first-letter:leading-[0.85] first-letter:text-accent"
         >
           Rokumentarni dani su jedinstveni festival dokumentarnog filma o
-          muzici u regionu. Već deset godina donosimo priče o izvođačima,
-          žanrovima i momentima koji su oblikovali zvuk našeg vremena.
+          muzici u regionu. Od 2017. donosimo priče o izvođačima, žanrovima i
+          momentima koji su oblikovali zvuk našeg vremena.
         </p>
         <p>
-          Festival se odvija u Niksiću, Podgorici i Kotoru, sa programom koji
-          spaja filmske projekcije, koncerte, razgovore sa autorima i panel
-          diskusije. Ulaz na sve programe je besplatan.
+          Osmo izdanje se odvija u Podgorici, na Kružnom toku, sa programom
+          koji spaja filmske projekcije, koncerte, razgovore sa autorima i
+          panel diskusije. Ulaz na sve programe je besplatan.
         </p>
         <a
           href="/o-festivalu/"
@@ -498,7 +507,7 @@ const locations = [
           <h2
             class="font-display font-light text-5xl md:text-6xl leading-[0.9] tracking-tight"
           >
-            Tri grada, jedan<br /><em class="text-accent">festival</em>.
+            Tri stanice, jedan<br /><em class="text-accent">festival</em>.
           </h2>
         </div>
         <div class="aspect-square w-full max-w-[140px] reveal">
@@ -2116,55 +2125,41 @@ const locations = [
   }
 
 
-  <!-- PARTNERS — funder logo strip -->
+  <!-- PARTNER I DONATOR — logotipi podrške ovog izdanja -->
   <section data-rd-cube-pattern="partners">
     <div class="mx-auto max-w-7xl px-6 lg:px-10 py-16">
       <p class="reveal text-center font-mono text-xs uppercase tracking-[0.3em] text-accent mb-10">
-        Podržavaju festival
+        Partner i donator
       </p>
-      <ul
-        class="reveal-stagger grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
-      >
+
+      <ul class="reveal-stagger grid sm:grid-cols-2 gap-3 max-w-3xl mx-auto mb-14">
         {
-          partners.map((p) => {
-            const inner = (
-              <div class="bg-ink/40 backdrop-blur-md h-24 px-6 flex items-center justify-center text-center transition border border-bone/15 group-hover:bg-ink/60 group-hover:border-accent/30">
-                {p.logo ? (
+          supporters.map((s) => (
+            <li class="group">
+              <div class="bg-ink/40 backdrop-blur-md border border-bone/15 h-full p-8 flex flex-col items-center gap-6 text-center transition group-hover:bg-ink/60 group-hover:border-accent/30">
+                <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-accent">
+                  {s.role}
+                </p>
+                <div
+                  class={`flex h-36 items-center justify-center ${s.light ? "bg-white px-5 py-4" : ""}`}
+                >
                   <img
-                    src={p.logo}
-                    alt={p.fullName ?? p.name}
-                    class="max-h-12 w-auto opacity-70 transition group-hover:opacity-100"
+                    src={s.logo}
+                    alt={s.name}
+                    loading="lazy"
+                    decoding="async"
+                    class="max-h-full w-auto object-contain"
                   />
-                ) : (
-                  <span class="font-mono text-xs uppercase tracking-[0.2em] text-bone/55 group-hover:text-bone transition">
-                    {p.name}
-                  </span>
-                )}
+                </div>
+                <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-bone/70 leading-relaxed">
+                  {s.name}
+                </p>
               </div>
-            );
-            return (
-              <li class="group">
-                {p.url ? (
-                  <a
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener"
-                    class="block h-full"
-                    title={p.fullName ?? p.name}
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  inner
-                )}
-              </li>
-            );
-          })
+            </li>
+          ))
         }
       </ul>
-      <p class="mt-6 text-center text-[11px] text-bone/40 font-mono uppercase tracking-[0.2em]">
-        Festival je realizovan uz podršku partnera iz Crne Gore i regiona.
-      </p>
+
     </div>
   </section>
   </div>
