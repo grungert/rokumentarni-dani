@@ -17,6 +17,12 @@ export interface Edition {
   slogan?: string;
   dates?: string;
   cities: string[];
+  /**
+   * Prostor izdanja — popunjen samo kad se cijelo izdanje odvija na jednom
+   * mjestu (RD8: Kružni tok). Arhivska izdanja su se selila po gradovima i
+   * prostor drže po danu, u `ArchiveDay.venue`.
+   */
+  venue?: string;
 }
 
 export interface ArchiveFilm {

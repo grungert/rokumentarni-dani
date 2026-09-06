@@ -353,8 +353,6 @@ html.theme-light .rd-izlog-dayhead {
 .rd-izlog-card[data-kind="tribina"],
 .rd-izlog-chip[data-filter-kind="tribina"]   { --k: #9aa8ff; }
 
-.rd-izlog-card[data-kind="rezerva"],
-.rd-izlog-chip[data-filter-kind="rezerva"]   { --k: #8a8378; }
 
 .rd-izlog-box {
   display: flex;
@@ -379,17 +377,17 @@ html.theme-light .rd-izlog-dayhead {
   box-shadow: 0 26px 40px -26px #000;
 }
 
-/* Light mode: providnost od 72% preko svijetle strane daje prljavo sivo i
-   guta kontrast tekstu. Kutija ostaje tamna — samo se malo više zatvori,
-   dobije jasnu ivicu i dublju sjenku da se odvoji od papira. */
+/* Light mode: providnost od 72% preko svijetle strane daje prljavo sivo, pa
+   kutija ide na punu boju papira. Ekran u zaglavlju kartice ostaje crn — on
+   je ekran, i na svijetloj strani. */
 html.theme-light .rd-izlog-box {
-  background: rgba(12, 12, 12, 0.94);
-  border-color: rgba(0, 0, 0, 0.3);
-  box-shadow: 0 22px 38px -24px rgba(0, 0, 0, 0.55);
+  background: color-mix(in srgb, var(--color-ink) 97%, transparent);
+  border-color: color-mix(in srgb, var(--color-bone) 16%, transparent);
+  box-shadow: 0 20px 34px -28px rgba(0, 0, 0, 0.4);
 }
 
 html.theme-light .rd-izlog-card:hover .rd-izlog-box {
-  box-shadow: 0 30px 48px -22px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 28px 44px -26px rgba(0, 0, 0, 0.45);
 }
 
 /* Prazno stanje i sitni natpisi na svijetloj podlozi trpe od providnosti. */
@@ -932,4 +930,71 @@ html.theme-light .rd-izlog-empty {
   .rd-vt-member-count.is-bump {
     animation: none;
   }
+}
+
+/* --------------------------------------------------------------- PLAKAT
+   Kad je slika plakat a ne kadar iz filma (`stillIsPoster`), pravila za
+   kadar rade protiv nje: `cover` na 16:9 odsijeca uspravan plakat na
+   sredinu i guta naslov, a `grayscale(1)` briše boju koja je pola poruke.
+   Plakat se zato prikazuje cijeo i u boji, na crnini ekrana.
+
+   Blok stoji na kraju fajla namjerno: pravila za kadar (hover, i varijanta
+   bez trejlera) imaju istu specifičnost, pa presuđuje redoslijed. */
+.rd-izlog-screen[data-still="plakat"] .rd-izlog-still,
+.rd-izlog-card:hover .rd-izlog-screen[data-still="plakat"] .rd-izlog-still,
+.rd-izlog-card:not(:has(.rd-izlog-play))
+  .rd-izlog-screen[data-still="plakat"]
+  .rd-izlog-still {
+  object-fit: contain;
+  filter: none;
+  transform: none;
+}
+
+/* ------------------------------------------------- SVIJETLA TEMA · KARTICA
+   Tekst u tijelu kartice pisan je tvrdim rgba(245,241,232,…) — bojom kosti
+   na tamnoj podlozi — pa se ne okreće sam kad tema zamijeni promjenljive.
+   Ovdje se isti odnosi ponavljaju preko `--color-bone`, koju tema mijenja.
+   Sve što stoji preko kadra (OSD, dugme za pusti, „bez snimka") namjerno
+   izostaje: ono i dalje leži na crnom ekranu. */
+html.theme-light .rd-izlog-screen {
+  border-bottom-color: color-mix(in srgb, var(--color-bone) 12%, transparent);
+}
+
+html.theme-light .rd-izlog-cat {
+  color: color-mix(in srgb, var(--color-bone) 60%, transparent);
+}
+
+html.theme-light .rd-izlog-title,
+html.theme-light .rd-izlog-titlebtn {
+  color: var(--color-bone);
+}
+
+html.theme-light .rd-izlog-credit {
+  color: color-mix(in srgb, var(--color-bone) 70%, transparent);
+}
+
+html.theme-light .rd-izlog-orig {
+  color: color-mix(in srgb, var(--color-bone) 64%, transparent);
+}
+
+html.theme-light .rd-izlog-syn {
+  color: color-mix(in srgb, var(--color-bone) 76%, transparent);
+}
+
+html.theme-light .rd-izlog-more,
+html.theme-light .rd-izlog-take {
+  border-color: color-mix(in srgb, var(--color-bone) 26%, transparent);
+  color: color-mix(in srgb, var(--color-bone) 78%, transparent);
+}
+
+html.theme-light .rd-izlog-more:hover,
+html.theme-light .rd-izlog-take:hover {
+  color: var(--color-bone);
+}
+
+/* Upozorenje o preklapanju: svijetlo crvena je pisana za crnu podlogu i na
+   papiru se ne vidi. */
+html.theme-light .rd-izlog-clash {
+  background: rgba(229, 72, 77, 0.08);
+  color: #a32026;
 }

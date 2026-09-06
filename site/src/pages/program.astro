@@ -12,38 +12,22 @@ import SectionSymbols from "../components/SectionSymbols.astro";
 import ProgramPoster from "../components/ProgramPoster.astro";
 import TapeSheet from "../components/TapeSheet.astro";
 import MemberCard from "../components/MemberCard.astro";
-import {
-  kindLabel,
-  program,
-  reserves,
-  type ProgramKind,
-} from "../data/program";
+import { kindLabel, program, type ProgramKind } from "../data/program";
 import "../styles/videoteka.css";
 import "../styles/izlog.css";
 
-// Rezerve su dan bez datuma — ista struktura, pa isti markup.
-const rezerveDay = {
-  id: "rezerve",
-  label: "Rezerve",
-  date: "",
-  dateLabel: "termin nije potvrđen",
-  city: "—",
-  venue: "čeka slobodan termin",
-  items: reserves,
-};
-
-const days = [...program, rezerveDay];
+const days = program;
 const all = days.flatMap((d) => d.items);
 
 // Filter nudi samo vrste koje program zaista sadrži.
 const kinds = (
-  ["film", "videodrom", "koncert", "tribina", "rezerva"] as ProgramKind[]
+  ["film", "videodrom", "koncert", "tribina"] as ProgramKind[]
 ).filter((k) => all.some((i) => i.kind === k));
 
-const withTrailer = all.filter((i) => i.trailer).length;
+const withVideo = all.filter((i) => i.trailer).length;
 const hours = Math.round(all.reduce((sum, i) => sum + i.duration, 0) / 60);
 
-// „10–13. decembar" iz prvog i posljednjeg dana — bez drugog izvora datuma.
+// „17–20. septembar" iz prvog i posljednjeg dana — bez drugog izvora datuma.
 const firstDay = program[0].dateLabel.replace(/\D+$/, "").trim().replace(".", "");
 const dateRange = `${firstDay}–${program[program.length - 1].dateLabel}`;
 
@@ -67,8 +51,8 @@ const titles = (n: number) =>
 
 /* --------------------------------------------------------------- JSON-LD
    Pretraživači čitaju termine iz istog fajla iz kojeg se crta strana, pa se
-   struktura ne može razići sa programom. Rezerve nemaju termin — ne ulaze.
-   Crna Gora je u decembru na CET (+01:00). */
+   struktura ne može razići sa programom.
+   Crna Gora je u septembru na ljetnjem računanju vremena — CEST (+02:00). */
 const SITE = Astro.site ?? new URL("https://rokumentarnidani.me");
 const abs = (path: string) => new URL(path, SITE).href;
 
@@ -78,8 +62,8 @@ const subEvents = program.flatMap((day) =>
     .map((item) => ({
       "@type": "Event",
       name: item.title,
-      startDate: `${day.date}T${item.start}:00+01:00`,
-      endDate: `${day.date}T${item.end}:00+01:00`,
+      startDate: `${day.date}T${item.start}:00+02:00`,
+      endDate: `${day.date}T${item.end}:00+02:00`,
       eventStatus: "https://schema.org/EventScheduled",
       eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
       description: item.synopsis,
@@ -146,7 +130,7 @@ const minLabel = (mins: number) => {
 
 <BaseLayout
   title="Program"
-  description="Program Rokumentarnih dana — svaki naslov sa kadrom, opisom i trejlerom koji se pušta odmah. Napravi svoju listu za gledanje."
+  description={`Program Rokumentarnih dana — ${all.length} naslova sa kadrom, opisom i terminom, od toga ${withVideo} sa snimkom koji se pušta odmah. Napravi svoju listu za gledanje.`}
 >
   <script
     type="application/ld+json"
@@ -197,7 +181,7 @@ const minLabel = (mins: number) => {
             class="reveal md:col-span-4 md:col-start-9 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 leading-relaxed"
             style="--i:3"
           >
-            {withTrailer} trejlera<br />
+            {withVideo} snimaka<br />
             {hours} sati programa
           </p>
         </div>
@@ -305,8 +289,8 @@ const minLabel = (mins: number) => {
         <p
           class="reveal font-mono text-[10px] uppercase tracking-[0.25em] text-bone/55 max-w-2xl leading-relaxed"
         >
-          Trejleri i sinopsisi su radna verzija. Program je tempiran u minut —
-          između projekcija računaj još 10 minuta. Satnica se može mijenjati.
+          Program je tempiran u minut — između projekcija računaj još 10
+          minuta. Satnica se može mijenjati.
         </p>
       </div>
     </section>

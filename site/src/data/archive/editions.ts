@@ -84,8 +84,9 @@ export const currentEdition: Edition = {
   year: 2026,
   slug: "2026",
   title: "Rokumentarni dani 8",
-  dates: "10–13. decembar 2026",
-  cities: ["Nikšić", "Podgorica"],
+  dates: "17–20. septembar 2026",
+  cities: ["Podgorica"],
+  venue: "Kružni tok",
 };
 
 export const editionByNumber = new Map(editions.map((e) => [e.n, e]));

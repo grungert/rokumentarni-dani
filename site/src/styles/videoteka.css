@@ -151,9 +151,30 @@
 /* Sadržaj omota (klon iz police). */
 .rd-vt-detail {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: 8px 30px;
   align-items: start;
+}
+
+/* Dvije stubne kolone. Blokovi unutar njih se slažu jedan ispod drugog
+   umjesto da svaki traži svoj red u gridu — inače visok red sa ekranom
+   odgurne sinopsis pod njega i otvori prazninu u obje kolone. */
+.rd-vt-d-side,
+.rd-vt-d-info {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rd-vt-d-side {
+  grid-column: 1;
+  gap: 18px;
+}
+
+.rd-vt-d-info {
+  grid-column: 2;
+  gap: 16px;
 }
 
 .rd-vt-d-eyebrow {
@@ -195,8 +216,6 @@
 /* Ekran — still, pa video preko njega. */
 .rd-vt-d-media {
   position: relative;
-  grid-column: 1;
-  margin-top: 20px;
   aspect-ratio: 539 / 303;
   background: #000;
   overflow: hidden;
@@ -264,8 +283,6 @@
 }
 
 .rd-vt-d-meta {
-  grid-column: 2;
-  margin-top: 20px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 18px;
@@ -286,29 +303,10 @@
 }
 
 .rd-vt-d-syn {
-  grid-column: 2;
-  margin-top: 20px;
+  margin: 0;
   font-size: 0.95rem;
   line-height: 1.65;
   color: rgba(245, 241, 232, 0.82);
-}
-
-.rd-vt-d-tags {
-  grid-column: 2;
-  margin-top: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.rd-vt-d-tags li {
-  padding: 4px 9px;
-  border: 1px solid rgba(245, 241, 232, 0.22);
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.52rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(245, 241, 232, 0.68);
 }
 
 /* ---------------------------------------------------------- ČLANSKA KARTA */
@@ -839,11 +837,13 @@
     grid-template-columns: 1fr;
   }
 
-  .rd-vt-d-media,
-  .rd-vt-d-meta,
-  .rd-vt-d-syn,
-  .rd-vt-d-tags {
+  .rd-vt-d-side,
+  .rd-vt-d-info {
     grid-column: 1;
+  }
+
+  .rd-vt-d-info {
+    margin-top: 4px;
   }
 
   .rd-vt-member {
@@ -856,4 +856,82 @@
   .rd-vt-card {
     transition-duration: 0.01ms;
   }
+}
+
+/* Plakat u info dijalogu — isto pravilo kao na kartici (v. izlog.css):
+   cijela slika, u boji, umjesto isječenog i obezbojenog kadra. */
+.rd-vt-d-media[data-still="plakat"] .rd-vt-d-still {
+  object-fit: contain;
+  filter: none;
+}
+
+/* --------------------------------------------------- SVIJETLA TEMA · OMOT
+   Omot je bio pisan samo za tamnu stranu: #0d0d0d podloga i tekst bojom
+   kosti. Kad se tema okrene, dijalog je ostajao crn usred svijetle strane.
+   Ovdje se iste vrijednosti izvode iz `--color-ink`/`--color-bone`, koje
+   tema već zamjenjuje, pa se održavaju na jednom mjestu.
+
+   Ekran sa kadrom ostaje crn, kao i na kartici, a sve što stoji preko njega
+   (dugme za pusti, CRT rešetka) namjerno se ne dira. */
+html.theme-light .rd-vt-sheet {
+  background: var(--color-ink);
+  color: var(--color-bone);
+  box-shadow:
+    0 0 40px -10px color-mix(in srgb, var(--k) 30%, transparent),
+    0 40px 80px -40px rgba(0, 0, 0, 0.45);
+}
+
+/* Zastor ostaje taman da dijalog dobije fokus, ali blaži nego na crnoj
+   strani — puna crnina od 82% preko papira je pretvrda. */
+html.theme-light .rd-vt-sheet::backdrop {
+  background: rgba(26, 26, 26, 0.55);
+}
+
+html.theme-light .rd-vt-sheet-bar {
+  border-bottom-color: color-mix(in srgb, var(--color-bone) 14%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-bone) 5%, transparent),
+    transparent
+  );
+}
+
+html.theme-light .rd-vt-sheet-close {
+  border-color: color-mix(in srgb, var(--color-bone) 22%, transparent);
+  color: var(--color-bone);
+}
+
+html.theme-light .rd-vt-sheet-foot {
+  border-top-color: color-mix(in srgb, var(--color-bone) 14%, transparent);
+  background: color-mix(in srgb, var(--color-bone) 5%, transparent);
+}
+
+html.theme-light .rd-vt-d-orig {
+  color: color-mix(in srgb, var(--color-bone) 64%, transparent);
+}
+
+html.theme-light .rd-vt-d-meta dt {
+  color: color-mix(in srgb, var(--color-bone) 62%, transparent);
+}
+
+html.theme-light .rd-vt-d-meta dd {
+  color: color-mix(in srgb, var(--color-bone) 92%, transparent);
+}
+
+html.theme-light .rd-vt-d-syn {
+  color: color-mix(in srgb, var(--color-bone) 80%, transparent);
+}
+
+/* Boja vrste (--k) je birana za crnu podlogu; žuta za koncert i tirkizna za
+   Videodrom na papiru gube kontrast, pa se za tekst zatamnjuju. Podloge i
+   linije zadržavaju punu boju. */
+html.theme-light .rd-vt-sheet-bar-txt,
+html.theme-light .rd-vt-d-eyebrow,
+html.theme-light .rd-vt-take:hover,
+html.theme-light .rd-vt-take[data-taken="true"] {
+  color: color-mix(in srgb, var(--k) 58%, #000);
+}
+
+html.theme-light .rd-vt-take[data-taken="true"]:hover {
+  color: #0a0a0a;
 }

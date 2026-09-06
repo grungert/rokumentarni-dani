@@ -9,7 +9,12 @@
 // <li> namjerno nosi i klasu .rd-vt-slot: videoteka.ts po njoj crta stanje
 // „uzeto" i članska karta radi bez ijedne nove linije logike.
 import ProgramDetail from "./ProgramDetail.astro";
-import { kindLabel, type ProgramDay, type ProgramItem } from "../data/program";
+import {
+  kindLabel,
+  videoLabel,
+  type ProgramDay,
+  type ProgramItem,
+} from "../data/program";
 
 interface Props {
   item: ProgramItem;
@@ -18,6 +23,8 @@ interface Props {
   index?: number;
 }
 const { item, day, index = 0 } = Astro.props;
+
+const playLabel = videoLabel[item.kind];
 
 const credits = [item.director, item.country, item.year ? `${item.year}.` : null]
   .filter(Boolean)
@@ -36,15 +43,23 @@ const credits = [item.director, item.country, item.year ? `${item.year}.` : null
 >
   <article class="rd-izlog-box">
     <!-- EKRAN — still, pa preview, pa trejler preko njega. -->
-    <div class="rd-izlog-screen" data-screen>
+    <div
+      class="rd-izlog-screen"
+      data-screen
+      data-still={item.stillIsPoster ? "plakat" : null}
+    >
       <img
         class="rd-izlog-still"
         src={item.still}
-        alt={`Kadar iz: ${item.title}`}
+        alt={
+          item.stillIsPoster
+            ? `Plakat za: ${item.title}`
+            : `Kadar iz: ${item.title}`
+        }
         loading="lazy"
         decoding="async"
-        width="539"
-        height="303"
+        width={item.stillIsPoster ? undefined : 539}
+        height={item.stillIsPoster ? undefined : 303}
       />
 
       {
@@ -80,16 +95,16 @@ const credits = [item.director, item.country, item.year ? `${item.year}.` : null
           <>
             <button type="button" class="rd-izlog-play" data-izlog-play>
               <span class="rd-izlog-play-tri" aria-hidden="true" />
-              <span class="rd-izlog-play-txt">Trejler</span>
+              <span class="rd-izlog-play-txt">{playLabel}</span>
               <span class="sr-only">— {item.title}</span>
             </button>
             <button type="button" class="rd-izlog-stop" data-izlog-stop hidden>
               <span aria-hidden="true">&#9632;</span>
-              <span class="sr-only">Zaustavi trejler — {item.title}</span>
+              <span class="sr-only">Zaustavi — {item.title}</span>
             </button>
           </>
         ) : (
-          <span class="rd-izlog-notrailer">Bez trejlera</span>
+          <span class="rd-izlog-notrailer">Bez snimka</span>
         )
       }
     </div>
