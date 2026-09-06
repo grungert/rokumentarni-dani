@@ -31,3 +31,4 @@ scripts/media-copy-report.txt
 # Stanje alata, ne projekat.
 .claude/
 .serena/
+.vercel
