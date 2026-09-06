@@ -1,0 +1,23 @@
+# Vercel gradi iz Root Directory „site", ali u paket uzima cijeli repozitorijum
+# i ne čita .gitignore. Bez ovoga se šalje 44.000 fajlova i preko dva gigabajta
+# migracionog materijala koji buildu ne treba.
+
+# Putanje su usidrene kosom crtom: bez nje se obrazac poklapa sa bilo kojim
+# folderom tog imena na bilo kojoj dubini, pa je „scripts" izbacivao i
+# site/src/scripts/ i obarao build.
+
+# Zaražena WP instalacija i sirov izvoz baze — nikad ne idu na server.
+/old_website
+/extracted
+
+# Alatke migracije, nemaju veze sa frontendom.
+/.venv
+/scripts
+/docs
+/press-kandidati
+
+# Ono što se gradi ili instalira na Vercelu.
+/site/node_modules
+/site/dist
+/site/.astro
+/site/poster-rd8
