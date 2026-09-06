@@ -8,7 +8,7 @@
 // jednom po tabu); wireVideoteka() se poziva i na astro:page-load jer
 // ClientRouter zamijeni DOM, a stanje treba ponovo iscrtati.
 
-import { program, reserves, type ProgramItem } from "../data/program";
+import { program, type ProgramItem } from "../data/program";
 
 const STORE_KEY = "rd:watchlist:v1";
 const MEMBER_KEY = "rd:member-no:v1";
@@ -29,7 +29,7 @@ interface Resolved {
   date: string;
   city: string;
   venue: string;
-  /** Minuti od ponoći; null za rezerve bez termina. */
+  /** Minuti od ponoći; null kad termin nije upisan. */
   startMin: number | null;
   endMin: number | null;
 }
@@ -51,19 +51,6 @@ for (const day of program) {
       endMin: toMin(item.end),
     });
   }
-}
-
-for (const item of reserves) {
-  index.set(item.id, {
-    item,
-    dayId: "rezerve",
-    dayLabel: "Rezerve",
-    date: "",
-    city: "—",
-    venue: "termin nije potvrđen",
-    startMin: null,
-    endMin: null,
-  });
 }
 
 function toMin(hhmm?: string): number | null {
@@ -201,10 +188,7 @@ function render(): void {
       .map((id) => index.get(id))
       .filter((r): r is Resolved => Boolean(r))
       .sort((a, b) => {
-        // Rezerve nemaju datum — idu na kraj, ne na početak liste.
-        const da = a.date || "9999-99-99";
-        const db = b.date || "9999-99-99";
-        if (da !== db) return da.localeCompare(db);
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
         return (a.startMin ?? 9999) - (b.startMin ?? 9999);
       });
 
@@ -276,6 +260,17 @@ function render(): void {
 /** Odakle je dijalog izletio — kadar kartice koja ga je otvorila. */
 let sheetOrigin: DOMRect | null = null;
 let sheetClosing = false;
+/** Izlazna animacija zatvaranja koje je još u toku — v. closeSheet(). */
+let sheetOutAnim: Animation | null = null;
+/**
+ * Posljednja izlazna animacija, bez obzira na stanje. Odvojena od
+ * `sheetOutAnim`, koji se prazni čim zatvaranje bude dovršeno: ova referencija
+ * preživi i završeno zatvaranje, jer animacija sa `fill: forwards` i tada
+ * nastavlja da drži `opacity: 0` i umanjen transform. Na nju se otkazivanje
+ * oslanja umjesto na `getAnimations()`, koji je u nekim stanjima ne prijavi
+ * iako i dalje djeluje — tada dijalog ostane otvoren i neviden.
+ */
+let lastOutAnim: Animation | null = null;
 
 const reducedMotion = () =>
   matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -311,11 +306,32 @@ function openSheet(id: string): void {
   sheet.dataset.item = id;
   syncSheetControls(sheet);
 
-  if (typeof sheet.showModal === "function") sheet.showModal();
-  else sheet.setAttribute("open", "");
+  // Zatvaranje koje je još u toku se prekida. Veza sa njegovom izlaznom
+  // animacijom se raskida prije otkazivanja, jer njen `cancel` slušalac
+  // dovršava zatvaranje — a dijalog koji sada otvaramo nije onaj koji se
+  // zatvarao, pa bi se zatvorio čim ga prikažemo.
+  const stale = sheetOutAnim;
+  sheetOutAnim = null;
+  sheetClosing = false;
+  stale?.cancel();
 
-  // Zaostali izlaz iz prethodnog zatvaranja bi držao transform.
+  // Otkazivanje po referenci — ne zavisi od toga da li je animacija u listi.
+  const zaostali = lastOutAnim;
+  lastOutAnim = null;
+  zaostali?.cancel();
+
+  if (!sheet.open) {
+    if (typeof sheet.showModal === "function") sheet.showModal();
+    else sheet.setAttribute("open", "");
+  }
+
+  // Ostatak se čisti tek poslije prikaza, i to je bitno: zatvoren <dialog> je
+  // `display: none`, pa getAnimations() na njemu vraća praznu listu i nema se
+  // šta otkazati. Već završena izlazna animacija ima `fill: forwards` i
+  // preživi zatvaranje — čim showModal() vrati dijalog u prikaz, ona opet
+  // drži opacity 0 i umanjen transform, preko svježe napunjenog sadržaja.
   sheet.getAnimations?.().forEach((a) => a.cancel());
+
   flipSheet(sheet, "in");
 }
 
@@ -371,6 +387,13 @@ function cleanupSheet(): void {
   const body = document.querySelector<HTMLElement>("[data-sheet-body]");
   if (!sheet) return;
 
+  // `close` na <dialog> stiže kao zadatak iz reda čekanja, pa može stići i
+  // pošto je omot već ponovo otvoren — dovoljno je da neko klikne INFO u tih
+  // nekoliko milisekundi. Tada ovo čišćenje pripada prošlom sadržaju i
+  // ispraznilo bi dijalog koji je upravo napunjen: ostane otvoren i prazan,
+  // sa zatamnjenom stranom iza sebe.
+  if (sheet.open) return;
+
   sheet.querySelectorAll("video").forEach((v) => {
     v.pause();
     v.removeAttribute("src");
@@ -403,7 +426,12 @@ function closeSheet(): void {
   }
 
   sheetClosing = true;
+  sheetOutAnim = anim;
+  lastOutAnim = anim;
   const finish = () => {
+    // Otkazano iz openSheet(): zatvaranje je prekinuto, dijalog je opet gore.
+    if (sheetOutAnim !== anim) return;
+    sheetOutAnim = null;
     if (sheet.open) sheet.close();
     else cleanupSheet();
   };
