@@ -25,6 +25,14 @@ const kinds = (
 ).filter((k) => all.some((i) => i.kind === k));
 
 const withVideo = all.filter((i) => i.trailer).length;
+
+// Prostor izdanja. Sva četiri dana su na istom mjestu, ali se izvodi iz
+// programa: ako se neki dan preseli, red se sam dopuni umjesto da slaže.
+const mjesta = [...new Set(program.map((d) => `${d.city} · ${d.venue}`))];
+const mjestoLine = mjesta.join("  ·  ");
+const mjestoOpis = [
+  ...new Set(program.map((d) => `${d.venue}, ${d.city}`)),
+].join("; ");
 const hours = Math.round(all.reduce((sum, i) => sum + i.duration, 0) / 60);
 
 // „17–20. septembar" iz prvog i posljednjeg dana — bez drugog izvora datuma.
@@ -130,7 +138,7 @@ const minLabel = (mins: number) => {
 
 <BaseLayout
   title="Program"
-  description={`Program Rokumentarnih dana — ${all.length} naslova sa kadrom, opisom i terminom, od toga ${withVideo} sa snimkom koji se pušta odmah. Napravi svoju listu za gledanje.`}
+  description={`Program Rokumentarnih dana — ${mjestoOpis}, ${dateRange}. ${all.length} naslova sa kadrom, opisom i terminom, od toga ${withVideo} sa snimkom koji se pušta odmah.`}
 >
   <script
     type="application/ld+json"
@@ -177,13 +185,22 @@ const minLabel = (mins: number) => {
             </p>
           </div>
 
-          <p
-            class="reveal md:col-span-4 md:col-start-9 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 leading-relaxed"
+          <div
+            class="reveal md:col-span-4 md:col-start-9 space-y-3"
             style="--i:3"
           >
-            {withVideo} snimaka<br />
-            {hours} sati programa
-          </p>
+            <p
+              class="font-mono text-xs uppercase tracking-[0.25em] text-bone/85"
+            >
+              {mjestoLine}
+            </p>
+            <p
+              class="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 leading-relaxed"
+            >
+              {withVideo} snimaka<br />
+              {hours} sati programa
+            </p>
+          </div>
         </div>
 
         <!-- Skok na dan — sadržaj strane u jednom redu. -->
