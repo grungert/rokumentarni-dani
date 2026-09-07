@@ -26,8 +26,10 @@ const fullTitle =
 const SITE = Astro.site ?? new URL("https://rokumentarnidani.me");
 const canonical = new URL(Astro.url.pathname, SITE).href;
 
-// new-fb.png je 1248×630, praktično tačno format koji mreže traže.
-const shareImage = new URL(image ?? "/media/new-fb.png", SITE).href;
+// 1200×630 je format koji Facebook, LinkedIn, WhatsApp i Viber traže, a
+// Twitter ga prikaže u „summary_large_image" kartici. Slika se mijenja svake
+// godine — ovo je za osmo izdanje.
+const shareImage = new URL(image ?? "/media/og-rd8-2026.jpg", SITE).href;
 
 const shareDescription =
   description ??
