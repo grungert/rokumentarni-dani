@@ -29,6 +29,7 @@ import queue
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -66,7 +67,7 @@ def connect(conf: dict[str, str], tiho: bool = False) -> ftplib.FTP:
     port = int(conf["FTP_PORT"])
     if conf["FTP_TLS"] != "0":
         ftp = ftplib.FTP_TLS()
-        ftp.connect(conf["FTP_HOST"], port, timeout=30)
+        ftp.connect(conf["FTP_HOST"], port, timeout=90)
         ftp.login(conf["FTP_USER"], conf["FTP_PASS"])
         # Bez ovoga ide šifrovana prijava a podaci u čisto — besmislena polovina.
         ftp.prot_p()
@@ -74,7 +75,7 @@ def connect(conf: dict[str, str], tiho: bool = False) -> ftplib.FTP:
             print(f"povezan (FTPS) → {conf['FTP_HOST']}")
     else:
         ftp = ftplib.FTP()
-        ftp.connect(conf["FTP_HOST"], port, timeout=30)
+        ftp.connect(conf["FTP_HOST"], port, timeout=90)
         ftp.login(conf["FTP_USER"], conf["FTP_PASS"])
         print(f"povezan (FTP, BEZ ŠIFROVANJA) → {conf['FTP_HOST']}")
         print("  lozinka putuje u čitljivom obliku; koristi FTPS ako server može.")
@@ -211,20 +212,40 @@ def main() -> None:
                 f, rel = posao.get_nowait()
             except queue.Empty:
                 break
-            try:
-                with f.open("rb") as fh:
-                    veza.storbinary(f"STOR {base}/{rel}", fh)
-                with kljuc:
-                    brojac["ok"] += 1
-                    i = brojac["ok"] + brojac["greska"]
-                    if i % 25 == 0 or i == ukupno:
-                        print(f"  {i}/{ukupno}  {rel}", flush=True)
-            except ftplib.all_errors as e:
+
+            # Kad veza jednom istekne, ostaje mrtva: bez ponovnog povezivanja
+            # svaki sljedeći fajl na toj niti pada isto tako. Zato se veza
+            # podiže iznova i fajl pokušava do tri puta.
+            posljednja = None
+            for pokusaj in range(3):
+                try:
+                    with f.open("rb") as fh:
+                        veza.storbinary(f"STOR {base}/{rel}", fh)
+                    with kljuc:
+                        brojac["ok"] += 1
+                        if brojac["ok"] % 50 == 0:
+                            print(
+                                f"  {brojac['ok']}/{ukupno}"
+                                f"{'  (grešaka ' + str(brojac['greska']) + ')' if brojac['greska'] else ''}",
+                                flush=True,
+                            )
+                    break
+                except ftplib.all_errors as e:
+                    posljednja = e
+                    try:
+                        veza.close()
+                    except Exception:
+                        pass
+                    try:
+                        veza = connect(conf, tiho=True)
+                    except ftplib.all_errors as e2:
+                        posljednja = e2
+                        time.sleep(3)
+            else:
                 with kljuc:
                     brojac["greska"] += 1
-                    print(f"  ✗ {rel}: {e}", flush=True)
-            finally:
-                posao.task_done()
+                    print(f"  ✗ {rel}: {posljednja}", flush=True)
+            posao.task_done()
         try:
             veza.quit()
         except ftplib.all_errors:
