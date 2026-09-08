@@ -18,14 +18,17 @@ Upotreba:
     python3 scripts/deploy_ftp.py --dry-run    # samo ispiše šta bi uradio
     python3 scripts/deploy_ftp.py              # pošalje izmjene
     python3 scripts/deploy_ftp.py --fresh      # ciljni folder je prazan
+    python3 scripts/deploy_ftp.py --jobs 4     # više veza uporedo
     python3 scripts/deploy_ftp.py --skip-prepare
 """
 
 from __future__ import annotations
 
 import ftplib
+import queue
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -59,7 +62,7 @@ def load_conf() -> dict[str, str]:
     return conf
 
 
-def connect(conf: dict[str, str]) -> ftplib.FTP:
+def connect(conf: dict[str, str], tiho: bool = False) -> ftplib.FTP:
     port = int(conf["FTP_PORT"])
     if conf["FTP_TLS"] != "0":
         ftp = ftplib.FTP_TLS()
@@ -67,7 +70,8 @@ def connect(conf: dict[str, str]) -> ftplib.FTP:
         ftp.login(conf["FTP_USER"], conf["FTP_PASS"])
         # Bez ovoga ide šifrovana prijava a podaci u čisto — besmislena polovina.
         ftp.prot_p()
-        print(f"povezan (FTPS) → {conf['FTP_HOST']}")
+        if not tiho:
+            print(f"povezan (FTPS) → {conf['FTP_HOST']}")
     else:
         ftp = ftplib.FTP()
         ftp.connect(conf["FTP_HOST"], port, timeout=30)
@@ -159,30 +163,82 @@ def main() -> None:
         postoji = remote_index(ftp, base)
         print(f"na serveru: {len(postoji)} fajlova\n")
 
-    made: set[str] = set()
-    poslato = presko = 0
-    bajta = 0
-
+    za_slanje = []
+    presko = 0
     for f in files:
         rel = f.relative_to(DIST).as_posix()
-        target = f"{base}/{rel}"
-        size = f.stat().st_size
-
-        if postoji.get(target) == size:
+        if postoji.get(f"{base}/{rel}") == f.stat().st_size:
             presko += 1
-            continue
-
-        if dry:
-            print(f"  [bi poslao] {rel}")
         else:
-            ensure_dir(ftp, target.rsplit("/", 1)[0], made)
-            with f.open("rb") as fh:
-                ftp.storbinary(f"STOR {target}", fh)
-            print(f"  ↑ {rel}")
-        poslato += 1
-        bajta += size
+            za_slanje.append((f, rel))
 
-    print(f"\nposlato {poslato}, preskočeno {presko} (isti) — {bajta / 1e6:.1f} MB")
+    bajta = sum(f.stat().st_size for f, _ in za_slanje)
+    print(f"za slanje: {len(za_slanje)}, preskačem {presko} (isti) — {bajta / 1e6:.1f} MB\n")
+
+    if dry:
+        for _, rel in za_slanje[:40]:
+            print(f"  [bi poslao] {rel}")
+        if len(za_slanje) > 40:
+            print(f"  … još {len(za_slanje) - 40}")
+        ftp.quit()
+        print("\n(probni hod — ništa nije poslato)")
+        return
+
+    # Folderi se prave unaprijed, jednom vezom: da se radnici ne utrkuju oko
+    # istog mkd i da greška „već postoji" ne izgleda kao pad.
+    made: set[str] = set()
+    for _, rel in za_slanje:
+        if "/" in rel:
+            ensure_dir(ftp, f"{base}/{rel.rsplit('/', 1)[0]}", made)
+    ftp.quit()
+
+    jobs = 1
+    if "--jobs" in args:
+        jobs = max(1, min(8, int(args[args.index("--jobs") + 1])))
+
+    posao: queue.Queue = queue.Queue()
+    for stavka in za_slanje:
+        posao.put(stavka)
+
+    brojac = {"ok": 0, "greska": 0}
+    kljuc = threading.Lock()
+    ukupno = len(za_slanje)
+
+    def radnik(n: int) -> None:
+        veza = connect(conf, tiho=True)
+        while True:
+            try:
+                f, rel = posao.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                with f.open("rb") as fh:
+                    veza.storbinary(f"STOR {base}/{rel}", fh)
+                with kljuc:
+                    brojac["ok"] += 1
+                    i = brojac["ok"] + brojac["greska"]
+                    if i % 25 == 0 or i == ukupno:
+                        print(f"  {i}/{ukupno}  {rel}", flush=True)
+            except ftplib.all_errors as e:
+                with kljuc:
+                    brojac["greska"] += 1
+                    print(f"  ✗ {rel}: {e}", flush=True)
+            finally:
+                posao.task_done()
+        try:
+            veza.quit()
+        except ftplib.all_errors:
+            pass
+
+    print(f"šaljem sa {jobs} {'vezom' if jobs == 1 else 'veze uporedo'}…\n")
+    niti = [threading.Thread(target=radnik, args=(i,), daemon=True) for i in range(jobs)]
+    for t in niti:
+        t.start()
+    for t in niti:
+        t.join()
+
+    poslato = brojac["ok"]
+    print(f"\nposlato {poslato}, preskočeno {presko} (isti), grešaka {brojac['greska']}")
 
     if "--delete" in args:
         print("\nbrisanje viška na serveru nije automatsko.")
@@ -190,9 +246,6 @@ def main() -> None:
         print("Managera, uz backup — v. napomenu o kompromitovanom nalogu")
         print("u README.md.")
 
-    ftp.quit()
-    if dry:
-        print("\n(probni hod — ništa nije poslato)")
 
 
 if __name__ == "__main__":
