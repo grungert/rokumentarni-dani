@@ -17,7 +17,7 @@ pa ponovljeni upload ide brzo. Stari fajlovi se NE brišu bez `--delete`.
 Upotreba:
     python3 scripts/deploy_ftp.py --dry-run    # samo ispiše šta bi uradio
     python3 scripts/deploy_ftp.py              # pošalje izmjene
-    python3 scripts/deploy_ftp.py --delete     # + obriše višak na serveru
+    python3 scripts/deploy_ftp.py --fresh      # ciljni folder je prazan
     python3 scripts/deploy_ftp.py --skip-prepare
 """
 
@@ -78,13 +78,32 @@ def connect(conf: dict[str, str]) -> ftplib.FTP:
     return ftp
 
 
-def remote_size(ftp: ftplib.FTP, path: str) -> int | None:
-    """Veličina fajla na serveru, ili None ako ga nema."""
-    try:
-        ftp.voidcmd("TYPE I")
-        return ftp.size(path)
-    except ftplib.error_perm:
-        return None
+def remote_index(ftp: ftplib.FTP, base: str) -> dict[str, int]:
+    """Mapa putanja → veličina za sve što već stoji na serveru.
+
+    Jedno listanje po folderu umjesto pitanja za svaki fajl posebno: dist ima
+    preko dvije hiljade fajlova, pa je razlika između pedesetak kružnih
+    putovanja i dvije hiljade — minut naspram pola sata.
+    """
+    nadjeno: dict[str, int] = {}
+
+    def prodji(putanja: str) -> None:
+        try:
+            unosi = list(ftp.mlsd(putanja, facts=["type", "size"]))
+        except ftplib.all_errors:
+            return  # folder ne postoji — sve u njemu se šalje
+        for ime, cinjenice in unosi:
+            if ime in (".", ".."):
+                continue
+            puna = f"{putanja}/{ime}"
+            tip = cinjenice.get("type")
+            if tip == "dir":
+                prodji(puna)
+            elif tip == "file":
+                nadjeno[puna] = int(cinjenice.get("size", -1))
+
+    prodji(base)
+    return nadjeno
 
 
 def ensure_dir(ftp: ftplib.FTP, path: str, made: set[str]) -> None:
@@ -129,6 +148,17 @@ def main() -> None:
     print(f"lokalno: {len(files)} fajlova   →   {base}/\n")
 
     ftp = connect(conf)
+    if "--fresh" in args:
+        # Popisivanje se preskače kad se šalje u prazan folder. Nad starom WP
+        # instalacijom ono traje predugo: obilazi wp-content/uploads sa
+        # desetinama hiljada fajlova koje ionako ne poredimo ni sa čim.
+        postoji: dict[str, int] = {}
+        print("--fresh: ne popisujem server, šaljem sve\n")
+    else:
+        print("čitam šta već stoji na serveru…")
+        postoji = remote_index(ftp, base)
+        print(f"na serveru: {len(postoji)} fajlova\n")
+
     made: set[str] = set()
     poslato = presko = 0
     bajta = 0
@@ -138,7 +168,7 @@ def main() -> None:
         target = f"{base}/{rel}"
         size = f.stat().st_size
 
-        if remote_size(ftp, target) == size:
+        if postoji.get(target) == size:
             presko += 1
             continue
 
@@ -155,7 +185,7 @@ def main() -> None:
     print(f"\nposlato {poslato}, preskočeno {presko} (isti) — {bajta / 1e6:.1f} MB")
 
     if "--delete" in args:
-        print("\nbrisanje viška na serveru nije automatsko u ovoj verziji.")
+        print("\nbrisanje viška na serveru nije automatsko.")
         print("Stara WP instalacija se sigurnije uklanja iz cPanel File")
         print("Managera, uz backup — v. napomenu o kompromitovanom nalogu")
         print("u README.md.")
