@@ -6,6 +6,8 @@
 // dijalogu, a dodato u listi — oboje iz videoteka.ts.
 //
 // Jedini izvor podataka je data/program.ts.
+import fs from "node:fs";
+import path from "node:path";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import BrickGrid from "../components/BrickGrid.astro";
 import SectionSymbols from "../components/SectionSymbols.astro";
@@ -28,12 +30,25 @@ const withVideo = all.filter((i) => i.trailer).length;
 
 // Prostor izdanja. Sva četiri dana su na istom mjestu, ali se izvodi iz
 // programa: ako se neki dan preseli, red se sam dopuni umjesto da slaže.
+// Program za štampu. Veličina se čita sa diska, da natpis ne slaže kad se
+// PDF ponovo napravi.
+const PDF = "/program-rd8-2026.pdf";
+let pdfMb = "";
+try {
+  const bytes = fs.statSync(path.join(process.cwd(), "public", PDF)).size;
+  pdfMb = `${(bytes / 1048576).toFixed(1).replace(".", ",")} MB`;
+} catch {
+  /* nema fajla — link se onda ne prikazuje */
+}
+
 const mjesta = [...new Set(program.map((d) => `${d.city} · ${d.venue}`))];
 const mjestoLine = mjesta.join("  ·  ");
+const adrese = [...new Set(program.map((d) => d.address).filter(Boolean))];
 const mjestoOpis = [
-  ...new Set(program.map((d) => `${d.venue}, ${d.city}`)),
+  ...new Set(
+    program.map((d) => [d.venue, d.address, d.city].filter(Boolean).join(", ")),
+  ),
 ].join("; ");
-const hours = Math.round(all.reduce((sum, i) => sum + i.duration, 0) / 60);
 
 // „17–20. septembar" iz prvog i posljednjeg dana — bez drugog izvora datuma.
 const firstDay = program[0].dateLabel.replace(/\D+$/, "").trim().replace(".", "");
@@ -82,6 +97,7 @@ const subEvents = program.flatMap((day) =>
         name: day.venue,
         address: {
           "@type": "PostalAddress",
+          ...(day.address ? { streetAddress: day.address } : {}),
           addressLocality: day.city,
           addressCountry: "ME",
         },
@@ -114,13 +130,16 @@ const festivalLd = {
     name: "Rokumentarni dani",
     url: SITE.href,
   },
-  location: [...new Set(program.map((d) => `${d.venue}|${d.city}`))].map((v) => {
-    const [name, city] = v.split("|");
+  location: [
+    ...new Set(program.map((d) => `${d.venue}|${d.address ?? ""}|${d.city}`)),
+  ].map((v) => {
+    const [name, street, city] = v.split("|");
     return {
       "@type": "Place",
       name,
       address: {
         "@type": "PostalAddress",
+        ...(street ? { streetAddress: street } : {}),
         addressLocality: city,
         addressCountry: "ME",
       },
@@ -179,10 +198,24 @@ const minLabel = (mins: number) => {
             <!-- Najvažniji podatak na strani — naglasak pada na posljednju
                  riječ, pa ide u pun akcentni blok. Stoji u lijevoj koloni jer
                  plutajuća članska karta zauzima desnu ivicu na užim ekranima. -->
-            <p class="rd-izlog-free">
-              <span class="rd-izlog-free-txt">Ulaz na programe</span>
-              <span class="rd-izlog-free-tag">Besplatan</span>
-            </p>
+            <div class="flex flex-col items-start gap-4">
+              <p class="rd-izlog-free">
+                <span class="rd-izlog-free-txt">Ulaz na programe</span>
+                <span class="rd-izlog-free-tag">Besplatan</span>
+              </p>
+
+              {
+                pdfMb && (
+                  <a href={PDF} download class="rd-izlog-pdf">
+                    <span class="rd-izlog-pdf-arrow" aria-hidden="true">
+                      ↓
+                    </span>
+                    Preuzmi program
+                    <span class="rd-izlog-pdf-size">PDF · {pdfMb}</span>
+                  </a>
+                )
+              }
+            </div>
           </div>
 
           <div
@@ -194,12 +227,13 @@ const minLabel = (mins: number) => {
             >
               {mjestoLine}
             </p>
-            <p
-              class="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 leading-relaxed"
-            >
-              {withVideo} snimaka<br />
-              {hours} sati programa
-            </p>
+            {
+              adrese.length > 0 && (
+                <p class="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+                  {adrese.join(" · ")}
+                </p>
+              )
+            }
           </div>
         </div>
 

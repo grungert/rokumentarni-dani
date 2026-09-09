@@ -67,6 +67,8 @@ export interface ProgramDay {
   dateLabel: string;
   city: string;
   venue: string;
+  /** Ulica i broj — ide u zaglavlje programa i u strukturirani zapis. */
+  address?: string;
   items: ProgramItem[];
 }
 
@@ -76,6 +78,7 @@ const M = "/media/2022/12";
 /** Isti prostor sva četiri dana. */
 const CITY = "Podgorica";
 const VENUE = "Kružni tok";
+const ADDRESS = "Dalmatinska 152";
 
 /** Trejler sa YouTubea — učitava se tek na klik. */
 const yt = (id: string): Trailer => ({ type: "youtube", src: id });
@@ -86,7 +89,7 @@ const yt = (id: string): Trailer => ({ type: "youtube", src: id });
  * trajanje i izvedba koja je te večeri na kartici.
  */
 const VIDEODROM =
-  "Spotovi crnogorskih bendova, uključujući Live Sessions izvedbe iz sopstvene produkcije Rokumentarnih dana. Zagrijavanje za svaki festivalski dan, dok se sala puni.";
+  "Spotovi crnogorskih bendova, uključujući Live Sessions izvedbe iz sopstvene produkcije Rokumentarnih dana.";
 
 export const program: ProgramDay[] = [
   {
@@ -96,6 +99,7 @@ export const program: ProgramDay[] = [
     dateLabel: "17. septembar",
     city: CITY,
     venue: VENUE,
+    address: ADDRESS,
     items: [
       {
         id: "cet-videodrom",
@@ -154,7 +158,6 @@ export const program: ProgramDay[] = [
           "Marko Janjušević — Janjo — osnivač je i frontmen nikšićkog Manitoua, a nastupa i kao Pas Manit. Slikar po obrazovanju, izašao iz stripa, grafita i uličnog crteža, drži tetovažni studio u Nikšiću i potpisuje vizuelni jezik svojih izdanja jednako koliko i muzički. Festival otvara sa sastavom Yataguns.",
         still: "/media/2026/09/janjo.jpg",
         stillIsPoster: true,
-        trailer: yt("kCABrMxONDU"),
       },
     ],
   },
@@ -165,6 +168,7 @@ export const program: ProgramDay[] = [
     dateLabel: "18. septembar",
     city: CITY,
     venue: VENUE,
+    address: ADDRESS,
     items: [
       {
         id: "pet-videodrom",
@@ -197,12 +201,12 @@ export const program: ProgramDay[] = [
         id: "pet-prica-mucin",
         cat: "RD8-007",
         kind: "tribina",
-        title: "Priča sa Mučinom",
+        title: "Razgovor sa Mučinom",
         start: "19:05",
         end: "19:35",
         duration: 30,
         synopsis:
-          "Razgovor o albumu, promociji vinila, bookingu i koncertima — kako se danas izvlači tura kroz region bez etikete iza sebe.",
+          "Nakon InMusica, Exita, Arsenala, Monteparadisa i Lake festa u goste nam stiže trio Mučin i sa sobom donosi album na vinilu. Sa jednim od najangažovanijih bendova Crne Gore pričaćemo kako napraviti, snimiti, producirati, bukirati i promovisati autorski rad. Kako snimiti vinil i stići na najvažnije bine regiona. Idealna polazna tačka za sve mlade koji kreću u muzičku avanturu.",
         still: "/media/2026/09/mucin.jpg",
       },
       {
@@ -217,7 +221,7 @@ export const program: ProgramDay[] = [
         country: "Hrvatska",
         director: "Ines Pletikos",
         synopsis:
-          "Franci Blašković kultna je figura istarske kulturne i društvene scene: frontmen benda Gori ussi Winnetou, kantautor i ekološki aktivista, predsjednik „Lige za boj protiv turizma\". Njegova kći Petra Blašković, glumica, otkriva kako je bilo odrastati uz harizmatičnog oca i majku Arinku Blašković Šegando, muzičarku i muzičku pedagoškinju.",
+          "Franci Blašković kultna je figura istarske kulturne i društvene scene: frontmen benda Gori ussi Winnetou, kantautor i ekološki aktivista, predsjednik „Lige za boj protiv turizma“. Njegova kći Petra Blašković, glumica, otkriva kako je bilo odrastati uz harizmatičnog oca i majku Arinku Blašković Šegando, muzičarku i muzičku pedagoškinju.",
         still: "/media/2026/09/film-u-ime-oca-petra.jpg",
       },
       {
@@ -230,7 +234,7 @@ export const program: ProgramDay[] = [
         duration: 60,
         country: "Crna Gora",
         synopsis:
-          "Podgorički trojac — Nemanja Grbović (gitara, vokal), Veljko Vučurović (bas, vokal) i Đorđije Njunjić (bubnjevi) — svira Oi! punk sa post-punk i coldwave rubovima. Prva dva digitalna EP-a sabrali su na ploču za zagrebački Geenger Records, a „Moj grob\" snimili na tekst Ivana Gorana Kovačića. Sviraju uveče, poslije razgovora o ploči i turnejama.",
+          "Podgorički trojac — Nemanja Grbović (gitara, vokal), Veljko Vučurović (bas, vokal) i Đorđije Njunjić (bubnjevi) — svira Oi! punk sa post-punk i coldwave rubovima. Prva dva digitalna EP-a sabrali su na ploču za zagrebački Geenger Records, a „Moj grob“ snimili na tekst Ivana Gorana Kovačića. Sviraju uveče, poslije razgovora o ploči i turnejama.",
         still: "/media/2026/09/mucin.jpg",
         trailer: yt("0wVknUT_gXw"),
       },
@@ -243,6 +247,7 @@ export const program: ProgramDay[] = [
     dateLabel: "19. septembar",
     city: CITY,
     venue: VENUE,
+    address: ADDRESS,
     items: [
       {
         id: "sub-videodrom",
@@ -270,7 +275,6 @@ export const program: ProgramDay[] = [
         synopsis:
           "Kratki dokumentarni film o Marku Lubardi, poznatijem kao Random. Kroz razgovor, arhivske snimke i fragmente sa nastupa, film prati njegov odnos prema muzici, novcu, pritisku i ličnim izborima koje pravi van reflektora. Realizovan kao studentski projekat, sa fokusom na autentičnost, minimalizam i dokumentarni pristup.",
         still: "/media/2026/09/film-randominacija.jpg",
-        trailer: yt("zaW9TVkOBcU"),
       },
       {
         id: "sub-osmasila",
@@ -286,13 +290,12 @@ export const program: ProgramDay[] = [
         synopsis:
           "Kratki dokumentarni film donosi priču o kultnom nikšićkom rok bendu Osma sila — o njegovom nastanku, značaju na muzičkoj sceni osamdesetih, dugoj pauzi i ponovnom okupljanju uz objavljivanje davno snimljenog albuma. Kroz priče članova benda, arhivske snimke i fotografije, film govori o muzici, mladosti, prijateljstvu i potrebi da se konačno dovrši ono što je nekada ostalo nedovršeno.",
         still: "/media/2026/09/film-osma-sila.jpg",
-        trailer: yt("6o-QeeMlvGE"),
       },
       {
         id: "sub-madeinny",
         cat: "RD8-013",
         kind: "film",
-        title: "Made in NY Jazz fest",
+        title: "Made in NY Jazz fest 2025.",
         start: "18:40",
         end: "19:10",
         duration: 27,
@@ -328,7 +331,7 @@ export const program: ProgramDay[] = [
         duration: 60,
         country: "Srbija",
         synopsis:
-          "Indi-rok duo iz Novog Sada, osnovan 2019: Nikoleta Feher na bubnjevima i Nemanja Velimirović na gitari i vokalu, koji je prije toga pet godina svirao u beogradskom E-Playu. Iza njih su albumi „Cats VS Dogs\" i „Vožnja\", singlovi „Connection\" i „Mathilda\", i preko sto dvadeset odsviranih koncerata.",
+          "Indi-rok duo iz Novog Sada, osnovan 2019: Nikoleta Feher na bubnjevima i Nemanja Velimirović na gitari i vokalu, koji je prije toga pet godina svirao u beogradskom E-Playu. Iza njih su albumi „Cats VS Dogs“ i „Vožnja“, singlovi „Connection“ i „Mathilda“, i preko sto dvadeset odsviranih koncerata.",
         still: "/media/2026/09/short-reports.jpg",
         trailer: yt("zsQFIp9T08w"),
       },
@@ -341,6 +344,7 @@ export const program: ProgramDay[] = [
     dateLabel: "20. septembar",
     city: CITY,
     venue: VENUE,
+    address: ADDRESS,
     items: [
       {
         id: "ned-videodrom",
@@ -363,8 +367,11 @@ export const program: ProgramDay[] = [
         end: "17:45",
         duration: 45,
         synopsis:
-          "Tribina u dvorištu, za vrijeme trajanja sajma — razgovor prije nego što počnu posljednje projekcije izdanja.",
-        still: `${M}/One-su-tu-539x303.jpg`,
+          "Tribina „Zapisano mladošću“ posvećena je mjestu i ulozi mladih u savremenoj muzičkoj i filmskoj produkciji. Kroz razgovor sa autorima i profesionalcima iz ovih oblasti, učesnici će saznati kako napraviti prve kreativne korake, uključiti se u postojeće projekte ili pokrenuti sopstvene, razviti ideju i doći do prvih kvalitetnih materijala. Posebna pažnja biće posvećena praktičnim pitanjima: kako predstaviti svoj rad, pronaći saradnike, koristiti dostupne digitalne platforme i postati vidljiv publici, medijima i potencijalnim partnerima. Tribina je zamišljena kao otvoren prostor za razmjenu iskustava, konkretne savjete i podsticaj mladima da od interesovanja pređu ka aktivnom stvaranju.",
+        // Neutralna grafika — tribina nema svoj materijal, a kadar iz tuđeg
+        // filma je obmanjivao. Ide kao plakat: cijela i u boji.
+        still: "/media/2026/09/tribina-zapisano-mladoscu.jpg",
+        stillIsPoster: true,
       },
       {
         id: "sub-funkyu",
@@ -378,7 +385,7 @@ export const program: ProgramDay[] = [
         country: "Hrvatska / Crna Gora",
         director: "Franko Dujmić",
         synopsis:
-          "Franko, kolekcionar vinila, zaputi se na avanturu kroz bivšu Jugoslaviju kako bi pronašao jedini vinilni zapis koji nedostaje njegovoj kolekciji — singl „Ulica Jorgovana / Zlatokosa\", jedan od najboljih primjera jugoslovenskog funka. Na putu susreće raznolike likove koje intervjuiše kako bi dobio uvid u maniju pretraživanja kutija s vinilima.",
+          "Franko, kolekcionar vinila, zaputi se na avanturu kroz bivšu Jugoslaviju kako bi pronašao jedini vinilni zapis koji nedostaje njegovoj kolekciji — singl „Ulica Jorgovana / Zlatokosa“, jedan od najboljih primjera jugoslovenskog funka. Na putu susreće raznolike likove koje intervjuiše kako bi dobio uvid u maniju pretraživanja kutija s vinilima.",
         still: "/media/2026/09/film-funk-yu.jpg",
         trailer: yt("JD8uYDP0FUw"),
       },
@@ -394,7 +401,7 @@ export const program: ProgramDay[] = [
         country: "Srbija / Makedonija",
         director: "Vladimir Petrović",
         synopsis:
-          "Jedan od prvih ženskih rok bendova na svijetu osnovan je šezdesetih godina u Beogradu. Tinejdžerke Doda, dvije Ljilje i Nena nastupale su kao VIS Sanjalice. Uprkos složenim okolnostima i predrasudama „čuvara javnog morala\", koji su ih optuživali za širenje buntovničkog duha, osvojile su muzičku scenu rame uz rame s muškim bendovima. Postale su zvijezde, a zatim iznenada odlučile da se raziđu. Ovo je njihova strana priče.",
+          "Jedan od prvih ženskih rok bendova na svijetu osnovan je šezdesetih godina u Beogradu. Tinejdžerke Doda, dvije Ljilje i Nena nastupale su kao VIS Sanjalice. Uprkos složenim okolnostima i predrasudama „čuvara javnog morala“, koji su ih optuživali za širenje buntovničkog duha, osvojile su muzičku scenu rame uz rame s muškim bendovima. Postale su zvijezde, a zatim iznenada odlučile da se raziđu. Ovo je njihova strana priče.",
         still: "/media/2026/09/film-sanjalice.jpg",
         trailer: yt("ZnWFd0ebxFE"),
       },
@@ -408,7 +415,7 @@ export const program: ProgramDay[] = [
         duration: 120,
         country: "Hrvatska",
         synopsis:
-          "Zagrebačka kantautorica i izvedbena umjetnica, arhitektica po struci koja je 2015. ostavila posao u struci i posvetila se muzici. Od „Djece\" (2013) do „Nježnih riječi\" (2025) njen izraz ide od akustičnog kantautorstva ka spoju eksperimenta, indieja i elektronike. Za „Jesen\" je 2015. dobila Porina za najbolju žensku vokalnu izvedbu. Zatvara osmo izdanje.",
+          "Zagrebačka kantautorica i izvedbena umjetnica, arhitektica po struci koja je 2015. ostavila posao u struci i posvetila se muzici. Od „Djece“ (2013) do „Nježnih riječi“ (2025) njen izraz ide od akustičnog kantautorstva ka spoju eksperimenta, indieja i elektronike. Za „Jesen“ je 2015. dobila Porina za najbolju žensku vokalnu izvedbu. Zatvara osmo izdanje.",
         still: "/media/2026/09/sara-renar.jpg",
         trailer: yt("9IS_swKigGc"),
       },

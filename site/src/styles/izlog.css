@@ -28,6 +28,42 @@
   border: 1px solid var(--color-accent);
 }
 
+/* Preuzimanje programa. Ista visina i tipografija kao traka „Ulaz
+   besplatan" iznad, ali obrisano umjesto punog akcenta — jedan naglasak po
+   koloni je dovoljan. Podloga i zamućenje su obavezni: bez njih kocke iz
+   BrickGrid-a prolaze kroz tekst. */
+.rd-izlog-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border: 1px solid color-mix(in srgb, var(--color-bone) 26%, transparent);
+  background: color-mix(in srgb, var(--color-ink) 85%, transparent);
+  backdrop-filter: blur(6px);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--color-bone) 80%, transparent);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.rd-izlog-pdf:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.rd-izlog-pdf-arrow {
+  color: var(--color-accent);
+}
+
+/* Veličina je korisna, ali ne smije da se čita jednako glasno kao poziv. */
+.rd-izlog-pdf-size {
+  color: color-mix(in srgb, var(--color-bone) 48%, transparent);
+  letter-spacing: 0.16em;
+}
+
 .rd-izlog-free-tag {
   padding: 13px 18px;
   background: var(--color-accent);
@@ -731,6 +767,13 @@ html.theme-light .rd-izlog-empty {
   filter: grayscale(1) contrast(1.06) brightness(0.7);
 }
 
+/* Ali samo dok miš nije na njoj. Zatamnjenje iznad je pisano za mirno stanje
+   i držalo je te kartice sivim i pod mišem, pa su jedine u mreži ostajale bez
+   prelaza u boju — a upravo njima je slika jedino što imaju. */
+.rd-izlog-card:not(:has(.rd-izlog-play)):hover .rd-izlog-still {
+  filter: grayscale(0.25) contrast(1.04) brightness(0.95);
+}
+
 /* ------------------------------------------------------------ NALJEPNICA */
 
 .rd-izlog-body {
@@ -933,21 +976,25 @@ html.theme-light .rd-izlog-empty {
 }
 
 /* --------------------------------------------------------------- PLAKAT
-   Kad je slika plakat a ne kadar iz filma (`stillIsPoster`), pravila za
-   kadar rade protiv nje: `cover` na 16:9 odsijeca uspravan plakat na
-   sredinu i guta naslov, a `grayscale(1)` briše boju koja je pola poruke.
-   Plakat se zato prikazuje cijeo i u boji, na crnini ekrana.
+   Kad je slika plakat a ne kadar iz filma (`stillIsPoster`), `cover` na 16:9
+   odsijeca uspravan plakat na sredinu i guta naslov — zato `contain`.
 
-   Blok stoji na kraju fajla namjerno: pravila za kadar (hover, i varijanta
-   bez trejlera) imaju istu specifičnost, pa presuđuje redoslijed. */
-.rd-izlog-screen[data-still="plakat"] .rd-izlog-still,
-.rd-izlog-card:hover .rd-izlog-screen[data-still="plakat"] .rd-izlog-still,
-.rd-izlog-card:not(:has(.rd-izlog-play))
-  .rd-izlog-screen[data-still="plakat"]
-  .rd-izlog-still {
+   Boja se, međutim, ne dira: plakat prolazi kroz isti crno-bijeli filtar kao
+   svaki kadar i oživi tek na prelazak mišem. Da ostane u boji, iskakao bi iz
+   mreže kao greška, a ne kao naglasak. */
+.rd-izlog-screen[data-still="plakat"] .rd-izlog-still {
   object-fit: contain;
-  filter: none;
-  transform: none;
+}
+
+/* Plakat oživi na prelazak mišem. Ide na punu boju, ne na 25% sivila kao
+   kadrovi: kadar je fotografija i djelimično sivilo mu ne smeta, a plakat je
+   ravna grafika kojoj to samo zamuti boju.
+
+   Pravilo mora doći poslije varijante „bez trejlera", koja karticu drži
+   sivom i na hoveru — obje imaju istu specifičnost, pa presuđuje redoslijed,
+   a tribina i koncertni plakat su upravo kartice bez snimka. */
+.rd-izlog-card:hover .rd-izlog-screen[data-still="plakat"] .rd-izlog-still {
+  filter: grayscale(0) contrast(1.02) brightness(1);
 }
 
 /* ------------------------------------------------- SVIJETLA TEMA · KARTICA
