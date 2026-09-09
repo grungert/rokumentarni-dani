@@ -4,6 +4,7 @@ import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import ThemePanel from "../components/ThemePanel.astro";
+import ConsentBar from "../components/ConsentBar.astro";
 import VhsMode from "../components/VhsMode.astro";
 import DustField from "../components/DustField.astro";
 import TransitionTweak from "../components/TransitionTweak.astro";
@@ -33,7 +34,7 @@ const shareImage = new URL(image ?? "/media/og-rd8-2026.jpg", SITE).href;
 
 const shareDescription =
   description ??
-  "Festival dokumentarnog filma o muzici — Nikšić, Podgorica, Mojkovac.";
+  "Revija muzičkog dokumentarnog filma — dokumentarci, koncerti, tribine i Videodrom. Ulaz na sve programe je besplatan.";
 ---
 
 <!doctype html>
@@ -96,6 +97,7 @@ const shareDescription =
 
     <!-- Floating accent-color picker (persists choice in localStorage). -->
     <ThemePanel />
+    <ConsentBar />
 
     <!-- Konami code easter egg → VHS mode. ↑↑↓↓←→←→BA -->
     <VhsMode />

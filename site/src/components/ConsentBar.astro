@@ -1,0 +1,159 @@
+---
+// Traka za pristanak mjerenju.
+//
+// GA4 postavlja kolačiće, pa se skripta ne učitava dok posjetilac ne kaže da.
+// Ovdje se ne koristi Google Consent Mode, koji bi GA ipak učitao i slao
+// zahtjeve bez kolačića: dok pristanka nema, sajt ne dodiruje Google nijednim
+// zahtjevom. Odluka se pamti u localStorage i traka se više ne pojavljuje.
+import { GA_ID, GA_READY } from "../data/analytics";
+
+// Kod ide kao string pa se ubacuje sa `set:html`. Sadržaj <script> elementa
+// Astro tretira kao čist tekst — izraz u vitičastim zagradama se tamo ne
+// izvršava nego ispiše doslovno, zajedno sa navodnicima.
+const SCRIPT = `(function () {
+  var KEY = "rd-analytics-consent";
+  var GA_ID = ${JSON.stringify(GA_ID)};
+
+  function local() {
+    return location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  }
+
+  function loadGA() {
+    // Na razvojnoj mašini se ne mjeri, ma šta stajalo u localStorage — inače
+    // bi svako osvježavanje ulazilo u statistiku festivala.
+    if (window.__rdGA || local()) return;
+    window.__rdGA = true;
+    var s = document.createElement("script");
+    s.async = true;
+    s.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_ID;
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { window.dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag("js", new Date());
+    gtag("config", GA_ID);
+  }
+
+  function read() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+
+  function write(v) {
+    try { localStorage.setItem(KEY, v); } catch (e) {}
+  }
+
+  function init() {
+    var bar = document.querySelector("[data-consent]");
+    var choice = read();
+
+    if (choice === "granted") { loadGA(); if (bar) bar.hidden = true; return; }
+    if (choice === "denied") { if (bar) bar.hidden = true; return; }
+    if (!bar || bar.dataset.wired === "true") return;
+
+    bar.dataset.wired = "true";
+    bar.hidden = false;
+    bar.querySelector("[data-consent-yes]").addEventListener("click", function () {
+      write("granted"); bar.hidden = true; loadGA();
+    });
+    bar.querySelector("[data-consent-no]").addEventListener("click", function () {
+      write("denied"); bar.hidden = true;
+    });
+  }
+
+  init();
+  // ClientRouter mijenja stranu bez novog učitavanja, pa se traka poslije
+  // navigacije mora ponovo pronaći i zakačiti.
+  document.addEventListener("astro:page-load", init);
+})();`;
+---
+
+{
+  GA_READY && (
+    <div class="rd-consent" data-consent hidden>
+      <p class="rd-consent-txt">
+        Koristimo Google Analytics da vidimo koliko vas ima i šta gledate.
+        Mjerenje postavlja kolačiće i ne pokreće se bez tvoje saglasnosti.
+      </p>
+      <div class="rd-consent-btns">
+        <button type="button" class="rd-consent-yes" data-consent-yes>
+          Prihvatam
+        </button>
+        <button type="button" class="rd-consent-no" data-consent-no>
+          Ne, hvala
+        </button>
+      </div>
+    </div>
+  )
+}
+
+{GA_READY && <script is:inline set:html={SCRIPT} />}
+
+<style>
+  /* Sjedi u lijevom uglu, ne preko cijele širine: desnu ivicu drže plutajuća
+     članska karta na programu i dugme za temu. */
+  .rd-consent {
+    position: fixed;
+    z-index: 60;
+    left: 16px;
+    bottom: 16px;
+    max-width: min(420px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 20px;
+    background: color-mix(in srgb, var(--color-ink) 94%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid color-mix(in srgb, var(--color-bone) 18%, transparent);
+    box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.7);
+  }
+
+  /* `display: flex` iznad pobjeđuje ugrađeno pravilo pregledača za [hidden],
+     pa se skrivanje mora napisati ručno. */
+  .rd-consent[hidden] {
+    display: none;
+  }
+
+  .rd-consent-txt {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: color-mix(in srgb, var(--color-bone) 78%, transparent);
+  }
+
+  .rd-consent-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .rd-consent-yes,
+  .rd-consent-no {
+    padding: 9px 16px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .rd-consent-yes {
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent);
+    color: #0a0a0a;
+  }
+
+  .rd-consent-yes:hover {
+    background: transparent;
+    color: var(--color-accent);
+  }
+
+  .rd-consent-no {
+    border: 1px solid color-mix(in srgb, var(--color-bone) 26%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-bone) 72%, transparent);
+  }
+
+  .rd-consent-no:hover {
+    color: var(--color-bone);
+  }
+</style>
