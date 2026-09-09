@@ -24,11 +24,12 @@ const posts = (await getCollection("posts", ({ data }) => data.status === "publi
 // Hero slideshow — first image is rendered server-side as a fallback, the
 // rest preload and cycle on the client with a mosaic-dissolve transition.
 //
-// Četiri koncerta izdanja, redom kojim se sviraju. Fajlovi sa prefiksom
-// `hero-` postoje samo zbog ove trake: Janjov plakat je uspravan pa je
-// isječen na 16:9, a Sarin kadar iz modala ima samo 480px i raspao bi se
-// preko cijelog ekrana, pa ovdje ide njen drugi zvanični spot u 1280px.
+// Prvo najavna slika izdanja, pa četiri koncerta redom kojim se sviraju.
+// Fajlovi sa prefiksom `hero-` postoje samo zbog ove trake: Janjov plakat je
+// uspravan pa je isječen na 16:9, a Sarin kadar iz modala ima samo 480px i
+// raspao bi se preko cijelog ekrana, pa ovdje ide njen drugi zvanični spot.
 const heroImages = [
+  "/media/2026/09/najava-rd8.jpg",
   "/media/2026/09/hero-janjo.jpg",
   "/media/2026/09/mucin.jpg",
   "/media/2026/09/short-reports.jpg",
@@ -107,6 +108,16 @@ const programs = [
 // festival je počeo 2017, ali nije održan svake godine, pa je 2026. osmo
 // izdanje a ne deveta godina. Kad dođe RD9, broj se pomjeri sam.
 const cities = new Set(editions.flatMap((e) => e.cities));
+
+// Opis koji vide Facebook, WhatsApp, Viber i Google. Sastavlja se iz
+// programa i tekućeg izdanja, pa ne može da se raziđe sa satnicom — jedino
+// što je ovdje napisano rukom je redoslijed riječi.
+const brojPo = (vrsta: string) =>
+  program.flatMap((d) => d.items).filter((i) => i.kind === vrsta).length;
+const shareDesc =
+  `Osmo izdanje, ${currentEdition.dates}. ${brojPo("film")} dokumentaraca o ` +
+  `muzici, ${brojPo("koncert")} koncerta, razgovori i Videodrom — ` +
+  `${currentEdition.venue}, ${currentEdition.cities[0]}. Ulaz besplatan.`;
 
 const stats = [
   { value: String(currentEdition.n), label: "Godina festivala" },
@@ -190,10 +201,7 @@ const locations = [
 ];
 ---
 
-<BaseLayout
-  title="Rokumentarni dani"
-  description="Festival dokumentarnog filma o muzici"
->
+<BaseLayout title="Rokumentarni dani" description={shareDesc}>
   <!-- Brick-grid backdrop. Fixed-position canvas behind every section.
        `-z-10` keeps it below body's in-flow content (header, footer, sections)
        — without it the canvas would default to z=auto and paint on top of
